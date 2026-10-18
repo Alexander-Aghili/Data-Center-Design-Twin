@@ -103,7 +103,7 @@ function FillRow({ plan, catalog }: { plan: Plan; catalog: CatalogIndex }) {
         <select id={`${id}-row`} className="input" value={rowId} onChange={(e) => setRowId(e.currentTarget.value)}>
           {rooms.map(({ row, room: r }) => (
             <option key={row.id} value={row.id}>
-              {row.id}, {r.count === 0 ? 'full' : `room for ${r.count}`}
+              {row.id}, {r.count === 0 ? 'full' : `${r.count} free`}
             </option>
           ))}
         </select>
