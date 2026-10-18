@@ -15,6 +15,7 @@ import { useTwinStore } from '../../state/store'
 import { objectIdForPlacement, rackSize, slotWorld } from '../geometry'
 import { FINISH, PERF_TILE_M } from '../Lighting'
 import { useRegistered } from '../hooks'
+import { exhaustColor } from '../overlays/Temperature'
 import { Shelf, Tray, type TrayCooling } from './Tray'
 
 // Built-in catalog by id; plan snapshot entries win over these, as in the engine.
@@ -50,6 +51,8 @@ const DOOR_MAX_RAD = (110 * Math.PI) / 180
 const EASE_S = 0.12
 /** With a focus tray, the other compute trays ease out only this fraction of the slide. */
 const NUDGE = 0.06
+/** Gap between the rack front and the rear of a fully pulled focus tray, so its quick disconnects show (m). */
+const FOCUS_TRAY_CLEARANCE = 0.06
 
 export interface TraySlot {
   kind: 'compute' | 'switch' | 'power'
@@ -118,6 +121,14 @@ export function rackModel(plan: Plan, rackTypeId: string, coolingMethodId: strin
 const smoothstep = (x: number) => {
   const t = Math.min(1, Math.max(0, x))
   return t * t * (3 - 2 * t)
+}
+
+/**
+ * How far the focus tray slides out: clear of the cabinet, so the trays above never cover its GPUs and the hoses
+ * and quick disconnects at its rear are in view (as when a tray is pulled for service).
+ */
+function focusTraySlide(model: Pick<RackModel, 'size' | 'trayDepth'>): number {
+  return model.size.d / 2 + model.trayDepth / 2 + FOCUS_TRAY_CLEARANCE
 }
 
 /** Door angle in radians for an openness: the door swings over the first 45%. */
@@ -270,9 +281,10 @@ interface RackBodyProps {
   openness: number
   tray: number | null
   interior: boolean
+  heat: string | null
 }
 
-function RackBody({ plan, placement, openness, tray, interior }: RackBodyProps) {
+function RackBody({ plan, placement, openness, tray, interior, heat }: RackBodyProps) {
   const group = plan.rackGroups.find((g) => g.id === placement.groupId)
   const model = useMemo(
     () => rackModel(plan, group?.rackTypeId ?? '', group?.coolingMethodId ?? ''),
@@ -290,11 +302,12 @@ function RackBody({ plan, placement, openness, tray, interior }: RackBodyProps) 
 
   const computeTrays = model.trays.filter((t) => t.kind === 'compute')
   const slideDepth = SLIDE_FRACTION * model.trayDepth
+  const focusSlideDepth = focusTraySlide(model)
 
   const apply = (o: number) => {
     if (door.current) door.current.rotation.y = -doorAngle(o)
     slides.current.forEach((g, k) => {
-      if (g) g.position.z = -traySlide(o, k, computeTrays.length, tray) * slideDepth
+      if (g) g.position.z = -traySlide(o, k, computeTrays.length, tray) * (k === tray ? focusSlideDepth : slideDepth)
     })
   }
 
@@ -332,6 +345,7 @@ function RackBody({ plan, placement, openness, tray, interior }: RackBodyProps) 
                 d={model.trayDepth}
                 gpus={model.gpusPerTray}
                 cooling={model.cooling}
+                heat={heat}
               />
             </group>
           ))
@@ -350,10 +364,16 @@ interface RackProps {
   interior?: boolean
 }
 
+/** Under the temperature overlay, the open rack's air heatsinks take its exhaust color, as its rear panel does. */
+function useHeatsinkColor(placementId: string, interior: boolean): string | null {
+  return useTwinStore((s) => (interior && s.overlay === 'temperature' ? exhaustColor(s.evaluation, placementId) : null))
+}
+
 /** One cabinet at its slot, built from catalog dimensions, with its trays and GPUs registered by id. */
 export function Rack({ placementId, openness, tray = null, interior = true }: RackProps) {
   const plan = useTwinStore((s) => s.plan)
+  const heat = useHeatsinkColor(placementId, interior)
   const placement = plan?.placements.find((p) => p.id === placementId)
   if (!plan || !placement) return null
-  return <RackBody plan={plan} placement={placement} openness={openness} tray={tray} interior={interior} />
+  return <RackBody plan={plan} placement={placement} openness={openness} tray={tray} interior={interior} heat={heat} />
 }

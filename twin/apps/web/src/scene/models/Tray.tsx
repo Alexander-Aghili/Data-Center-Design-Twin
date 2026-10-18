@@ -3,7 +3,7 @@ import { CatmullRomCurve3, TubeGeometry, Vector3, type BufferGeometry, type Grou
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { FINISH, PERF_TILE_M } from '../Lighting'
 import { useRegistered } from '../hooks'
-import { Gpu, gpuFootprint, gpuPorts } from './Gpu'
+import { GPU_FRONT_CLEAR_M, Gpu, gpuFootprint, gpuPorts } from './Gpu'
 import { box, panelGeometry } from './Rack'
 
 export type TrayCooling = 'coldPlate' | 'air'
@@ -24,7 +24,7 @@ export function gpuSlots(n: number, w: number, d: number): GpuSlot[] {
   const cols = Math.min(n, 4)
   const rows = Math.ceil(n / cols)
   const cellW = (w - 0.06) / cols
-  const zFront = -d / 2 + 0.24
+  const zFront = -d / 2 + GPU_FRONT_CLEAR_M
   const zBack = d / 2 - 0.1
   const cellD = (zBack - zFront) / rows
   return Array.from({ length: n }, (_, j) => ({
@@ -93,6 +93,17 @@ function hoseGeometries(slots: GpuSlot[], size: number, w: number, h: number, d:
   return geometries
 }
 
+/** The tray's cold-plate hoses, rails and quick disconnects, registered so the gpu shot can frame them. */
+function Hoses({ objectId, supply, ret }: { objectId: string; supply: BufferGeometry; ret: BufferGeometry }) {
+  const ref = useRegistered<Group>(objectId, 'hoses')
+  return (
+    <group ref={ref}>
+      <mesh geometry={supply} material={FINISH.supply} castShadow />
+      <mesh geometry={ret} material={FINISH.return} castShadow />
+    </group>
+  )
+}
+
 interface TrayProps {
   objectId: string
   y: number
@@ -101,10 +112,12 @@ interface TrayProps {
   d: number
   gpus: number
   cooling: TrayCooling
+  /** Heatsink color under the temperature overlay (air trays only); null keeps bare metal. */
+  heat?: string | null
 }
 
 /** A compute tray at height `y` inside the cabinet, with its GPUs (`<objectId>:gpu:<j>`) and coolant hoses. */
-export function Tray({ objectId, y, h, w, d, gpus, cooling }: TrayProps) {
+export function Tray({ objectId, y, h, w, d, gpus, cooling, heat = null }: TrayProps) {
   const ref = useRegistered<Group>(objectId, 'tray')
   const slots = useMemo(() => gpuSlots(gpus, w, d), [gpus, w, d])
   const size = gpuFootprint(slots.length, w, d)
@@ -116,14 +129,9 @@ export function Tray({ objectId, y, h, w, d, gpus, cooling }: TrayProps) {
     <group ref={ref} position={[0, y, 0]}>
       <mesh geometry={trayGeometry(w, h, d)} material={TRAY_MATERIALS} castShadow receiveShadow />
       {slots.map((s, j) => (
-        <Gpu key={j} objectId={`${objectId}:gpu:${j}`} x={s.x} z={s.z} size={size} trayH={h} cooling={cooling} />
+        <Gpu key={j} objectId={`${objectId}:gpu:${j}`} x={s.x} z={s.z} size={size} trayH={h} cooling={cooling} heat={heat} />
       ))}
-      {hoses ? (
-        <>
-          <mesh geometry={hoses.supply} material={FINISH.supply} castShadow />
-          <mesh geometry={hoses.return} material={FINISH.return} castShadow />
-        </>
-      ) : null}
+      {hoses ? <Hoses objectId={`${objectId}:hoses`} supply={hoses.supply} ret={hoses.return} /> : null}
     </group>
   )
 }

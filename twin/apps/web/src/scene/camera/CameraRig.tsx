@@ -17,10 +17,43 @@ const MAX_NEAR_M = 1
 const MIN_DISTANCE_M = 0.1
 // camera-controls' own default damping, restored for the user once a choreographed move settles or is grabbed.
 const USER_SMOOTH_TIME_S = 0.25
+// The drawer slides in over a few frames; measure it for this many frames after the selection or the size changes.
+const MEASURE_FRAMES = 12
+// How quickly the framing recenters when the inspector opens or closes (damping rate, 1/s).
+const INSET_RATE = 6
+
+/** Width of the scene the inspector drawer covers on the right, in CSS pixels (0 when it is closed). */
+function coveredRight(canvas: HTMLCanvasElement): number {
+  const stage = canvas.closest<HTMLElement>('.scene-stage')
+  const drawer = stage?.querySelector<HTMLElement>('.dt-inspector')
+  if (!stage || !drawer) return 0
+  // offsetLeft ignores the drawer's slide-in transform, so the goal does not drift while it animates.
+  return Math.min(stage.clientWidth / 2, Math.max(0, stage.clientWidth - drawer.offsetLeft))
+}
 
 function waypointOf(s: TwinState): Waypoint | null {
   if (!s.plan) return null
   return { shot: s.shot, focusId: resolveFocus({ plan: s.plan, evaluation: s.evaluation, focusId: s.selection?.id ?? null }) }
+}
+
+/**
+ * Shifts the projection center left by half of `inset` (a view offset into a wider virtual frame), so the shot's
+ * subject sits in the middle of the part of the scene the inspector leaves visible.
+ */
+function applyInset(camera: PerspectiveCamera, width: number, height: number, inset: number) {
+  if (width <= 0 || height <= 0) return
+  const view = camera.view
+  if (inset < 0.5) {
+    if (view?.enabled || Math.abs(camera.aspect - width / height) > 1e-6) {
+      camera.clearViewOffset()
+      camera.aspect = width / height
+      camera.updateProjectionMatrix()
+    }
+    return
+  }
+  const fullWidth = width + inset
+  const current = view?.enabled && view.fullWidth === fullWidth && view.width === width && view.height === height
+  if (!current || Math.abs(camera.aspect - fullWidth / height) > 1e-6) camera.setViewOffset(fullWidth, height, inset, 0, width, height)
 }
 
 /**
@@ -37,6 +70,12 @@ export function CameraRig() {
   const onSceneChange = useRef<() => void>(() => {})
   const camera = useThree((s) => s.camera)
   const canvas = useThree((s) => s.gl.domElement)
+  const size = useThree((s) => s.size)
+  const getThree = useThree((s) => s.get)
+  // The inspector covers the right of the scene; shots center their subject in what is left (see useFrame).
+  const insetGoal = useRef(0)
+  const inset = useRef(0)
+  const measureFrames = useRef(MEASURE_FRAMES)
 
   useEffect(() => {
     const cc = controls.current
@@ -71,7 +110,9 @@ export function CameraRig() {
       const { plan, evaluation } = useTwinStore.getState()
       if (!plan) return driver.pose()
       const { worldBox } = useSceneRegistry.getState()
-      return shotFor(w.shot, { plan, evaluation, focusId: w.focusId, worldBox, aspect: camera.aspect })
+      const { width, height } = getThree().size
+      const aspect = height > 0 ? Math.max(1, width - insetGoal.current) / height : camera.aspect
+      return shotFor(w.shot, { plan, evaluation, focusId: w.focusId, worldBox, aspect })
     }
 
     // The tray the camera pushes into: the selected one when the selection is inside this rack, else the middle one.
@@ -95,6 +136,7 @@ export function CameraRig() {
     follow(useTwinStore.getState())
     // Only what the shot depends on; hover, chat and the like never reach resolveFocus.
     const unsubscribe = useTwinStore.subscribe((s, prev) => {
+      if (s.selection !== prev.selection || s.evaluation !== prev.evaluation) measureFrames.current = MEASURE_FRAMES
       if (s.shot !== prev.shot || s.selection !== prev.selection || s.plan !== prev.plan || s.evaluation !== prev.evaluation) follow(s)
     })
     const markChanged = () => {
@@ -130,9 +172,14 @@ export function CameraRig() {
       cc.removeEventListener('rest', restoreUserDamping)
       choreography.current = null
       canvas.style.opacity = ''
+      camera.clearViewOffset()
       useRackOpenness.setState({ placementId: null, tray: null, value: 0 })
     }
-  }, [camera, canvas])
+  }, [camera, canvas, getThree])
+
+  useEffect(() => {
+    measureFrames.current = MEASURE_FRAMES
+  }, [size])
 
   useFrame((_, dt) => {
     if (sceneChanged.current) {
@@ -142,6 +189,16 @@ export function CameraRig() {
     choreography.current?.tick(dt)
     const cc = controls.current
     if (!cc || !(camera instanceof PerspectiveCamera)) return
+    if (measureFrames.current > 0) {
+      measureFrames.current--
+      const covered = coveredRight(canvas)
+      if (Math.abs(covered - insetGoal.current) > 1) {
+        insetGoal.current = covered
+        choreography.current?.invalidate()
+      }
+    }
+    inset.current = Math.abs(inset.current - insetGoal.current) < 0.5 ? insetGoal.current : MathUtils.damp(inset.current, insetGoal.current, INSET_RATE, dt)
+    applyInset(camera, size.width, size.height, inset.current)
     const { fov, smoothTimeS } = fovGoal.current
     let changed = false
     if (fov > 0 && Math.abs(camera.fov - fov) > 1e-3) {

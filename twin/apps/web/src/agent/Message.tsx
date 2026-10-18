@@ -64,7 +64,7 @@ export const AgentMessage = memo(function AgentMessage({ message, tag }: AgentMe
             case 'tool':
               return <ToolCallLine key={part.callId} call={part} />
             case 'link':
-              return <DownloadLink key={i} label={part.label} href={part.href} />
+              return <FileLink key={i} label={part.label} href={part.href} />
             case 'proposal':
               return <ProposalCard key={part.proposal.id} proposal={part.proposal} />
             case 'error':
@@ -97,7 +97,7 @@ export function ErrorLine({ message }: { message: string }) {
   )
 }
 
-/** Only files this app serves under /api/ are offered for download. */
+/** Only files this app serves under /api/ are linked. */
 function appFilePath(href: string): string | null {
   try {
     const url = new URL(href, window.location.origin)
@@ -107,13 +107,14 @@ function appFilePath(href: string): string | null {
   }
 }
 
-function DownloadLink({ label, href }: { label: string; href: string }) {
+/** A file the app generated (a simulation brief), opened as text in a new browser tab. */
+function FileLink({ label, href }: { label: string; href: string }) {
   const path = appFilePath(href)
   if (!path) return <p className="ag-link ag-link--withheld">{`${label} (not offered: the link points outside this app)`}</p>
   return (
-    <a className="ag-link" href={path} download>
+    <a className="ag-link" href={path} target="_blank" rel="noopener noreferrer">
       <svg aria-hidden="true" width="12" height="12" viewBox="0 0 12 12">
-        <path d="M6 1v7M3 5.5 6 8.5 9 5.5M1.5 11h9" />
+        <path d="M7 1.5h3.5V5M10.5 1.5 5.5 6.5M9 7.5v3H1.5V3h3" />
       </svg>
       {label}
     </a>

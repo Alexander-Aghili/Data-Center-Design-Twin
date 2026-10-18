@@ -9,11 +9,14 @@ import { Busway } from './Busway'
 import { Cdu, CDU_SIZE } from './Cdu'
 import { Crah, CRAH_SIZE } from './Crah'
 import { LeafSwitch } from './LeafSwitch'
-import { PLANT_PITCH_M, plantCategory } from './Plant'
+import { PLANT_PITCH_M, plantCategory, plantUnitLength } from './Plant'
 import { DOOR_MATERIALS, Rack, SHELL_MATERIALS, catalogEntry, panelGeometry, rackDoorGeometry, rackModel, rackShellGeometry } from './Rack'
 
 /** Above this many placements the closed racks draw as instanced meshes, one per rack type. */
 export const INSTANCE_THRESHOLD = 40
+
+/** Parallel busway ducts on one row sit side by side as one overhead run: a 150 mm duct plus a 50 mm gap. */
+const BUSWAY_PITCH_M = 0.2
 
 export const UNIT_KINDS = ['cdu', 'crah', 'plant', 'busway', 'ups', 'transformer', 'leaf', 'bufferTank'] as const
 export type UnitKind = (typeof UNIT_KINDS)[number]
@@ -81,6 +84,26 @@ function positionEquipment(plan: Plan): EquipmentSource[] {
   return out
 }
 
+/** Electrical cabinets stand in lineups of at most this many, as UPS modules and transformers ship in. */
+const CABINET_LINEUP = 8
+/** Lineup to lineup: a cabinet up to 1.2 m deep plus a 1.2 m service aisle. */
+const LINEUP_PITCH_M = 2.4
+/** Along a lineup: the cabinet width (1.2 m UPS, 1.8 m transformer) plus a 0.2 m gap. */
+const CABINET_PITCH_M = { ups: 1.4, transformer: 2.0 } as const
+/** Service aisle between rows of yard plant (m). */
+const PLANT_ROW_GAP_M = 2.5
+
+/** Yard plant stands in rows no wider than the building. */
+function plantRowLength(plan: Plan, pitch: number): number {
+  return Math.max(1, Math.floor(plan.hall.widthM / pitch))
+}
+
+/** Slot `j` of `count` units filled `perLine` at a time: its line, its index on that line, and that line's size. */
+function yardSlot(j: number, count: number, perLine: number): { line: number; index: number; size: number } {
+  const line = Math.floor(j / perLine)
+  return { line, index: j % perLine, size: Math.min(perLine, count - line * perLine) }
+}
+
 /** Places every unit of sized equipment (or, before the engine sizes any, of the hall's positions). */
 export function equipmentUnits(plan: Plan, evaluation: Evaluation | null): EquipmentUnit[] {
   const source: EquipmentSource[] = evaluation && evaluation.equipment.length > 0 ? evaluation.equipment : positionEquipment(plan)
@@ -103,13 +126,14 @@ export function equipmentUnits(plan: Plan, evaluation: Evaluation | null): Equip
       const centered = (pitch: number) => (j - (m - 1) / 2) * pitch
       if (head === 'busway') {
         const row = plan.hall.rows.find((r) => r.id === rest)
-        if (row) units.push({ ...base, x: row.x, z: row.z + row.rackDepthM / 2 + centered(0.3), rotY: 0, rowId: row.id })
+        if (row) units.push({ ...base, x: row.x, z: row.z + row.rackDepthM / 2 + centered(BUSWAY_PITCH_M), rotY: 0, rowId: row.id })
         continue
       }
       if (head === 'bufferTank') {
         const plant = plan.hall.positions.find((q) => q.kind === 'plant')
-        const plantUnits = source.find((s) => s.key === 'plant')?.count ?? 1
         const pitch = PLANT_PITCH_M[plantCategory(plan, null)]
+        // West of the near (widest) row of the yard.
+        const plantUnits = Math.min(source.find((s) => s.key === 'plant')?.count ?? 1, plantRowLength(plan, pitch))
         units.push({
           ...base,
           x: (plant?.x ?? 0) - (plantUnits * pitch) / 2 - 3 - centered(4),
@@ -131,13 +155,30 @@ export function equipmentUnits(plan: Plan, evaluation: Evaluation | null): Equip
         case 'leaf':
           units.push({ ...base, x: p.x, z: p.z + centered(0.7), rotY: rowRot(p.servesRows[0]), rowId: null })
           break
-        case 'plant':
-          units.push({ ...base, x: p.x + centered(PLANT_PITCH_M[plantCategory(plan, e.modelId)]), z: p.z, rotY: 0, rowId: null })
+        case 'plant': {
+          const pitch = PLANT_PITCH_M[plantCategory(plan, e.modelId)]
+          const at = yardSlot(j, m, plantRowLength(plan, pitch))
+          // Far rows shift half a pitch, so their branch pipes run south through the near row's service gaps.
+          const x = p.x + (at.index - (at.size - 1) / 2) * pitch + (at.line % 2) * (pitch / 2)
+          units.push({ ...base, x, z: p.z - at.line * (plantUnitLength(plan, e.modelId) + PLANT_ROW_GAP_M), rotY: 0, rowId: null })
           break
+        }
         case 'ups':
-        case 'transformer':
-          units.push({ ...base, x: p.x + (head === 'transformer' ? 2.4 : 0), z: p.z + centered(1.4), rotY: Math.PI / 2, rowId: null })
+        case 'transformer': {
+          const count = (key: string) => Math.max(0, Math.round(source.find((s) => s.key === key)?.count ?? 0))
+          const upsLineups = Math.ceil(count('ups') / CABINET_LINEUP)
+          const lineups = upsLineups + Math.ceil(count('transformer') / CABINET_LINEUP)
+          const at = yardSlot(j, m, CABINET_LINEUP)
+          const column = (head === 'transformer' ? upsLineups : 0) + at.line
+          units.push({
+            ...base,
+            x: p.x + (column - (lineups - 1) / 2) * LINEUP_PITCH_M,
+            z: p.z + (at.index - (at.size - 1) / 2) * CABINET_PITCH_M[head],
+            rotY: Math.PI / 2,
+            rowId: null,
+          })
           break
+        }
       }
     }
   }

@@ -170,8 +170,26 @@ describe('shotFor', () => {
     const worldBox = (id: string) => boxes[id] ?? null
     const tray = shotFor('tray', ctx({ focusId: 'R3-07', worldBox }))
     expect(tray.target[1]).toBeCloseTo(1.22)
+    // The gpu shot spans the tray's width and the GPU row, from the tray floor to the GPU's top.
     const gpu = shotFor('gpu', ctx({ focusId: 'rack:R3-07:tray:1:gpu:0', worldBox }))
-    expect(gpu.target).toEqual([10.05, 1.215, 9.05].map((v) => expect.closeTo(v, 5)))
+    expect(gpu.target).toEqual([10.2, 1.215, 9.05].map((v) => expect.closeTo(v, 5)))
+    // A cold-plate tray adds its hoses back to the quick disconnects at the tray's rear.
+    boxes['rack:R3-07:tray:1:hoses'] = new Box3(new Vector3(9.95, 1.21, 9.02), new Vector3(10.45, 1.23, 9.18))
+    const plated = shotFor('gpu', ctx({ focusId: 'rack:R3-07:tray:1:gpu:0', worldBox }))
+    expect(plated.target).toEqual([10.2, 1.215, 9.09].map((v) => expect.closeTo(v, 5)))
+  })
+
+  it('frames the populated rows and the units that serve them, not the empty hall floor', () => {
+    // The default plan fills R1–R5 (x 8–22.4 m, z 4–19.6 m) in a 40 m × 36 m hall; CRAHs stand at x 1.5 m and CDU
+    // positions at x 23.6 m.
+    const hall = shotFor('hall', ctx({}))
+    expect(hall.target[0]).toBeCloseTo((1.5 + 23.6) / 2, 0)
+    expect(hall.target[2]).toBeLessThan(plan.hall.depthM / 2)
+    const filled = Math.max(...plan.placements.map((p) => plan.hall.rows.findIndex((r) => r.id === p.rowId)))
+    const lastRow = plan.hall.rows[filled]!
+    expect(hall.target[2]).toBeCloseTo((plan.hall.rows[0]!.z + lastRow.z + lastRow.rackDepthM) / 2, 0)
+    const whole = shotFor('hall', ctx({ plan: { ...plan, placements: [], rackGroups: [] } }))
+    expect(distance(hall)).toBeLessThan(distance(whole) * 0.8)
   })
 
   it('frames an empty hall without NaN', () => {

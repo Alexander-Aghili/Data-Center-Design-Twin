@@ -300,11 +300,13 @@ describe('agent thread', () => {
     expect(screen.getByText(/Brief \(not offered/)).toBeTruthy()
   })
 
-  it('link events render as a download link', () => {
+  it('link events open the file in a new browser tab', () => {
     setup(chatTurn)
     const link = screen.getByRole('link', { name: 'OpenFOAM simulation brief' })
     expect(link.getAttribute('href')).toBe('/api/brief/file/2026-10-18-openfoam.md')
-    expect(link.hasAttribute('download')).toBe(true)
+    expect(link.hasAttribute('download')).toBe(false)
+    expect(link.getAttribute('target')).toBe('_blank')
+    expect(link.getAttribute('rel')).toBe('noopener noreferrer')
   })
 
   it('an empty thread invites a question', () => {

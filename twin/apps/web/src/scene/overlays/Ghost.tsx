@@ -18,6 +18,7 @@ import { useTwinStore } from '../../state/store'
 import { objectIdForPlacement, positionWorld, rackSize, slotWorld } from '../geometry'
 import { PALETTE } from '../palette'
 import { useSceneRegistry, type SceneObject } from '../registry'
+import { rowsLabel } from '../../strips/parts'
 import { SceneTag } from './FloorLoad'
 
 const catalogs = new WeakMap<Plan, CatalogIndex>()
@@ -112,13 +113,16 @@ function previewState(plan: Plan, proposal: Proposal): PlanState | null {
 
 type Mode = 'added' | 'removed' | 'changed'
 
-interface GhostBox {
+export interface GhostBox {
   id: string
   mode: Mode
   box: Box3
-  /** Groups boxes under one tag, e.g. "changed|R3|Direct liquid cooling". */
+  /** Groups boxes under one tag across rows, e.g. "changed|Cooling: Direct-to-chip" or "added|cdu|<model>". */
   tagKey: string
-  tag: string
+  /** Tag text for a group of `n` boxes. */
+  label: (n: number) => string
+  /** Row of a rack ghost, named in its group's tag; null for equipment and moves. */
+  row: string | null
   /** Tag at the west end instead of the middle: for long equipment runs such as busways. */
   tagWest: boolean
 }
@@ -197,50 +201,81 @@ function ghostBoxes(diff: GhostDiff, base: PlanState, preview: PlanState, object
     (item.modelId && planCatalog(preview.plan).get(item.modelId, 'equipment')?.name) || item.category
 
   const out: GhostBox[] = []
-  const push = (id: string, mode: Mode, box: Box3 | null, tagKey: string, tag: string) => {
+  const push = (id: string, mode: Mode, box: Box3 | null, tagKey: string, label: (n: number) => string, row: string | null = null) => {
     if (!box || box.isEmpty()) return
     const longRun = !id.startsWith('rack:') && box.max.x - box.min.x > LONG_RUN_M
-    out.push({ id, mode, box, tagKey, tag, tagWest: longRun })
+    out.push({ id, mode, box, tagKey, label, row, tagWest: longRun })
   }
-  const addedRacks = diff.added.filter((id) => id.startsWith('rack:'))
-  const removedRacks = diff.removed.filter((id) => id.startsWith('rack:'))
-  for (const id of addedRacks) {
-    const row = rackRow(preview, id)
-    const n = addedRacks.filter((x) => rackRow(preview, x) === row).length
-    push(id, 'added', rackBox(preview, id), `added|${row}`, plural(n, 'New rack', 'new racks'))
+  const units = (text: string) => (n: number) => (n === 1 ? text : `${text}, ${n} units`)
+  const rackName = (id: string) => id.slice('rack:'.length)
+  for (const id of diff.added.filter((x) => x.startsWith('rack:'))) {
+    push(id, 'added', rackBox(preview, id), 'added|rack', (n) => plural(n, 'New rack', 'new racks'), rackRow(preview, id))
   }
-  for (const id of removedRacks) {
-    const row = rackRow(base, id)
-    const n = removedRacks.filter((x) => rackRow(base, x) === row).length
-    push(id, 'removed', rendered(id) ?? rackBox(base, id), `removed|${row}`, plural(n, 'Rack removed', 'racks removed'))
+  for (const id of diff.removed.filter((x) => x.startsWith('rack:'))) {
+    push(id, 'removed', rendered(id) ?? rackBox(base, id), 'removed|rack', (n) => plural(n, 'Rack removed', 'racks removed'), rackRow(base, id))
   }
   for (const { from, to } of diff.moved) {
-    push(from, 'removed', rendered(from) ?? rackBox(base, from), `from|${from}`, `Moved to ${to.slice('rack:'.length)}`)
-    push(to, 'added', rackBox(preview, to), `to|${to}`, `Moved from ${from.slice('rack:'.length)}`)
+    push(from, 'removed', rendered(from) ?? rackBox(base, from), 'moved|from', (n) => (n === 1 ? `Moved to ${rackName(to)}` : `${n} racks moved out`))
+    push(to, 'added', rackBox(preview, to), 'moved|to', (n) => (n === 1 ? `Moved from ${rackName(from)}` : `${n} racks moved in`))
   }
   for (const id of diff.changed) {
     if (id.startsWith('rack:')) {
       const tag = describeRackChange(base, preview, id)
-      push(id, 'changed', rendered(id) ?? rackBox(preview, id), `changed|${rackRow(preview, id)}|${tag}`, tag)
+      push(id, 'changed', rendered(id) ?? rackBox(preview, id), `changed|${tag}`, () => tag, rackRow(preview, id))
     } else {
       const item = previewUnits.get(id)
-      if (item) push(id, 'changed', rendered(id) ?? unitBox(preview, item, id, objects), `changed|${item.key}`, `Model: ${modelName(item)}`)
+      if (item) push(id, 'changed', rendered(id) ?? unitBox(preview, item, id, objects), `changed|${item.category}|${item.modelId}`, units(`Model: ${modelName(item)}`))
     }
   }
   for (const id of diff.added.filter((x) => !x.startsWith('rack:'))) {
     const item = previewUnits.get(id)
-    if (item) push(id, 'added', unitBox(preview, item, id, objects), `added|${item.key}`, `New ${modelName(item)}${unitsSuffix(diff.added, item)}`)
+    if (item) push(id, 'added', unitBox(preview, item, id, objects), `added|${item.category}|${item.modelId}`, units(`New ${modelName(item)}`))
   }
   for (const id of diff.removed.filter((x) => !x.startsWith('rack:'))) {
     const item = baseUnits.get(id)
-    if (item) push(id, 'removed', rendered(id) ?? unitBox(base, item, id, objects), `removed|${item.key}`, `Removed ${modelName(item)}${unitsSuffix(diff.removed, item)}`)
+    if (item) push(id, 'removed', rendered(id) ?? unitBox(base, item, id, objects), `removed|${item.category}|${item.modelId}`, units(`Removed ${modelName(item)}`))
   }
   return out
 }
 
-function unitsSuffix(ids: string[], item: SizedEquipment): string {
-  const n = item.objectIds.filter((id) => ids.includes(id)).length
-  return n === 1 ? '' : `, ${n} units`
+export interface GhostTag {
+  key: string
+  /** One line per kind of change at this place. */
+  lines: string[]
+  position: [number, number, number]
+}
+
+// Tags whose anchors are closer than this on the floor (m) merge into one: at the hall shot they would overlap.
+const TAG_MERGE_M = 4
+
+/**
+ * One tag per kind of change, however many rows or units it spans ("Cooling: Direct-to-chip, rows 3–5",
+ * "New row CDU, 3 units"), over the middle of what it groups; long runs take theirs at the west end. Kinds of
+ * change at the same place (a CRAH removed and its replacement) share one tag, a line each.
+ */
+export function ghostTags(ghosts: GhostBox[]): GhostTag[] {
+  const groups = new Map<string, { ghosts: GhostBox[]; box: Box3 }>()
+  for (const g of ghosts) {
+    const group = groups.get(g.tagKey)
+    if (group) {
+      group.ghosts.push(g)
+      group.box.union(g.box)
+    } else groups.set(g.tagKey, { ghosts: [g], box: g.box.clone() })
+  }
+  const tags: GhostTag[] = []
+  for (const [key, { ghosts: members, box }] of groups) {
+    const first = members[0]!
+    const rows = members.flatMap((g) => (g.row ? [g.row] : []))
+    const line = rows.length > 0 ? `${first.label(members.length)}, ${rowsLabel(rows, false)}` : first.label(members.length)
+    const c = box.getCenter(new Vector3())
+    const position: GhostTag['position'] = [first.tagWest ? box.min.x : c.x, box.max.y + TAG_ABOVE_M, c.z]
+    const near = tags.find((t) => Math.hypot(t.position[0] - position[0], t.position[2] - position[2]) < TAG_MERGE_M)
+    if (near) {
+      near.lines.push(line)
+      near.position[1] = Math.max(near.position[1], position[1])
+    } else tags.push({ key, lines: [line], position })
+  }
+  return tags
 }
 
 // Tags float this far above the top of what they describe.
@@ -288,12 +323,6 @@ export function Ghost() {
   }, [plan, evaluation, proposal, preview, objects])
   if (ghosts.length === 0) return null
 
-  const tags = new Map<string, { tag: string; box: Box3; west: boolean }>()
-  for (const g of ghosts) {
-    const entry = tags.get(g.tagKey)
-    if (entry) entry.box.union(g.box)
-    else tags.set(g.tagKey, { tag: g.tag, box: g.box.clone(), west: g.tagWest })
-  }
   const boxOf = (id: string, mode: Mode) => ghosts.find((g) => g.id === id && g.mode === mode)?.box
 
   return (
@@ -308,16 +337,15 @@ export function Ghost() {
         const points = [a.getCenter(new Vector3()).setY(MOVE_LINE_Y_M), b.getCenter(new Vector3()).setY(MOVE_LINE_Y_M)]
         return <Line key={to} points={points} color={PALETTE.ink} lineWidth={1} dashed dashSize={0.2} gapSize={0.12} raycast={() => null} />
       })}
-      {[...tags.entries()].map(([key, { tag, box, west }]) => {
-        const c = box.getCenter(new Vector3())
-        // Long runs (busways) take their tag at the west end, clear of the racks tagged mid-row beneath them.
-        const x = west ? box.min.x : c.x
-        return (
-          <SceneTag key={key} position={[x, box.max.y + TAG_ABOVE_M, c.z]}>
-            {tag}
-          </SceneTag>
-        )
-      })}
+      {ghostTags(ghosts).map((t) => (
+        <SceneTag key={t.key} position={t.position}>
+          {t.lines.map((line, i) => (
+            <span key={i} style={{ display: 'block' }}>
+              {line}
+            </span>
+          ))}
+        </SceneTag>
+      ))}
     </group>
   )
 }

@@ -1,4 +1,4 @@
-import { CylinderGeometry, type BufferGeometry, type Group } from 'three'
+import { CylinderGeometry, type BufferGeometry, type Group, type Material } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { FINISH } from '../Lighting'
 import { useRegistered } from '../hooks'
@@ -13,12 +13,15 @@ const FITTING_R = 0.0055
 /** Fin pitch of a GPU air heatsink, about 2 mm. */
 const FIN_PITCH = 0.0022
 
+/** Depth kept clear at the tray front for the drive cage and NICs; the GPU boards sit behind it, near the rear. */
+export const GPU_FRONT_CLEAR_M = 0.36
+
 /** Square GPU module footprint for `n` GPUs on a tray of width `w` and depth `d` (same grid as `gpuSlots`). */
 export function gpuFootprint(n: number, w: number, d: number): number {
   const cols = Math.max(1, Math.min(n, 4))
   const rows = Math.max(1, Math.ceil(n / cols))
   const cellW = (w - 0.06) / cols
-  const cellD = (d - 0.34) / rows
+  const cellD = (d - GPU_FRONT_CLEAR_M - 0.1) / rows
   return Math.min(cellW * 0.8, cellD * 0.72, 0.15)
 }
 
@@ -97,8 +100,25 @@ function gpuGeometry(cooling: TrayCooling, s: number, trayH: number): BufferGeom
   return geometry
 }
 
-const COLD_PLATE_MATERIALS = [FINISH.clayDark, FINISH.graphite, FINISH.metal, FINISH.supply, FINISH.return]
-const HEATSINK_MATERIALS = [FINISH.clayDark, FINISH.graphite, FINISH.metal]
+// Boards are graphite so the bright metal plates and heatsinks read against them and against the clay tray pan.
+const COLD_PLATE_MATERIALS = [FINISH.graphite, FINISH.graphite, FINISH.metal, FINISH.supply, FINISH.return]
+const HEATSINK_MATERIALS = [FINISH.graphite, FINISH.graphite, FINISH.metal]
+
+const heatsinkCache = new Map<string, Material[]>()
+
+/** Heatsink materials with the fins in `heat` (the rack's exhaust color), cached per color. */
+function heatsinkMaterials(heat: string | null): Material[] {
+  if (heat === null) return HEATSINK_MATERIALS
+  let materials = heatsinkCache.get(heat)
+  if (!materials) {
+    const fins = FINISH.metal.clone()
+    fins.color.set(heat)
+    fins.metalness = 0.2
+    materials = [FINISH.graphite, FINISH.graphite, fins]
+    heatsinkCache.set(heat, materials)
+  }
+  return materials
+}
 
 interface GpuProps {
   objectId: string
@@ -107,16 +127,17 @@ interface GpuProps {
   size: number
   trayH: number
   cooling: TrayCooling
+  heat: string | null
 }
 
 /** One GPU module on a tray: a cold plate with quick disconnects, or an air heatsink. */
-export function Gpu({ objectId, x, z, size, trayH, cooling }: GpuProps) {
+export function Gpu({ objectId, x, z, size, trayH, cooling, heat }: GpuProps) {
   const ref = useRegistered<Group>(objectId, 'gpu')
   return (
     <group ref={ref} position={[x, 0, z]}>
       <mesh
         geometry={gpuGeometry(cooling, size, trayH)}
-        material={cooling === 'coldPlate' ? COLD_PLATE_MATERIALS : HEATSINK_MATERIALS}
+        material={cooling === 'coldPlate' ? COLD_PLATE_MATERIALS : heatsinkMaterials(heat)}
         castShadow
         receiveShadow
       />

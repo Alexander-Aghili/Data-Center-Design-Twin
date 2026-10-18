@@ -12,6 +12,8 @@ import { BRIEF_FILE_NAME, EXPORT_FILE_NAME, fileSlug } from './files'
 
 const MARKDOWN = 'text/markdown; charset=utf-8'
 const JSON_TYPE = 'application/json; charset=utf-8'
+// Briefs open in a browser tab: browsers download text/markdown, but show text/plain inline.
+const PLAIN_TEXT = 'text/plain; charset=utf-8'
 
 const CommandBody = z.object({ command: CommandSchema })
 const CommandsBody = z.object({ commands: z.array(CommandSchema).min(1) })
@@ -89,8 +91,8 @@ export function registerRoutes(app: FastifyInstance, deps: { store: PlanStore; a
     return reply.type(MARKDOWN).send(generateBrief(plan, evaluation, query.data.target))
   })
 
-  /** Serves a file the agent wrote into `dataDir/<folder>/`, as a download; the name pattern rules out path traversal. */
-  const serveFile = (route: string, folder: string, pattern: RegExp, type: string, noun: string) => {
+  /** Serves a file the agent wrote into `dataDir/<folder>/`; the name pattern rules out path traversal. Briefs open inline, exports download. */
+  const serveFile = (route: string, folder: string, pattern: RegExp, type: string, noun: string, disposition: 'inline' | 'attachment') => {
     const dir = resolve(dataDir, folder)
     app.get<{ Params: { name: string } }>(route, async (request, reply) => {
       const { name } = request.params
@@ -100,15 +102,15 @@ export function registerRoutes(app: FastifyInstance, deps: { store: PlanStore; a
       }
       try {
         const text = await readFile(file, 'utf8')
-        return reply.type(type).header('content-disposition', `attachment; filename="${name}"`).send(text)
+        return reply.type(type).header('content-disposition', `${disposition}; filename="${name}"`).send(text)
       } catch (err) {
         if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
         return reply.code(404).send({ ok: false, error: `No ${noun} named ${name}` })
       }
     })
   }
-  serveFile('/api/brief/file/:name', 'briefs', BRIEF_FILE_NAME, MARKDOWN, 'a brief')
-  serveFile('/api/plan/export/file/:name', 'exports', EXPORT_FILE_NAME, JSON_TYPE, 'an exported plan')
+  serveFile('/api/brief/file/:name', 'briefs', BRIEF_FILE_NAME, PLAIN_TEXT, 'a brief', 'inline')
+  serveFile('/api/plan/export/file/:name', 'exports', EXPORT_FILE_NAME, JSON_TYPE, 'an exported plan', 'attachment')
 
   app.get('/api/tools', async () => agent.listTools())
 
