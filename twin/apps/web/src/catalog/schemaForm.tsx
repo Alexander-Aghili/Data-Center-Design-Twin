@@ -120,9 +120,9 @@ const FIELDS: Record<string, { label: string; unit?: string }> = {
   city: { label: 'City' },
   lat: { label: 'Latitude' },
   lon: { label: 'Longitude' },
-  dryBulbC: { label: 'Hourly dry-bulb' },
-  wetBulbC: { label: 'Hourly wet-bulb' },
-  designDryBulbC: { label: 'Design dry-bulb', unit: '°C' },
+  dryBulbC: { label: 'Hourly dry bulb' },
+  wetBulbC: { label: 'Hourly wet bulb' },
+  designDryBulbC: { label: 'Design dry bulb', unit: '°C' },
 }
 
 function lookup(key: string) {

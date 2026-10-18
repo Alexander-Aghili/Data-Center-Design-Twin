@@ -3,7 +3,7 @@ import { defineCommand, type AnyCommandDef } from '../define'
 import { excerpt } from '../format'
 import { nextId, requireGroup, requirePlacement } from '../lookup'
 
-const IMPORTANCE_LABEL = { must: 'Must', prefer: 'Prefer', fyi: 'FYI' } as const
+const IMPORTANCE_LABEL = { must: 'must', prefer: 'prefer', fyi: 'FYI' } as const
 
 function resolvesInPlan(plan: Plan, path: string): boolean {
   let node: unknown = plan
@@ -68,7 +68,7 @@ const addNote = defineCommand({
       createdAt: new Date().toISOString(),
     })
   },
-  summarize: (payload, plan) => `${IMPORTANCE_LABEL[payload.importance]} note on ${targetLabel(plan, payload.target)}: "${excerpt(payload.text.trim())}"`,
+  summarize: (payload, plan) => `Added note on ${targetLabel(plan, payload.target)} (${IMPORTANCE_LABEL[payload.importance]}): "${excerpt(payload.text.trim())}"`,
 })
 
 const editNote = defineCommand({
@@ -83,8 +83,8 @@ const editNote = defineCommand({
     if (payload.importance !== undefined) note.importance = payload.importance
   },
   summarize: ({ id, text, importance }) => {
-    if (text !== undefined && importance !== undefined) return `Note ${id} text changed and set to ${importance}`
-    return text !== undefined ? `Note ${id} text changed` : `Note ${id} changed to ${importance}`
+    if (text !== undefined && importance !== undefined) return `Note ${id} text changed and set to ${IMPORTANCE_LABEL[importance]}`
+    return text !== undefined ? `Note ${id} text changed` : `Note ${id} changed to ${IMPORTANCE_LABEL[importance!]}`
   },
 })
 

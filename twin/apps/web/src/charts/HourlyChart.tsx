@@ -17,8 +17,8 @@ interface SeriesMeta {
 }
 
 const META: Record<HourlySeriesKey, SeriesMeta> = {
-  outdoorC: { label: 'Outdoor dry-bulb', fmt: (v) => fmtValue(v, '°C') },
-  wetBulbC: { label: 'Outdoor wet-bulb', fmt: (v) => fmtValue(v, '°C') },
+  outdoorC: { label: 'Outdoor dry bulb', fmt: (v) => fmtValue(v, '°C') },
+  wetBulbC: { label: 'Outdoor wet bulb', fmt: (v) => fmtValue(v, '°C') },
   itW: { label: 'IT power', fmt: fmtPower },
   coolingW: { label: 'Cooling power', fmt: fmtPower },
   facilityW: { label: 'Facility power', fmt: fmtPower },
