@@ -3,6 +3,7 @@ import {
   type Basis,
   type CatalogEntry,
   type Check,
+  type CheckKind,
   type Evaluation,
   type LayerId,
   type Plan,
@@ -10,16 +11,21 @@ import {
   type Selection,
   type SizedEquipment,
   type Status,
+  type ViewAction,
 } from '@twin/schema'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useTwinStore } from '../state/store'
-import { fmtPower } from '../format'
+import { fmtPower, fmtValue } from '../format'
 import { fmtUnit, rowsLabel } from '../strips/parts'
+import './Inspector.css'
 import { StatusMark } from './StatusMark'
 
 /** Where a shown number comes from: a calculation over named inputs, or a catalog or plan value with its basis. */
 type Origin =
-  { from: string[] } | { basis: Basis; of?: string; source?: string; note?: string } | { catalog: string; source?: string }
+  | { from: string[] }
+  | { setBy: string }
+  | { basis: Basis; of?: string; source?: string; note?: string }
+  | { catalog: string; source?: string }
 
 interface Fact {
   label: string
@@ -55,6 +61,32 @@ const LAYER_NAMES: Record<LayerId, string> = {
   cooling: 'Cooling',
   power: 'Power',
   network: 'Network',
+}
+
+/** Where each check's limit comes from. */
+const CHECK_LIMITS: Record<CheckKind, string> = {
+  'cooling.rackHeatLimit': 'the maximum rack heat of the cooling method (catalog)',
+  'cooling.crahCapacity': 'CRAH unit capacity times the units sized (catalog)',
+  'cooling.cduCapacity': 'CDU unit capacity times the units sized (catalog)',
+  'cooling.cduPositions': 'the CDU positions that serve these rows (plan)',
+  'cooling.manifoldBalance': 'the minimum flow share per rack, 0.9 to warn and 0.8 to fail (engine rule)',
+  'cooling.coolantTemp': 'the rack maximum coolant supply temperature (catalog)',
+  'cooling.heatRejection': 'heat rejection unit capacity times the units sized (catalog)',
+  'cooling.rideThrough': 'the chiller restart time and allowed temperature rise (rules)',
+  'cooling.waterPeakDay': 'the site water allowance (plan)',
+  'cooling.leakExposure': 'the leak risks of the cooling method (catalog)',
+  'power.gridWorstHour': 'the site grid capacity (plan)',
+  'power.busway': 'the busway rating and the oversubscription allowance (catalog and plan)',
+  'power.trainingSwing': 'the site grid capacity (plan)',
+  'power.ups': 'UPS module rating times the modules for the redundancy (catalog and plan)',
+  'power.transformer': 'transformer rating times the units for the redundancy (catalog and plan)',
+  'power.inputCompat': 'the power inputs the rack supports (catalog)',
+  'layout.floorBay': 'the bay floor rating (plan)',
+  'layout.pointLoad': 'the bay point-load limit (plan)',
+  'network.copperReach': 'DAC and AEC reach (rules)',
+  'network.leafPorts': 'leaf ports times the leaves sized (catalog)',
+  'demand.leadTime': 'equipment lead times against the build schedule (catalog)',
+  'workload.targetCompute': 'the workload target (plan)',
 }
 
 const STATUS_WORDS: Record<Status, string> = {
@@ -120,6 +152,10 @@ function rackView(plan: Plan | null, ev: Evaluation, id: string): View | null {
   const cdu = ev.equipment.find((e) => e.key === ev.rows.find((row) => row.rowId === r.rowId)?.cduKey)
   const cduModel = catalogEntry(plan, cdu?.modelId, 'equipment')
   const bay = ev.bays.find((b) => b.bayId === r.bayId)
+  const planBay = plan?.hall.bays.find((b) => b.id === r.bayId)
+  const bayGrid = planBay
+    ? `the ${fmtValue(planBay.w, 'm')} by ${fmtValue(planBay.d, 'm')} bay in the plan`
+    : 'the bay grid in the plan'
   const rackName = rack?.name ?? 'rack type'
   const methodName = method?.name ?? 'cooling method'
   const liquid = r.liquidW > 0
@@ -204,11 +240,7 @@ function rackView(plan: Plan | null, ev: Evaluation, id: string): View | null {
           : r.bayId,
       ],
       origin: {
-        from: [
-          `footprint center of row ${r.rowId.replace(/\D/g, '')}, slot ${r.slot + 1}`,
-          'the 3.6 m bay grid',
-          'rack weights in the bay',
-        ],
+        from: [`footprint center of row ${r.rowId.replace(/\D/g, '')}, slot ${r.slot + 1}`, bayGrid, 'rack weights in the bay'],
       },
     },
   ]
@@ -303,7 +335,13 @@ function equipmentView(plan: Plan | null, ev: Evaluation, id: string): View | nu
           },
         ]
       : []),
-    { label: 'Positions', value: [e.positionIds.length ? e.positionIds.join(', ') : 'none'] },
+    {
+      label: 'Positions',
+      value: [e.positionIds.length ? e.positionIds.join(', ') : 'none'],
+      origin: {
+        setBy: e.autoSized ? 'the engine, from the plan positions that serve these rows' : 'the equipment override in the plan',
+      },
+    },
   ]
 
   return {
@@ -324,7 +362,7 @@ function checkView(ev: Evaluation, id: string): View | null {
       value: [fmtUnit(c.value, c.unit)],
       origin: { from: [c.causes.length ? 'the plan decisions listed under causes' : 'the evaluated plan'] },
     },
-    { label: 'Limit', value: [fmtUnit(c.limit, c.unit)] },
+    { label: 'Limit', value: [fmtUnit(c.limit, c.unit)], origin: { setBy: CHECK_LIMITS[c.kind] } },
     { label: 'Utilization', value: [fmtUnit(c.utilization, 'fraction')], origin: { from: ['value', 'limit'] } },
     ...(c.worstFailure
       ? [
@@ -377,7 +415,11 @@ function rowView(ev: Evaluation, id: string): View | null {
         value: [fmtUnit(r.buswayLoadA, 'A')],
         origin: { from: ['row IT load', 'busway voltage and power factor'] },
       },
-      { label: 'CDU', value: [r.cduKey ?? 'none'] },
+      {
+        label: 'CDU',
+        value: [r.cduKey ?? 'none'],
+        origin: { setBy: 'the engine, from the row liquid heat and the CDU positions that serve the row' },
+      },
     ],
     related: ev.checks.filter((c) => c.subject.kind === 'row' && c.subject.id === r.rowId),
   }
@@ -429,6 +471,7 @@ function SourceLink({ href }: { href?: string }) {
 
 function OriginLine({ origin }: { origin: Origin }) {
   if ('from' in origin) return <p className="dt-origin">Calculated from {origin.from.join(', ')}</p>
+  if ('setBy' in origin) return <p className="dt-origin">Set by {origin.setBy}</p>
   if ('catalog' in origin)
     return (
       <p className="dt-origin">
@@ -453,35 +496,17 @@ function StatusLine({ status }: { status: Status }) {
   )
 }
 
-const CSS = `
-.dt-inspector{position:absolute;top:var(--space-3);right:var(--space-3);bottom:var(--space-3);width:340px;max-width:calc(100% - 2 * var(--space-3));
-  display:flex;flex-direction:column;background:var(--panel);border:var(--rule);border-radius:var(--radius);z-index:5;
-  box-shadow:0 2px 8px rgb(23 32 38 / .08);font-variant-numeric:tabular-nums;animation:dt-drawer var(--dur) var(--ease)}
-@keyframes dt-drawer{from{transform:translateX(12px);opacity:0}}
-.dt-inspector header{display:grid;grid-template-columns:1fr auto;gap:2px var(--space-2);padding:var(--space-3) var(--space-4);border-bottom:var(--rule)}
-.dt-inspector .dt-kind{margin:0;font-size:var(--text-sm);font-stretch:var(--stretch-label);color:var(--graphite)}
-.dt-inspector h2{grid-column:1;margin:0;font-size:var(--text-lg);font-weight:600;line-height:1.25}
-.dt-inspector .dt-sub{grid-column:1;margin:0;color:var(--graphite);font-size:var(--text-sm)}
-.dt-inspector .dt-close{grid-row:1 / span 2;grid-column:2;align-self:start;font:inherit;font-size:var(--text-sm);color:var(--graphite);
-  background:none;border:var(--rule);border-radius:var(--radius);padding:2px var(--space-2);cursor:pointer}
-.dt-inspector .dt-close:hover{color:var(--ink);background:var(--canvas)}
-.dt-inspector .dt-body{overflow:auto;padding:0 var(--space-4) var(--space-4)}
-.dt-inspector .dt-status{margin:var(--space-3) 0 0;font-weight:600}
-.dt-inspector .dt-fact{display:grid;grid-template-columns:96px 1fr;gap:var(--space-2);padding:var(--space-2) 0;border-bottom:var(--rule)}
-.dt-inspector .dt-fact dt{font-size:var(--text-sm);font-stretch:var(--stretch-label);color:var(--graphite);padding-top:1px}
-.dt-inspector .dt-fact dd{margin:0;font-weight:500}
-.dt-inspector .dt-fact dd div+div{margin-top:1px}
-.dt-inspector .dt-origin{margin:2px 0 0;font-size:var(--text-xs);font-weight:400;color:var(--graphite);line-height:1.4}
-.dt-inspector .dt-origin a{color:inherit}
-.dt-inspector h3{margin:var(--space-4) 0 var(--space-1);font-size:var(--text-sm);font-weight:600;font-stretch:var(--stretch-label);color:var(--graphite)}
-.dt-inspector .dt-text{margin:var(--space-2) 0 0;line-height:1.45}
-.dt-inspector ul{list-style:none;margin:0;padding:0}
-.dt-inspector li button{display:flex;gap:var(--space-2);width:100%;text-align:left;font:inherit;color:var(--ink);background:none;border:0;
-  border-bottom:var(--rule);padding:var(--space-1) 0;cursor:pointer}
-.dt-inspector li button:hover .dt-link{text-decoration:underline}
-.dt-inspector .dt-link{text-decoration:underline;text-decoration-color:var(--hairline);text-underline-offset:2px}
-.dt-inspector .dt-meta{margin-left:auto;color:var(--graphite);font-size:var(--text-xs);white-space:nowrap}
-`
+/** Escape belongs to the field being edited (it reverts the draft), not to the drawer. */
+function isTextEntry(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
+}
+
+function closeDrawer(dispatchView: (a: ViewAction) => void, opener: { current: HTMLElement | null }) {
+  dispatchView({ type: 'select', target: null })
+  const back = opener.current
+  opener.current = null
+  if (back?.isConnected) back.focus()
+}
 
 /** Detail drawer for the current selection: inputs, computed values, limits, headroom and the origin of each number. */
 export function Inspector() {
@@ -490,30 +515,38 @@ export function Inspector() {
   const evaluation = useTwinStore((s) => s.evaluation)
   const dispatchView = useTwinStore((s) => s.dispatchView)
 
+  const opener = useRef<HTMLElement | null>(null)
+  const open = selection !== null
+
+  // Remember what had focus when the drawer opened, so closing can hand focus back.
   useEffect(() => {
-    if (!selection) return
+    if (!open) return
+    const active = document.activeElement
+    if (active instanceof HTMLElement && active !== document.body) opener.current ??= active
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') dispatchView({ type: 'select', target: null })
+      if (e.key !== 'Escape' || e.defaultPrevented || isTextEntry(e.target)) return
+      closeDrawer(dispatchView, opener)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [selection, dispatchView])
+  }, [open, dispatchView])
 
   if (!selection || !evaluation) return null
   const view = describe(selection, plan, evaluation)
-  const close = () => dispatchView({ type: 'select', target: null })
+  const close = () => closeDrawer(dispatchView, opener)
   const selectCheck = (id: string) => dispatchView({ type: 'select', target: { kind: 'check', id } })
 
   return (
     <aside className="dt-inspector" aria-label="Inspector">
-      <style href="twin-inspector" precedence="default">
-        {CSS}
-      </style>
       <header>
         <p className="dt-kind">{view?.kind ?? 'Selection'}</p>
         <h2>{view?.title ?? selection.id}</h2>
         {view?.subtitle ? <p className="dt-sub">{view.subtitle}</p> : null}
-        <button type="button" className="dt-close" onClick={close} aria-label="Close inspector">
+        <button type="button" className="btn btn--quiet dt-close" onClick={close} aria-label="Close inspector">
           Close
         </button>
       </header>

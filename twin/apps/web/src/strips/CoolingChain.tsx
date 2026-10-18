@@ -85,12 +85,6 @@ export function CoolingChain({ plan, evaluation, select }: LayerStripProps) {
     .filter(Boolean)
     .join(', ')
 
-  return (
-    <StripFrame title="Cooling chain" summary={racks.length ? summary : undefined} empty={racks.length ? undefined : EMPTY}>
-      {draw}
-    </StripFrame>
-  )
-
   function draw(width: number) {
     const left = 64
     const step = (width - left - 80) / 4
@@ -145,7 +139,7 @@ export function CoolingChain({ plan, evaluation, select }: LayerStripProps) {
           y={LANE_TOP}
           label="Facility loop"
           value={`${fmtUnit(plan.cooling.facilitySupplyC, '°C')} supply`}
-          detail={plan.cooling.bufferTankM3 > 0 ? `${plan.cooling.bufferTankM3} m³ buffer tank` : 'no buffer tank'}
+          detail={plan.cooling.bufferTankM3 > 0 ? `${fmtUnit(plan.cooling.bufferTankM3, 'm³')} buffer tank` : 'no buffer tank'}
           status={statusOf(of('cooling.rideThrough'))}
           onSelect={selectFor(select, of('cooling.rideThrough'))}
         />
@@ -206,4 +200,10 @@ export function CoolingChain({ plan, evaluation, select }: LayerStripProps) {
       </svg>
     )
   }
+
+  return (
+    <StripFrame title="Cooling chain" summary={racks.length ? summary : undefined} empty={racks.length ? undefined : EMPTY}>
+      {draw}
+    </StripFrame>
+  )
 }

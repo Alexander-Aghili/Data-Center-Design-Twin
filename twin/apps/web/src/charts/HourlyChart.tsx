@@ -1,8 +1,9 @@
 import { HOURS_PER_YEAR, type HourlySeries, type HourlySeriesKey } from '@twin/schema'
-import { useState, type KeyboardEvent } from 'react'
+import { useMemo, useState, type KeyboardEvent } from 'react'
 import { useTwinStore } from '../state/store'
 import { fmtNumber, fmtPower, fmtValue } from '../format'
 import { useWidth } from '../strips/parts'
+import './HourlyChart.css'
 
 /*
  * The year at a glance plus the worst-week zoom, one row per series (small multiples, never two y-scales).
@@ -30,7 +31,6 @@ const DAYS = HOURS_PER_YEAR / 24
 const WEEK = 168
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const MONTH_START_DAY = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
-const HEADER_H = 30
 const AXIS_H = 18
 const Y_AXIS_W = 46
 const GAP = 20
@@ -111,32 +111,82 @@ function bandPath(band: Daily, x: (i: number) => number, y: (v: number) => numbe
   return top.length ? `M${top.join('L')}L${bottom.join('L')}Z` : ''
 }
 
-type Hover = { panel: 'year'; at: number } | { panel: 'week'; at: number } | null
+type Hover = { panel: 'year' | 'week'; at: number } | null
 
-const CSS = `
-.dt-hourly{position:relative;display:flex;flex-direction:column;height:100%;min-width:0;font-variant-numeric:tabular-nums}
-.dt-hourly header{display:flex;align-items:baseline;gap:var(--space-3);height:${HEADER_H}px;padding:var(--space-2) var(--space-4) 0}
-.dt-hourly h3{margin:0;font-size:var(--text-sm);font-weight:600;font-stretch:var(--stretch-label);color:var(--graphite)}
-.dt-hourly .dt-key{display:flex;gap:var(--space-3);align-items:center;margin-left:auto;font-size:var(--text-xs);font-stretch:var(--stretch-label);color:var(--graphite)}
-.dt-hourly .dt-key svg{vertical-align:-1px;margin-right:4px}
-.dt-hourly .dt-over{font-size:var(--text-xs);font-weight:600;color:var(--heat)}
-.dt-hourly .dt-over[data-ok]{color:var(--ok)}
-.dt-hourly .btn{height:22px;font-size:var(--text-xs)}
-.dt-hourly .dt-plots{padding:0 var(--space-4) var(--space-1)}
-.dt-hourly .dt-row{display:flex;gap:${GAP}px}
-.dt-hourly .dt-captions{font-size:var(--text-xs);font-stretch:var(--stretch-label);color:var(--graphite);margin-bottom:6px}
-.dt-hourly svg{display:block;overflow:visible}
-.dt-hourly svg[tabindex]:focus-visible{outline:2px solid var(--supply);outline-offset:2px}
-.dt-hourly .dt-grid{stroke:var(--hairline);stroke-width:1}
-.dt-hourly .dt-tick{font-size:10.5px;fill:var(--graphite)}
-.dt-hourly .dt-tip{position:absolute;pointer-events:none;background:var(--panel);border:var(--rule);border-radius:var(--radius);
-  padding:var(--space-1) var(--space-2);font-size:var(--text-xs);color:var(--graphite);white-space:nowrap;box-shadow:0 1px 2px rgb(23 32 38 / .08)}
-.dt-hourly .dt-tip b{color:var(--ink);font-weight:600;margin-right:4px}
-.dt-hourly .dt-table{overflow:auto;padding:0 var(--space-4) var(--space-2)}
-.dt-hourly table{font-size:var(--text-xs)}
-.dt-hourly .data-table td{text-align:right}
-.dt-hourly .dt-empty{margin:auto;padding:var(--space-4);color:var(--graphite);font-size:var(--text-sm)}
-`
+/** Geometry of one small-multiple row, computed once per data and width change, never on hover. */
+interface RowGeometry {
+  key: HourlySeriesKey
+  meta: SeriesMeta
+  y: (v: number) => number
+  ticks: number[]
+  bandD: string
+  peakD: string
+  weekD: string
+  capY: number | null
+  yearSummary: string
+  weekSummary: string
+}
+
+interface Layout {
+  inner: number
+  yearW: number
+  weekW: number
+  plotH: number
+  weekStart: number
+  xYear: (day: number) => number
+  xWeek: (hour: number) => number
+  rowTop: (row: number) => number
+}
+
+const LABEL_H = 16
+const ROW_GAP = 6
+
+function plural(n: number, one: string, many: string): string {
+  return `${n} ${n === 1 ? one : many}`
+}
+
+function layoutFor(width: number, rows: number, worstHour: number): Layout {
+  const inner = Math.max(320, width - 32)
+  const weekW = Math.round(Math.max(160, inner * 0.3))
+  const yearW = inner - weekW - GAP
+  const plotH = rows === 1 ? 82 : 72
+  const weekStart = Math.min(Math.max(0, worstHour - WEEK / 2), HOURS_PER_YEAR - WEEK)
+  return {
+    inner,
+    yearW,
+    weekW,
+    plotH,
+    weekStart,
+    xYear: (day) => Y_AXIS_W + ((day + 0.5) / DAYS) * (yearW - Y_AXIS_W),
+    xWeek: (h) => ((h - weekStart + 0.5) / WEEK) * weekW,
+    rowTop: (row) => row * (LABEL_H + plotH + ROW_GAP) + LABEL_H,
+  }
+}
+
+function rowGeometry(hourly: HourlySeries, key: HourlySeriesKey, layout: Layout, capW: number | null): RowGeometry {
+  const meta = META[key]
+  const values = hourly[key]
+  const band = daily(values)
+  const all = finite(values)
+  const cap = key === 'facilityW' ? capW : null
+  const withCap = cap !== null ? [...all, cap] : all
+  const scale = niceScale(Math.min(...withCap), Math.max(...withCap), 4)
+  const { plotH, weekStart, xYear, xWeek } = layout
+  const y = (v: number) => plotH - ((v - scale.min) / (scale.max - scale.min)) * plotH
+  const week = values.slice(weekStart, weekStart + WEEK)
+  return {
+    key,
+    meta,
+    y,
+    ticks: scale.ticks,
+    bandD: bandPath(band, xYear, y),
+    peakD: linePath(band.hi, xYear, y),
+    weekD: linePath(week, (i) => xWeek(weekStart + i), y),
+    capY: cap === null ? null : y(cap),
+    yearSummary: `${meta.label} over the year, daily range and peak, ${meta.fmt(Math.min(...all))} to ${meta.fmt(Math.max(...all))}`,
+    weekSummary: `${meta.label}, worst week from ${dayLabel(Math.floor(weekStart / 24))}, hourly, peak ${meta.fmt(Math.max(...finite(week)))}`,
+  }
+}
 
 /** Hourly series over the typical year with the worst week beside it, from the current evaluation. */
 export function HourlyChart({ series }: { series: HourlySeriesKey[] }) {
@@ -145,19 +195,19 @@ export function HourlyChart({ series }: { series: HourlySeriesKey[] }) {
   const capW = useTwinStore((s) => s.plan?.site.gridCapacityW ?? null)
   const climate = useTwinStore((s) => (s.plan ? s.plan.catalog[s.plan.site.climateId]?.name : undefined))
   const [ref, width] = useWidth<HTMLDivElement>(720)
-  const [hover, setHover] = useState<Hover>(null)
   const [table, setTable] = useState(false)
 
-  const shown = series.filter((k) => (hourly?.[k].length ?? 0) === HOURS_PER_YEAR)
-  const title = `${series.map((k) => META[k].label).join(', ')} over the year${climate ? `, ${climate}` : ''}`
-  const facility = shown.includes('facilityW') && hourly ? hourly.facilityW : null
-  const overHours = facility && capW !== null ? facility.flatMap((w, h) => (w > capW ? [h] : [])) : []
+  const shownKey = series.filter((k) => (hourly?.[k].length ?? 0) === HOURS_PER_YEAR).join(',')
+  const shown = useMemo(() => (shownKey ? (shownKey.split(',') as HourlySeriesKey[]) : []), [shownKey])
+  const facility = shown.includes('facilityW') && hourly && capW !== null ? hourly.facilityW : null
+  const overHours = useMemo(
+    () => (facility && capW !== null ? facility.flatMap((w, h) => (w > capW ? [h] : [])) : []),
+    [facility, capW],
+  )
+  const title = `${series.length === 1 ? META[series[0]!].label : 'Hourly results'} over the year${climate ? `, ${climate}` : ''}`
 
   return (
     <section className="dt-hourly" aria-label={title} ref={ref}>
-      <style href="twin-hourly" precedence="default">
-        {CSS}
-      </style>
       <header>
         <h3>{title}</h3>
         {shown.length ? (
@@ -176,9 +226,9 @@ export function HourlyChart({ series }: { series: HourlySeriesKey[] }) {
                 daily range
               </span>
             </span>
-            {facility && capW !== null ? (
+            {facility ? (
               <span className="dt-over" data-ok={overHours.length ? undefined : ''}>
-                {overHours.length ? `✕ ${overHours.length} hours over the cap` : '✓ Never over the cap'}
+                {overHours.length ? `✕ ${plural(overHours.length, 'hour', 'hours')} over the cap` : '✓ Never over the cap'}
               </span>
             ) : null}
             <button type="button" className="btn" aria-pressed={table} onClick={() => setTable((t) => !t)}>
@@ -192,16 +242,7 @@ export function HourlyChart({ series }: { series: HourlySeriesKey[] }) {
       ) : table ? (
         <MonthlyTable hourly={hourly} series={shown} capW={facility ? capW : null} />
       ) : (
-        <Plots
-          hourly={hourly}
-          series={shown}
-          width={width}
-          worstHour={worstHour}
-          capW={capW}
-          overHours={overHours}
-          hover={hover}
-          setHover={setHover}
-        />
+        <Plots hourly={hourly} series={shown} width={width} worstHour={worstHour} capW={capW} overHours={overHours} />
       )}
     </section>
   )
@@ -214,77 +255,65 @@ interface PlotsProps {
   worstHour: number
   capW: number | null
   overHours: number[]
-  hover: Hover
-  setHover: (h: Hover) => void
 }
 
-function Plots({ hourly, series, width, worstHour, capW, overHours, hover, setHover }: PlotsProps) {
-  const inner = Math.max(320, width - 32)
-  const weekW = Math.round(Math.max(160, inner * 0.3))
-  const yearW = inner - weekW - GAP
-  const plotH = series.length === 1 ? 82 : 72
-  const weekStart = Math.min(Math.max(0, worstHour - WEEK / 2), HOURS_PER_YEAR - WEEK)
-  const xYear = (day: number) => Y_AXIS_W + ((day + 0.5) / DAYS) * (yearW - Y_AXIS_W)
-  const xWeek = (h: number) => ((h - weekStart + 0.5) / WEEK) * weekW
+/**
+ * The plots hold the hover state themselves. The series geometry and the static SVG are memoized, so a
+ * pointer move only redraws the crosshair overlay and the tooltip.
+ */
+function Plots({ hourly, series, width, worstHour, capW, overHours }: PlotsProps) {
+  const [hover, setHover] = useState<Hover>(null)
+  const layout = useMemo(() => layoutFor(width, series.length, worstHour), [width, series.length, worstHour])
+  const rows = useMemo(() => series.map((key) => rowGeometry(hourly, key, layout, capW)), [hourly, series, layout, capW])
 
-  const step = (e: KeyboardEvent, panel: 'year' | 'week', max: number, start: number) => {
-    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
-    e.preventDefault()
-    const current = hover?.panel === panel ? hover.at : start
-    const next = Math.min(max, Math.max(0, current + (e.key === 'ArrowRight' ? 1 : -1)))
-    setHover({ panel, at: next })
-  }
-  const pointer = (panel: 'year' | 'week', clientX: number, el: SVGSVGElement) => {
-    const px = clientX - el.getBoundingClientRect().left
-    if (panel === 'year') {
-      const day = Math.floor(((px - Y_AXIS_W) / (yearW - Y_AXIS_W)) * DAYS)
-      setHover(day >= 0 && day < DAYS ? { panel, at: day } : null)
-    } else {
-      const h = Math.floor((px / weekW) * WEEK)
-      setHover(h >= 0 && h < WEEK ? { panel, at: h } : null)
+  const plots = useMemo(() => {
+    const { yearW, weekW, plotH, weekStart, xYear, xWeek } = layout
+    const atPointer = (panel: 'year' | 'week', clientX: number, el: SVGSVGElement) => {
+      const px = clientX - el.getBoundingClientRect().left
+      const at = panel === 'year' ? Math.floor(((px - Y_AXIS_W) / (yearW - Y_AXIS_W)) * DAYS) : Math.floor((px / weekW) * WEEK)
+      setHover(at >= 0 && at < (panel === 'year' ? DAYS : WEEK) ? { panel, at } : null)
     }
-  }
+    const onKey = (e: KeyboardEvent, panel: 'year' | 'week') => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+      e.preventDefault()
+      const max = panel === 'year' ? DAYS - 1 : WEEK - 1
+      const start = panel === 'year' ? Math.floor(worstHour / 24) : worstHour - weekStart
+      setHover((h) => {
+        const current = h?.panel === panel ? h.at : start
+        return { panel, at: Math.min(max, Math.max(0, current + (e.key === 'ArrowRight' ? 1 : -1))) }
+      })
+    }
+    const overInWeek = overHours.filter((hr) => hr >= weekStart && hr < weekStart + WEEK)
+    const firstDay = Math.floor(weekStart / 24)
 
-  const hoverX = hover ? (hover.panel === 'year' ? xYear(hover.at) : yearW + GAP + xWeek(weekStart + hover.at)) : 0
-
-  return (
-    <div className="dt-plots">
-      <div className="dt-row dt-captions" aria-hidden="true">
-        <span style={{ width: yearW, paddingLeft: Y_AXIS_W }}>Each day of the year</span>
-        <span>Worst week, hour by hour</span>
-      </div>
-      {series.map((key, row) => {
-        const meta = META[key]
-        const values = hourly[key]
-        const band = daily(values)
-        const all = finite(values)
-        const withCap = key === 'facilityW' && capW !== null ? [...all, capW] : all
-        const scale = niceScale(Math.min(...withCap), Math.max(...withCap), 4)
-        const y = (v: number) => plotH - ((v - scale.min) / (scale.max - scale.min)) * plotH
-        const week = values.slice(weekStart, weekStart + WEEK)
-        const last = row === series.length - 1
-        const showCap = key === 'facilityW' && capW !== null
-        const yearSummary = `${meta.label} over the year, daily range and peak, ${meta.fmt(Math.min(...all))} to ${meta.fmt(Math.max(...all))}`
-        const weekSummary = `${meta.label}, worst week from ${dayLabel(Math.floor(weekStart / 24))}, hourly, peak ${meta.fmt(Math.max(...finite(week)))}`
-        const h = plotH + (last ? AXIS_H : 6)
-        return (
-          <div className="dt-row" key={key}>
+    return rows.map((r, row) => {
+      const last = row === rows.length - 1
+      const h = plotH + (last ? AXIS_H : ROW_GAP)
+      return (
+        <div key={r.key}>
+          <div className="dt-rowlabel">
+            <span data-series-label="" style={{ width: yearW, paddingLeft: Y_AXIS_W }}>
+              {r.meta.label}
+            </span>
+            {row === 0 ? <span aria-hidden="true">Worst week, hour by hour</span> : null}
+          </div>
+          <div className="dt-row">
             <svg
               width={yearW}
               height={h}
               role="img"
-              aria-label={yearSummary}
+              aria-label={r.yearSummary}
               tabIndex={0}
-              onPointerMove={(e) => pointer('year', e.clientX, e.currentTarget)}
+              onPointerMove={(e) => atPointer('year', e.clientX, e.currentTarget)}
               onPointerLeave={() => setHover(null)}
-              onKeyDown={(e) => step(e, 'year', DAYS - 1, Math.floor(worstHour / 24))}
+              onKeyDown={(e) => onKey(e, 'year')}
               onBlur={() => setHover(null)}
             >
-              {scale.ticks.map((t) => (
+              {r.ticks.map((t) => (
                 <g key={t}>
-                  <line className="dt-grid" x1={Y_AXIS_W} x2={yearW} y1={y(t)} y2={y(t)} />
-                  <text className="dt-tick" x={Y_AXIS_W - 6} y={y(t) + 3.5} textAnchor="end">
-                    {meta.fmt(t)}
+                  <line className="dt-grid" x1={Y_AXIS_W} x2={yearW} y1={r.y(t)} y2={r.y(t)} />
+                  <text className="dt-tick" x={Y_AXIS_W - 6} y={r.y(t) + 3.5} textAnchor="end">
+                    {r.meta.fmt(t)}
                   </text>
                 </g>
               ))}
@@ -296,11 +325,12 @@ function Plots({ hourly, series, width, worstHour, capW, overHours, hover, setHo
                 fill="var(--ink)"
                 fillOpacity={0.05}
               />
-              <path d={bandPath(band, xYear, y)} fill="var(--ink)" fillOpacity={0.1} />
-              <path d={linePath(band.hi, xYear, y)} fill="none" stroke="var(--ink)" strokeWidth={1.5} strokeLinejoin="round" />
-              {showCap ? <CapLine x1={Y_AXIS_W} x2={yearW} y={y(capW)} label={`Grid cap ${fmtPower(capW)}`} /> : null}
-              {showCap
-                ? overHours.map((hr) => (
+              <path d={r.bandD} fill="var(--ink)" fillOpacity={0.1} />
+              <path d={r.peakD} fill="none" stroke="var(--ink)" strokeWidth={1.5} strokeLinejoin="round" />
+              {r.capY !== null && capW !== null ? (
+                <>
+                  <CapLine x1={Y_AXIS_W} x2={yearW} y={r.capY} label={`Grid cap ${fmtPower(capW)}`} />
+                  {overHours.map((hr) => (
                     <line
                       key={hr}
                       data-over-cap=""
@@ -312,10 +342,8 @@ function Plots({ hourly, series, width, worstHour, capW, overHours, hover, setHo
                       stroke="var(--heat)"
                       strokeWidth={1.5}
                     />
-                  ))
-                : null}
-              {hover?.panel === 'year' ? (
-                <line className="dt-grid" x1={xYear(hover.at)} x2={xYear(hover.at)} y1={0} y2={plotH} stroke="var(--graphite)" />
+                  ))}
+                </>
               ) : null}
               {last
                 ? MONTH_START_DAY.map((d, m) => (
@@ -329,65 +357,36 @@ function Plots({ hourly, series, width, worstHour, capW, overHours, hover, setHo
               width={weekW}
               height={h}
               role="img"
-              aria-label={weekSummary}
+              aria-label={r.weekSummary}
               tabIndex={0}
-              onPointerMove={(e) => pointer('week', e.clientX, e.currentTarget)}
+              onPointerMove={(e) => atPointer('week', e.clientX, e.currentTarget)}
               onPointerLeave={() => setHover(null)}
-              onKeyDown={(e) => step(e, 'week', WEEK - 1, worstHour - weekStart)}
+              onKeyDown={(e) => onKey(e, 'week')}
               onBlur={() => setHover(null)}
             >
-              {scale.ticks.map((t) => (
-                <line key={t} className="dt-grid" x1={0} x2={weekW} y1={y(t)} y2={y(t)} />
+              {r.ticks.map((t) => (
+                <line key={t} className="dt-grid" x1={0} x2={weekW} y1={r.y(t)} y2={r.y(t)} />
               ))}
-              <path
-                d={linePath(week, (i) => xWeek(weekStart + i), y)}
-                fill="none"
-                stroke="var(--ink)"
-                strokeWidth={2}
-                strokeLinejoin="round"
-                strokeLinecap="round"
-              />
-              {showCap ? <CapLine x1={0} x2={weekW} y={y(capW)} /> : null}
-              {showCap
-                ? overHours
-                    .filter((hr) => hr >= weekStart && hr < weekStart + WEEK)
-                    .map((hr) => (
-                      <line
-                        key={hr}
-                        x1={xWeek(hr)}
-                        x2={xWeek(hr)}
-                        y1={plotH - 7}
-                        y2={plotH}
-                        stroke="var(--heat)"
-                        strokeWidth={1.5}
-                      />
-                    ))
-                : null}
-              {hover?.panel === 'week' ? (
+              <path d={r.weekD} fill="none" stroke="var(--ink)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+              {r.capY !== null ? (
                 <>
-                  <line
-                    className="dt-grid"
-                    x1={xWeek(weekStart + hover.at)}
-                    x2={xWeek(weekStart + hover.at)}
-                    y1={0}
-                    y2={plotH}
-                    stroke="var(--graphite)"
-                  />
-                  {values[weekStart + hover.at] !== null ? (
-                    <circle
-                      cx={xWeek(weekStart + hover.at)}
-                      cy={y(values[weekStart + hover.at]!)}
-                      r={4}
-                      fill="var(--ink)"
-                      stroke="var(--canvas)"
-                      strokeWidth={2}
+                  <CapLine x1={0} x2={weekW} y={r.capY} />
+                  {overInWeek.map((hr) => (
+                    <line
+                      key={hr}
+                      x1={xWeek(hr)}
+                      x2={xWeek(hr)}
+                      y1={plotH - 7}
+                      y2={plotH}
+                      stroke="var(--heat)"
+                      strokeWidth={1.5}
                     />
-                  ) : null}
+                  ))}
                 </>
               ) : null}
               {last
                 ? Array.from({ length: 7 }, (_, d) => {
-                    const day = Math.floor(weekStart / 24) + d + 1
+                    const day = firstDay + d + 1
                     return day * 24 < weekStart + WEEK ? (
                       <text key={d} className="dt-tick" x={xWeek(day * 24)} y={plotH + 13} textAnchor="middle">
                         {d === 0 ? dayLabel(day) : day - MONTH_START_DAY[monthOfDay(day)]! + 1}
@@ -397,10 +396,76 @@ function Plots({ hourly, series, width, worstHour, capW, overHours, hover, setHo
                 : null}
             </svg>
           </div>
-        )
-      })}
-      {hover ? <Tooltip hourly={hourly} series={series} hover={hover} weekStart={weekStart} x={hoverX} width={inner} /> : null}
+        </div>
+      )
+    })
+  }, [rows, layout, overHours, capW, worstHour])
+
+  return (
+    <div className="dt-plots">
+      <div className="dt-stack">
+        {plots}
+        {hover ? <Crosshair hourly={hourly} rows={rows} layout={layout} hover={hover} /> : null}
+      </div>
     </div>
+  )
+}
+
+/** The only part that changes on hover: a hairline at the hovered day or hour, a dot in the week, the readout. */
+function Crosshair({
+  hourly,
+  rows,
+  layout,
+  hover,
+}: {
+  hourly: HourlySeries
+  rows: RowGeometry[]
+  layout: Layout
+  hover: NonNullable<Hover>
+}) {
+  const { yearW, plotH, weekStart, xYear, xWeek, rowTop, inner } = layout
+  const hour = hover.panel === 'week' ? weekStart + hover.at : null
+  const x = hour === null ? xYear(hover.at) : yearW + GAP + xWeek(hour)
+  const height = rowTop(rows.length - 1) + plotH
+  const tipW = 200
+  const tipLeft = x + 16 + tipW > inner ? x - 16 - tipW : x + 16
+  return (
+    <>
+      <svg className="dt-overlay" width={inner} height={height} aria-hidden="true" data-crosshair="">
+        {rows.map((r, i) => {
+          const v = hour === null ? null : hourly[r.key][hour]
+          return (
+            <g key={r.key} transform={`translate(0 ${rowTop(i)})`}>
+              <line x1={x} x2={x} y1={0} y2={plotH} stroke="var(--graphite)" strokeWidth={1} />
+              {v !== null && v !== undefined ? (
+                <circle cx={x} cy={r.y(v)} r={4} fill="var(--ink)" stroke="var(--canvas)" strokeWidth={2} />
+              ) : null}
+            </g>
+          )
+        })}
+      </svg>
+      <div className="dt-tip" aria-hidden="true" style={{ left: tipLeft, top: LABEL_H, width: tipW }}>
+        <div>{hour === null ? `${dayLabel(hover.at)}, daily range` : hourLabel(hour)}</div>
+        {rows.map(({ key, meta }) => {
+          if (hour !== null) {
+            const v = hourly[key][hour]
+            return (
+              <div key={key}>
+                <b>{v === null || v === undefined ? '—' : meta.fmt(v)}</b>
+                {meta.label}
+              </div>
+            )
+          }
+          const day = finite(hourly[key].slice(hover.at * 24, hover.at * 24 + 24))
+          return (
+            <div key={key}>
+              <b>{day.length ? `${meta.fmt(Math.min(...day))} to ${meta.fmt(Math.max(...day))}` : '—'}</b>
+              {meta.label}
+            </div>
+          )
+        })}
+      </div>
+    </>
   )
 }
 
@@ -414,43 +479,6 @@ function CapLine({ x1, x2, y, label }: { x1: number; x2: number; y: number; labe
         </text>
       ) : null}
     </g>
-  )
-}
-
-function Tooltip(props: {
-  hourly: HourlySeries
-  series: HourlySeriesKey[]
-  hover: NonNullable<Hover>
-  weekStart: number
-  x: number
-  width: number
-}) {
-  const { hourly, series, hover, weekStart } = props
-  const hour = hover.panel === 'week' ? weekStart + hover.at : null
-  const left = props.x + 16 + 200 > props.width ? props.x - 16 - 200 : props.x + 16
-  return (
-    <div className="dt-tip" role="status" style={{ left: left + 16, top: HEADER_H + 20, width: 200 }}>
-      <div>{hour === null ? `${dayLabel(hover.at)}, daily range` : hourLabel(hour)}</div>
-      {series.map((key) => {
-        const meta = META[key]
-        if (hour !== null) {
-          const v = hourly[key][hour]
-          return (
-            <div key={key}>
-              <b>{v === null || v === undefined ? '—' : meta.fmt(v)}</b>
-              {meta.label}
-            </div>
-          )
-        }
-        const day = finite(hourly[key].slice(hover.at * 24, hover.at * 24 + 24))
-        return (
-          <div key={key}>
-            <b>{day.length ? `${meta.fmt(Math.min(...day))} to ${meta.fmt(Math.max(...day))}` : '—'}</b>
-            {meta.label}
-          </div>
-        )
-      })}
-    </div>
   )
 }
 

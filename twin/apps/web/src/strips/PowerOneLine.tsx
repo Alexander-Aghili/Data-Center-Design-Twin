@@ -1,6 +1,6 @@
 import type { Check } from '@twin/schema'
 import { fmtPower } from '../format'
-import { Node, Pipe, selectFor, sizedSummary, statusOf, StripFrame, type LayerStripProps } from './parts'
+import { fmtUnit, Node, Pipe, selectFor, sizedSummary, statusOf, StripFrame, type LayerStripProps } from './parts'
 
 const DISTRIBUTION: Record<string, string> = { ac54: 'AC to 54 V rack busbars', dc800: '800 V DC' }
 const MAIN_Y = 30
@@ -119,7 +119,7 @@ export function PowerOneLine({ plan, evaluation, select }: LayerStripProps) {
             y={LOAD_Y}
             label={d.row.rowId}
             value={fmtPower(d.loadW)}
-            detail={`${Math.round(d.row.buswayLoadA).toLocaleString('en-US')} A`}
+            detail={fmtUnit(d.row.buswayLoadA, 'A')}
             symbol={<LoadSymbol x={dropX(i)} y={LOAD_Y} />}
             status={statusOf(d.checks)}
             onSelect={selectFor(select, d.checks, d.busway)}

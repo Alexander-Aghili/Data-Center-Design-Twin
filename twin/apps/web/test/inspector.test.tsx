@@ -76,6 +76,67 @@ describe('Inspector', () => {
     expect(useTwinStore.getState().selection).toEqual({ kind: 'check', id: 'cooling.cduPositions:g2' })
   })
 
+  it('every number in every view shows its origin, including limits, positions and the row CDU', () => {
+    const targets: [string, string][] = [
+      ['rack', 'R3-07'],
+      ['rack', 'R1-00'],
+      ['equipment', 'crah:W1'],
+      ['equipment', 'ups'],
+      ['row', 'R3'],
+      ['bay', evaluation.bays[0]!.bayId],
+      ['metric', 'cooling.pueAnnual'],
+      ...evaluation.checks.map((c): [string, string] => ['check', c.id]),
+    ]
+    for (const [kind, id] of targets) {
+      cleanup()
+      select(kind, id)
+      const facts = within(screen.getByRole('complementary', { name: 'Inspector' })).getAllByRole('group')
+      expect(facts.length).toBeGreaterThan(0)
+      for (const fact of facts) {
+        expect(
+          within(fact).queryByText(/^(Calculated from|Basis|Set by|Catalog entry)/),
+          `${kind} ${id}: ${fact.getAttribute('aria-label')}`,
+        ).not.toBeNull()
+      }
+    }
+  })
+
+  it('Escape typed in a text field elsewhere does not close the drawer', () => {
+    useTwinStore.setState({ plan, evaluation, selection: { kind: 'rack', id: 'R3-07' } })
+    render(
+      <>
+        <input aria-label="Supply temperature" />
+        <Inspector />
+      </>,
+    )
+    const field = screen.getByRole('textbox', { name: 'Supply temperature' })
+    field.focus()
+    fireEvent.keyDown(field, { key: 'Escape' })
+    expect(useTwinStore.getState().selection).toEqual({ kind: 'rack', id: 'R3-07' })
+    fireEvent.keyDown(document.body, { key: 'Escape' })
+    expect(useTwinStore.getState().selection).toBeNull()
+  })
+
+  it('closing returns focus to the control that opened the drawer', () => {
+    useTwinStore.setState({ plan, evaluation, selection: null })
+    render(
+      <>
+        <button type="button" onClick={() => useTwinStore.setState({ selection: { kind: 'rack', id: 'R3-07' } })}>
+          Open R3-07
+        </button>
+        <Inspector />
+      </>,
+    )
+    const opener = screen.getByRole('button', { name: 'Open R3-07' })
+    opener.focus()
+    fireEvent.click(opener)
+    const close = screen.getByRole('button', { name: 'Close inspector' })
+    close.focus()
+    fireEvent.click(close)
+    expect(useTwinStore.getState().selection).toBeNull()
+    expect(document.activeElement).toBe(opener)
+  })
+
   it('closes on Escape and renders nothing without a selection', () => {
     select('rack', 'R3-07')
     fireEvent.keyDown(window, { key: 'Escape' })
