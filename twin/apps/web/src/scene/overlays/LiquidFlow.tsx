@@ -1,5 +1,5 @@
 import { useFrame } from '@react-three/fiber'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   BufferAttribute,
   CatmullRomCurve3,
@@ -200,7 +200,13 @@ export const particleRadius = (c: Circuit) => PARTICLE_RADIUS[c.tier]
 export function LiquidFlow({ visible }: { visible: boolean }) {
   const plan = useTwinStore((s) => s.plan)
   const evaluation = useTwinStore((s) => s.evaluation)
-  const network = useMemo(() => (plan && evaluation ? liquidNetwork(plan, evaluation) : null), [plan, evaluation])
+  // While hidden, edits do not rebuild the network; it catches up when the overlay shows again.
+  const [shown, setShown] = useState({ plan, evaluation })
+  if (visible && (shown.plan !== plan || shown.evaluation !== evaluation)) setShown({ plan, evaluation })
+  const network = useMemo(
+    () => (shown.plan && shown.evaluation ? liquidNetwork(shown.plan, shown.evaluation) : null),
+    [shown],
+  )
   if (!network) return null
   return (
     <group name="liquid-flow" visible={visible}>
