@@ -94,7 +94,7 @@ export function rejectHeat(ctx: EvalContext, racks: RackResult[], equipment: Siz
   const metrics = [
     metric('cooling.plantLoadW', 'Heat to reject', loadW, 'W', ['rackGroups', 'placements']),
     metric('cooling.hallPumpFanW', 'Hall pumps and fans', hallW, 'W', ['rackGroups', 'cooling.flowBalancing']),
-    metric('cooling.coolingPowerPeakW', 'Cooling power at the worst hour', known ? Math.max(0, ...coolingW) : null, 'W', plantInputs),
+    metric('cooling.coolingPowerPeakW', 'Cooling power at the worst hour', known ? coolingW.reduce((a, b) => Math.max(a, b), 0) : null, 'W', plantInputs),
     metric('cooling.coolingEnergyWh', 'Cooling energy per year', known ? sum(coolingW) : null, 'Wh', plantInputs),
     metric('cooling.trimHours', 'Hours needing trim cooling', known ? trimHours : null, 'h', plantInputs),
     metric('cooling.freeCoolingHours', 'Hours without compressors', known ? coolingW.length - compressorHours : null, 'h', plantInputs),
@@ -105,8 +105,8 @@ export function rejectHeat(ctx: EvalContext, racks: RackResult[], equipment: Siz
   return {
     hourly: { outdoorC: [...climate.dryBulbC], wetBulbC: [...climate.wetBulbC], coolingW, trimW, waterM3 },
     checks: [
-      capacityCheck(ctx, equipment, loadW, plant ? { plant, trimHours } : (resolved as Unresolved)),
-      waterCheck(ctx, known, peakDayM3, peakDay),
+      capacityCheck(ctx, equipment, loadW, 'missing' in resolved ? resolved : { plant: resolved, trimHours }),
+      waterCheck(ctx, plant, peakDayM3, peakDay),
     ],
     metrics,
   }
@@ -288,7 +288,8 @@ function capacityCheck(
   return { ...base, limit, utilization, status, explanation: sentences.join(' '), ...(advice ? { advice } : {}) }
 }
 
-function waterCheck(ctx: EvalContext, known: boolean, peakDayM3: number, peakDay: number): Check {
+function waterCheck(ctx: EvalContext, plant: Plant | null, peakDayM3: number, peakDay: number): Check {
+  const known = plant !== null
   const allowance = ctx.plan.site.waterAllowanceM3PerDay
   const utilization = known && allowance > 0 ? peakDayM3 / allowance : null
   const warnAt = num(ctx.rules.warnThreshold) ?? 1
@@ -299,11 +300,10 @@ function waterCheck(ctx: EvalContext, known: boolean, peakDayM3: number, peakDay
 
   // Climate series are a typical non-leap year starting 1 January.
   const day = new Date(Date.UTC(2023, 0, 1 + peakDay)).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' })
-  const plantName = ctx.catalog.get(ctx.plan.cooling.heatRejectionId, 'heatRejection')?.name ?? 'plant'
   const explanation = !known
     ? 'Water use is unknown until the heat rejection plant can be modeled.'
     : peakDayM3 === 0
-      ? `The ${plantName.toLowerCase()} uses no water.`
+      ? `The ${plant.entry.name.toLowerCase()} uses no water.`
       : `The peak day (${day}) uses ${round(peakDayM3)}${NBSP}m³ against a site allowance of ${round(allowance)}${NBSP}m³/day.`
   return {
     id: 'cooling.waterPeakDay:site',
