@@ -550,24 +550,20 @@ function leafFills(ctx: EvalContext, racks: RackResult[]): Fill[] {
   })
 }
 
+/**
+ * One buffer tank holding `cooling.bufferTankM3`, at the plant position, so ride-through and cost can find it.
+ * A `bufferTank` override can set the model, the count or the positions.
+ */
 function bufferTank(ctx: EvalContext, racks: RackResult[]): SizedEquipment[] {
   if (ctx.plan.cooling.bufferTankM3 <= 0) return []
-  const model = ctx.catalog.all().find((e) => e.kind === 'equipment' && e.category === 'bufferTank')
+  const candidates = ctx.catalog
+    .all()
+    .filter((e): e is EquipmentEntry => e.kind === 'equipment' && e.category === 'bufferTank')
+    .map((entry): Candidate => ({ id: entry.id, unit: 1, unitW: null, name: entry.name, entry }))
   const plant = ctx.plan.hall.positions.find((p) => p.kind === 'plant')
-  return [
-    {
-      key: 'bufferTank',
-      category: 'bufferTank',
-      modelId: model?.id ?? null,
-      count: 1,
-      required: 1,
-      positionIds: plant ? [plant.id] : [],
-      autoSized: false,
-      loadW: sumBy(racks, (r) => r.liquidW),
-      capacityW: null,
-      objectIds: ['eq:bufferTank:0'],
-    },
-  ]
+  const loadW = sumBy(racks, (r) => r.liquidW)
+  const f = fill(ctx, { key: 'bufferTank', category: 'bufferTank', loadW, candidates, units: () => 1, positions: plant ? [plant] : null, redundancy: 'N' }, freeMap(ctx.plan))
+  return [f.item]
 }
 
 /**

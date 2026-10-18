@@ -4,6 +4,7 @@ import { airSide } from '../src/cooling/air'
 import { liquidSide } from '../src/cooling/liquid'
 import { evaluate } from '../src/evaluate'
 import { networkFabric } from '../src/network'
+import { makeCatalogIndex } from '../src/context'
 import { sizeEquipment } from '../src/sizing'
 import { airRack, builtinEntries, gb300, makeCtx, makePlan, makeRacks, rules } from './coolingFixture'
 import { builtins, demoPlan } from './integrationFixture'
@@ -189,6 +190,19 @@ describe('plant, electrical and network sizing', () => {
     )
     expect(item(result, 'cdu:R6')!.modelId).toBe('cdu.2000kw')
     expect(item(result, 'crah:Z1')!.modelId).toBe('crah.400kw')
+  })
+
+  it('a bufferTank override sets the tank model, count and position; without one the tank is auto-sized', () => {
+    const cooling = { ...makePlan([]).cooling, bufferTankM3: 20 }
+    const auto = run(makePlan([dlc], { cooling }))
+    expect(item(auto, 'bufferTank')).toMatchObject({ modelId: 'bufferTank.standard', count: 1, positionIds: ['plant-1'], autoSized: true })
+
+    const custom = { ...builtinEntries.find((e) => e.id === 'bufferTank.standard')!, id: 'bufferTank.custom', name: 'Custom tank', custom: true }
+    const plan = makePlan([dlc], { cooling, overrides: [{ key: 'bufferTank', modelId: 'bufferTank.custom', count: 2 }] })
+    const ctx = { ...makeCtx(plan), catalog: makeCatalogIndex([...builtinEntries, custom]) }
+    const racks = makeRacks(ctx)
+    const tank = sizeEquipment(ctx, racks, airSide(ctx, racks), liquidSide(ctx, racks)).equipment.find((e) => e.key === 'bufferTank')
+    expect(tank).toMatchObject({ modelId: 'bufferTank.custom', count: 2, autoSized: false, objectIds: ['eq:bufferTank:0', 'eq:bufferTank:1'] })
   })
 
   it('an empty hall sizes nothing and raises no checks', () => {
