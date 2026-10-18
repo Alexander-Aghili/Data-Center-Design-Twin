@@ -179,7 +179,7 @@ describe('HTTP routes', () => {
     expect(Object.keys(body.rules).length).toBeGreaterThan(0)
   })
 
-  it('GET /api/brief/file/:name serves a generated brief and validates the name', async () => {
+  it('GET /api/brief/file/:name serves a generated brief inline as plain text and validates the name', async () => {
     const dataDir = tempDataDir()
     mkdirSync(join(dataDir, 'briefs'))
     writeFileSync(join(dataDir, 'briefs', '2026-10-18T15-00-00-openfoam.md'), '# Brief\n')
@@ -188,7 +188,8 @@ describe('HTTP routes', () => {
 
     const ok = await app.inject({ method: 'GET', url: '/api/brief/file/2026-10-18T15-00-00-openfoam.md' })
     expect(ok.statusCode).toBe(200)
-    expect(ok.headers['content-type']).toBe('text/markdown; charset=utf-8')
+    expect(ok.headers['content-type']).toBe('text/plain; charset=utf-8')
+    expect(ok.headers['content-disposition']).toBe('inline; filename="2026-10-18T15-00-00-openfoam.md"')
     expect(ok.body).toBe('# Brief\n')
 
     expect((await app.inject({ method: 'GET', url: '/api/brief/file/missing.md' })).statusCode).toBe(404)

@@ -12,6 +12,8 @@ import type { AgentRuntime, PlanStore } from './contracts'
 /** Names of briefs the agent writes into `dataDir/briefs/`. No slashes, so no path traversal. */
 const BRIEF_FILE_NAME = /^[\w.-]+\.md$/
 const MARKDOWN = 'text/markdown; charset=utf-8'
+// Briefs open in a browser tab: browsers download text/markdown, but show text/plain inline.
+const PLAIN_TEXT = 'text/plain; charset=utf-8'
 
 const CommandBody = z.object({ command: CommandSchema })
 const CommandsBody = z.object({ commands: z.array(CommandSchema).min(1) })
@@ -103,7 +105,7 @@ export function registerRoutes(app: FastifyInstance, deps: { store: PlanStore; a
     }
     try {
       const text = await readFile(file, 'utf8')
-      return reply.type(MARKDOWN).header('content-disposition', `attachment; filename="${name}"`).send(text)
+      return reply.type(PLAIN_TEXT).header('content-disposition', `inline; filename="${name}"`).send(text)
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
       return reply.code(404).send({ ok: false, error: `No brief named ${name}` })
