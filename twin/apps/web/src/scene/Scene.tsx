@@ -35,16 +35,15 @@ function World() {
   // Overhead busways hide under the flow and floor load overlays and on the workload layer: several ducts per row
   // would bar the view down into the aisles, bays and racks those views color.
   const hideBusways = BUSWAY_FREE_OVERLAYS.has(overlay) || layer === 'workload'
-  const hallUnits = useMemo(() => (hideBusways ? units.filter((u) => u.kind !== 'busway') : units), [units, hideBusways])
 
   if (!plan) return null
   return (
     <>
       <Ground plan={plan} runs={runs} />
       <Site plan={plan} units={units} />
-      <Hall plan={plan} units={hallUnits} openRack={openRack} />
+      <Hall plan={plan} units={units} openRack={openRack} hideBusways={hideBusways} />
       {/* The liquid overlay draws its own colored pipes; the neutral ones would double them. */}
-      {overlay === 'liquid' ? null : <Pipes runs={runs} />}
+      <Pipes runs={runs} visible={overlay !== 'liquid'} />
     </>
   )
 }

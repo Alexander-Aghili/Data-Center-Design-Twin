@@ -101,6 +101,9 @@ export function createPicker({
     raycaster.setFromCamera(pointer.set(ndc.x, ndc.y), camera)
     for (const hit of raycaster.intersectObjects(roots, true)) {
       if (hit.object.userData.occludesPicks === true && shown(hit.object)) return null
+      // Inside a hidden group (busways under a flow overlay, the neutral pipes): not there for the user. The mesh
+      // itself may be invisible, as the instanced racks' pick proxies are.
+      if (hit.object.parent && !shown(hit.object.parent)) continue
       const id = idOf(hit.object, hit.instanceId)
       const selection = id === null ? null : selectionForObjectId(id)
       if (id !== null && selection) return { objectId: outlineId(id, registered), selection }

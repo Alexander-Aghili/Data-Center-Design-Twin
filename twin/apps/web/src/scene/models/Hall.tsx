@@ -1,5 +1,5 @@
 import { num, type Evaluation, type Plan, type SizedEquipment } from '@twin/schema'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { BoxGeometry, Object3D, type Group, type InstancedMesh } from 'three'
 import { selectOpenness, useRackOpenness } from '../camera/openness'
 import { objectIdForEquipment, objectIdForPlacement, slotWorld } from '../geometry'
@@ -230,7 +230,11 @@ interface InstancedRacksProps {
   racks: { id: string; x: number; z: number; rotY: number }[]
 }
 
-function InstancedRacks({ plan, rackTypeId, coolingMethodId, racks }: InstancedRacksProps) {
+/**
+ * Closed racks of one type as instances. The open rack (`hidden`, its scene id; drawn in full elsewhere) keeps its instance at
+ * zero scale, so opening and closing a rack updates one matrix instead of rebuilding the instanced meshes.
+ */
+function InstancedRacks({ plan, rackTypeId, coolingMethodId, racks, hidden }: InstancedRacksProps & { hidden: string | null }) {
   const model = useMemo(() => rackModel(plan, rackTypeId, coolingMethodId), [plan, rackTypeId, coolingMethodId])
   const shell = useRef<InstancedMesh>(null)
   const door = useRef<InstancedMesh>(null)
@@ -239,6 +243,7 @@ function InstancedRacks({ plan, rackTypeId, coolingMethodId, racks }: InstancedR
     racks.forEach((r, i) => {
       dummy.position.set(r.x, 0, r.z)
       dummy.rotation.set(0, r.rotY, 0)
+      dummy.scale.setScalar(r.id === hidden ? 0 : 1)
       dummy.updateMatrix()
       shell.current?.setMatrixAt(i, dummy.matrix)
       door.current?.setMatrixAt(i, dummy.matrix)
@@ -249,7 +254,7 @@ function InstancedRacks({ plan, rackTypeId, coolingMethodId, racks }: InstancedR
       mesh.computeBoundingSphere()
       mesh.computeBoundingBox()
     }
-  }, [racks])
+  }, [racks, hidden])
   const ids = racks.map((r) => r.id)
   return (
     <>
@@ -269,9 +274,11 @@ function InstancedRacks({ plan, rackTypeId, coolingMethodId, racks }: InstancedR
         castShadow
         receiveShadow
       />
-      {racks.map((r) => (
-        <RackProxy key={r.id} id={r.id} x={r.x} z={r.z} rotY={r.rotY} size={model.size} />
-      ))}
+      {racks
+        .filter((r) => r.id !== hidden)
+        .map((r) => (
+          <RackProxy key={r.id} id={r.id} x={r.x} z={r.z} rotY={r.rotY} size={model.size} />
+        ))}
     </>
   )
 }
@@ -295,7 +302,32 @@ interface HallProps {
   units: EquipmentUnit[]
   /** The rack the camera rig opens (`useRackOpenness`); drawn in full with trays and GPUs. */
   openRack: string | null
+  /** Hide the overhead busways (they stay mounted, so toggling them costs no rebuild). */
+  hideBusways?: boolean
 }
+
+/** One unit of hall equipment. Memoized: units keep their identity while unchanged, so view changes skip them. */
+const Equipment = memo(function Equipment({ unit, plan, hidden }: { unit: EquipmentUnit; plan: Plan; hidden: boolean }) {
+  switch (unit.kind) {
+    case 'cdu':
+      return <Cdu unit={unit} />
+    case 'crah':
+      return <Crah unit={unit} />
+    case 'busway':
+      return (
+        <group visible={!hidden}>
+          <Busway unit={unit} plan={plan} />
+        </group>
+      )
+    case 'ups':
+    case 'transformer':
+      return <Cabinet unit={unit} />
+    default:
+      return null
+  }
+})
+
+const MemoLeafRack = memo(LeafRack)
 
 /** The rack stays drawn in full this long after the rig closes it, so the door and trays finish easing shut. */
 const CLOSE_LINGER_MS = 300
@@ -322,7 +354,7 @@ function RigRack({ placementId }: { placementId: string }) {
 }
 
 /** Racks in their slots (instanced when there are many), the one open rack, and the equipment inside the hall. */
-export function Hall({ plan, units, openRack }: HallProps) {
+export function Hall({ plan, units, openRack, hideBusways = false }: HallProps) {
   const instanced = plan.placements.length > INSTANCE_THRESHOLD
   const lingering = useLingering(openRack, CLOSE_LINGER_MS)
   const open = lingering && plan.placements.some((p) => p.id === lingering) ? lingering : null
@@ -331,7 +363,6 @@ export function Hall({ plan, units, openRack }: HallProps) {
     if (!instanced) return []
     const byType = new Map<string, InstancedRacksProps>()
     for (const p of plan.placements) {
-      if (p.id === open) continue
       const group = plan.rackGroups.find((g) => g.id === p.groupId)
       if (!group) continue
       const slotsWide = catalogEntry(plan, group.rackTypeId, 'rack')?.slotsWide ?? 1
@@ -342,7 +373,7 @@ export function Hall({ plan, units, openRack }: HallProps) {
       byType.set(key, batch)
     }
     return [...byType.entries()]
-  }, [plan, instanced, open])
+  }, [plan, instanced])
 
   const leafRacks = useMemo(() => {
     const racks = new Map<string, EquipmentUnit[]>()
@@ -357,29 +388,17 @@ export function Hall({ plan, units, openRack }: HallProps) {
   return (
     <group>
       {instanced
-        ? batches.map(([key, batch]) => <InstancedRacks key={key} {...batch} />)
+        ? batches.map(([key, batch]) => <InstancedRacks key={key} {...batch} hidden={open === null ? null : objectIdForPlacement(open)} />)
         : plan.placements
             .filter((p) => p.id !== open)
             .map((p) => <Rack key={p.id} placementId={p.id} openness={0} interior={false} />)}
       {open ? <RigRack key={`open-${open}`} placementId={open} /> : null}
       {[...leafRacks].map(([id, rackUnits]) => (
-        <LeafRack key={id} id={id} units={rackUnits} plan={plan} />
+        <MemoLeafRack key={id} id={id} units={rackUnits} plan={plan} />
       ))}
-      {units.map((u) => {
-        switch (u.kind) {
-          case 'cdu':
-            return <Cdu key={u.objectId} unit={u} />
-          case 'crah':
-            return <Crah key={u.objectId} unit={u} />
-          case 'busway':
-            return <Busway key={u.objectId} unit={u} plan={plan} />
-          case 'ups':
-          case 'transformer':
-            return <Cabinet key={u.objectId} unit={u} />
-          default:
-            return null
-        }
-      })}
+      {units.map((u) => (
+        <Equipment key={u.objectId} unit={u} plan={plan} hidden={u.kind === 'busway' && hideBusways} />
+      ))}
     </group>
   )
 }

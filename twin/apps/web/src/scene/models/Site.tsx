@@ -1,7 +1,7 @@
 import { Edges, Line, type EdgesRef } from '@react-three/drei'
 import type { Plan } from '@twin/schema'
 import { useFrame } from '@react-three/fiber'
-import { useLayoutEffect, useRef } from 'react'
+import { memo, useLayoutEffect, useRef } from 'react'
 import type { Group, Mesh } from 'three'
 import { useSiteReveal } from '../camera/siteReveal'
 import { GROUND_Y } from '../Ground'
@@ -163,6 +163,9 @@ interface SiteProps {
   units: EquipmentUnit[]
 }
 
+// Units keep their identity while unchanged, so a view change re-renders none of the yard plant.
+const MemoPlant = memo(Plant)
+
 /** Everything outside the hall: building shell, yard plant and buffer tank, utility and water feeds, property line. */
 export function Site({ plan, units }: SiteProps) {
   const { widthM: w, depthM: d } = plan.hall
@@ -180,7 +183,7 @@ export function Site({ plan, units }: SiteProps) {
     <group>
       <Building plan={plan} />
       {plants.map((u) => (
-        <Plant key={u.objectId} unit={u} plan={plan} />
+        <MemoPlant key={u.objectId} unit={u} plan={plan} />
       ))}
       {tanks.map((u) => (
         <BufferTank key={u.objectId} unit={u} plan={plan} units={tanks.length} />

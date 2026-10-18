@@ -1,7 +1,7 @@
 import ReactThreeTestRenderer from '@react-three/test-renderer'
 import { createDefaultPlan } from '@twin/catalog'
 import { RACK, RACK_COOLING, placementId, type Plan } from '@twin/schema'
-import { Box3, InstancedMesh, Vector3, type Object3D } from 'three'
+import { Box3, InstancedMesh, Matrix4, Vector3, type Object3D } from 'three'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import type { Hall as HallComponent } from '../src/scene/models/Hall'
 import type { Rack as RackComponent } from '../src/scene/models/Rack'
@@ -261,12 +261,26 @@ describe('procedural models', () => {
     const plan = nvl72Plan()
     useTwinStore.setState({ plan, evaluation: null })
     renderer = await ReactThreeTestRenderer.create(<Hall plan={plan} units={[]} openRack="R3-04" />)
+    // The instanced row keeps the open rack's instance, shrunk to nothing, so closing it swaps one matrix back.
+    const bodies: InstancedMesh[] = []
+    renderer.scene.instance.traverse((o) => {
+      if (o instanceof InstancedMesh && o.userData.role === 'rackBody') bodies.push(o)
+    })
+    const body = bodies.find((m) => (m.userData.objectIds as string[]).includes('rack:R3-04'))!
+    const scaleOf = () => {
+      const m = new Matrix4()
+      body.getMatrixAt((body.userData.objectIds as string[]).indexOf('rack:R3-04'), m)
+      return new Vector3().setFromMatrixScale(m).x
+    }
+    expect(scaleOf()).toBe(0)
     expect(ids()).toContain('rack:R3-04:chassis')
     await renderer.update(<Hall plan={plan} units={[]} openRack={null} />)
     expect(ids()).toContain('rack:R3-04:chassis')
     await new Promise((r) => setTimeout(r, 400))
     expect(ids()).not.toContain('rack:R3-04:chassis')
     expect(ids()).toContain('rack:R3-04')
+    expect(scaleOf()).toBe(1)
+    expect(bodies[0]!.parent).not.toBeNull()
   })
 
   it('useStable keeps the reference while the content is unchanged', async () => {

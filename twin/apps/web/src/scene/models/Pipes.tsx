@@ -145,10 +145,13 @@ function PipeMesh({ run }: { run: PipeRun }) {
   return <mesh ref={ref} geometry={geometry} material={FINISH.pipe} castShadow receiveShadow />
 }
 
-/** Facility and technical loop piping as neutral painted pipe; the liquid overlay adds flow and color on top. */
-export function Pipes({ runs }: { runs: PipeRun[] }) {
+/**
+ * Facility and technical loop piping as neutral painted pipe. The liquid overlay draws its own colored pipes, so
+ * these hide under it (`visible` false) rather than unmount: rebuilding them costs a frame at the start of a move.
+ */
+export function Pipes({ runs, visible }: { runs: PipeRun[]; visible: boolean }) {
   return (
-    <group>
+    <group visible={visible}>
       {runs.map((r) => (
         <PipeMesh key={r.id} run={r} />
       ))}

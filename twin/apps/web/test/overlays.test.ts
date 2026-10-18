@@ -8,7 +8,7 @@ import {
   type Plan,
   type SizedEquipment,
 } from '@twin/schema'
-import { Box3, BoxGeometry, Mesh, MeshBasicMaterial, PerspectiveCamera, Vector3 } from 'three'
+import { Box3, BoxGeometry, Group, Mesh, MeshBasicMaterial, PerspectiveCamera, Vector3 } from 'three'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import type { Backend } from '../src/state/backend'
 
@@ -337,6 +337,20 @@ describe('picking', () => {
     // Hidden below the site shot, the roof lets the ray through again.
     roof.visible = false
     expect(picker.pick({ x: 0, y: 0 })?.objectId).toBe('rack:R3-07')
+  })
+
+  it('skips objects inside a hidden group, such as busways under a flow overlay', () => {
+    const { picker, objects } = scene()
+    const hiddenGroup = new Group()
+    hiddenGroup.visible = false
+    const busway = new Mesh(new BoxGeometry(2, 0.2, 2), new MeshBasicMaterial())
+    busway.position.set(0, 3, 0)
+    hiddenGroup.add(busway)
+    hiddenGroup.updateMatrixWorld(true)
+    objects.set('eq:busway:R3:0', { kind: 'busway', ref: busway })
+    expect(picker.pick({ x: 0, y: 0 })?.objectId).toBe('rack:R3-07')
+    hiddenGroup.visible = true
+    expect(picker.pick({ x: 0, y: 0 })?.objectId).toBe('eq:busway:R3:0')
   })
 
   it('clicking empty space clears selection', () => {

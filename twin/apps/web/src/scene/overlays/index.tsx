@@ -22,7 +22,7 @@ export function Overlays() {
   const siteClosed = useSiteReveal((s) => s.value >= SITE_LABELS_AT)
   return (
     <>
-      {overlay === 'liquid' ? <LiquidFlow /> : null}
+      <LiquidFlow visible={overlay === 'liquid'} />
       {overlay === 'air' ? <AirFlow /> : null}
       {overlay === 'temperature' ? <Temperature /> : null}
       {overlay === 'air' || overlay === 'temperature' ? <HeatShimmer /> : null}
