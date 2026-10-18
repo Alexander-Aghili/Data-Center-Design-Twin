@@ -43,6 +43,16 @@ interface Turn {
 const MISSING_KEY = 'The agent needs an API key in .env'
 const FRESH_CONVERSATION_OFFER = 'This is a different plan now. Start a new conversation if the earlier discussion no longer applies.'
 
+/** Ids of proposals in a thread that no later status event settled. */
+function openProposalIds(thread: AgentEvent[]): string[] {
+  const open = new Set<string>()
+  for (const e of thread) {
+    if (e.kind === 'proposal') open.add(e.proposal.id)
+    else if (e.kind === 'proposalStatus' && e.status !== 'open') open.delete(e.proposalId)
+  }
+  return [...open]
+}
+
 export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
   const client = deps.client ?? createAnthropicClient()
   // Without a key every request would fail inside the SDK; say so plainly instead of calling the API.
@@ -167,6 +177,11 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
     save(conversation)
   }
 
+  // Proposals live in memory; cards replayed from conversation.json that were still open can no longer be applied.
+  const replayedOpen = openProposalIds(conversation.thread())
+  for (const proposalId of replayedOpen) emit({ kind: 'proposalStatus', proposalId, status: 'stale' })
+  if (replayedOpen.length > 0) save(conversation)
+
   return {
     handleChat(text) {
       emit({ kind: 'userMessage', messageId: randomUUID(), text })
@@ -181,7 +196,8 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
       if (replaced) {
         coalescer.clear()
         pendingObservation = null
-        offerFreshConversation()
+        // Undo and redo step back to a plan this conversation already knows, so the offer is made once.
+        if (change.kind === 'replace' || change.kind === 'command') offerFreshConversation()
         return
       }
       if (change.author === 'user') coalescer.add(change)

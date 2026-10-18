@@ -572,6 +572,15 @@ describe('agent runtime', () => {
       expect(createAnthropicClient({ apiKey: 'test-key' }).maxRetries).toBe(4)
     })
 
+    it('the real client always talks to api.anthropic.com, whatever ANTHROPIC_BASE_URL says', () => {
+      vi.stubEnv('ANTHROPIC_BASE_URL', 'https://gateway.example')
+      try {
+        expect(createAnthropicClient({ apiKey: 'test-key' }).baseURL).toBe('https://api.anthropic.com')
+      } finally {
+        vi.unstubAllEnvs()
+      }
+    })
+
     it('a network error gives a plain message', async () => {
       const { client } = fakeClient([{ error: new Anthropic.APIConnectionError({ message: 'fetch failed' }) }, reply('Back.')])
       const rt = createAgentRuntime({ store: fakeStore(), tools: [], client, dataDir })
@@ -692,6 +701,13 @@ describe('agent runtime', () => {
     const infoText = rec.events.flatMap((x) => (x.kind === 'textDelta' && x.messageId === infos[0]!.messageId ? [x.text] : [])).join('')
     expect(infoText).toMatch(/new conversation/i)
     expect(requests).toHaveLength(2)
+
+    // Undoing or redoing the switch goes back to a plan this conversation knows: no second offer.
+    store.setPlan({ ...createDefaultPlan(), id: 'first-plan' })
+    rt.handleChange({ ...change(e, e, 'New plan'), kind: 'undo' })
+    store.setPlan({ ...createDefaultPlan(), id: 'another-plan' })
+    rt.handleChange({ ...change(e, e, 'New plan'), kind: 'redo' })
+    expect(rec.events.filter((x) => x.kind === 'messageStart' && x.trigger === 'observation')).toHaveLength(2)
   })
 
   it('persists the conversation to dataDir/conversation.json after each turn', async () => {
@@ -709,6 +725,43 @@ describe('agent runtime', () => {
     restarted.handleChat('and now?')
     await rec2.turnsDone(1)
     expect(second.requests[0]!.messages.map((m) => m.role)).toEqual(['user', 'assistant', 'user'])
+  })
+
+  it('open proposal cards from before a restart come back marked stale, since the proposals themselves are gone', async () => {
+    const proposal = (id: string): Proposal => ({
+      id,
+      title: `Proposal ${id}`,
+      rationale: 'Because.',
+      commands: [{ type: 'renamePlan', payload: { name: 'X' } }],
+      respectsNotes: [],
+      violatesNotes: [],
+      diff: testDiff(evaluation([]), evaluation([])),
+      status: 'open',
+      basePlanUpdatedAt: '2026-10-18T10:00:00.000Z',
+    })
+    const propose = tool('propose_change', async (input) => ({
+      ok: true,
+      content: '{}',
+      summary: 'Proposed',
+      events: [{ kind: 'proposal', proposal: proposal((input as { id: string }).id) }],
+    }))
+    const { client } = fakeClient([
+      { content: [toolUse('t1', 'propose_change', { id: 'p1' }), toolUse('t2', 'propose_change', { id: 'p2' })], stop_reason: 'tool_use' },
+      reply('Two options.'),
+    ])
+    const proposals = { apply: vi.fn(), dismiss: vi.fn((id: string) => ({ ...proposal(id), status: 'dismissed' as const })) }
+    const first = createAgentRuntime({ store: fakeStore(), tools: [propose], client, dataDir, proposals })
+    const rec = recorder(first)
+    first.handleChat('options please')
+    await rec.turnsDone(1)
+    first.dismissProposal('p2')
+
+    const restarted = createAgentRuntime({ store: fakeStore(), tools: [propose], client: fakeClient([]).client, dataDir, proposals })
+    const statuses = restarted.threadEvents().filter((e) => e.kind === 'proposalStatus')
+    expect(statuses).toEqual([
+      { kind: 'proposalStatus', proposalId: 'p2', status: 'dismissed' },
+      { kind: 'proposalStatus', proposalId: 'p1', status: 'stale' },
+    ])
   })
 
   it('tool events become proposal and link events; applyProposal and dismissProposal emit statuses', async () => {

@@ -100,13 +100,9 @@ function customRack(gpuId: string): RackEntry {
   }
 }
 
-// Task 3 (GPU and rack data) has not merged yet. The coordinator removes kinds from this set at merge.
-const KINDS_AWAITING_DATA: ReadonlySet<CatalogKind> = new Set<CatalogKind>()
-
 describe('built-in data files', () => {
   for (const kind of CATALOG_KINDS) {
-    const test = KINDS_AWAITING_DATA.has(kind) ? it.skip : it
-    test(`every id in ids.ts has exactly one data file: ${kind}`, async () => {
+    it(`every id in ids.ts has exactly one data file: ${kind}`, async () => {
       const files = await dataFiles()
       for (const id of BUILTIN_IDS[kind]) {
         const matches = files.filter((f) => f.entry.id === id)
