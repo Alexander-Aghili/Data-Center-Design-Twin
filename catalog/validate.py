@@ -178,6 +178,7 @@ if __name__ == "__main__":
         print(p)
     bundle = ROOT / "dist" / "catalog.json"
     if not probs and bundle.exists():
+        sys.path.insert(0, str(ROOT))
         from build import build
         if json.loads(bundle.read_text()).get("hash") != build()["hash"]:
             print("note: catalog/dist/catalog.json is stale; run catalog/build.py")

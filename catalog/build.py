@@ -11,7 +11,8 @@ import json
 import sys
 from pathlib import Path
 
-from validate import ROOT, validate
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from validate import ROOT, validate  # noqa: E402
 
 OUT = ROOT / "dist" / "catalog.json"
 
