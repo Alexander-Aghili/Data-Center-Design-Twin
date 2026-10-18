@@ -1,0 +1,77 @@
+{
+  "kind": "equipment",
+  "id": "vertiv-liebert-cw181",
+  "name": "Vertiv Liebert CW181 chilled-water CRAH",
+  "vendor": "Vertiv",
+  "model": "Liebert CW181 (EC fans, downflow)",
+  "category": "air_handler",
+  "as_of": "2026-10-18",
+  "description": "Perimeter chilled-water computer room air handler, downflow, 3 EC plug fans, 6-row coil. Suited to the residual air load of liquid-cooled AI halls with warm water.",
+  "params": {
+    "capacity_w": {
+      "value": 210000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "vertiv-cw-design",
+      "note": "210 kW total = sensible, high delta-T rating: 85 F DB / 64.4 F WB return air (29.4 C), 50 F in / 64 F out water (10->17.8 C), 108 GPM. At 90 F return air: 246 kW; at classic 75 F / 45 F water: 211 kW total, 179 kW sensible"
+    },
+    "power_w": {
+      "value": 11100,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "vertiv-cw-design",
+      "note": "3 EC fans x 4.9 hp (3.7 kW) maximum motor rating; absorbed power at rated airflow not published"
+    },
+    "airflow_m3_s": {
+      "value": 11.33,
+      "unit": "m3/s",
+      "provenance": "vendor_spec",
+      "source": "vertiv-cw-design",
+      "note": "nominal 24,000 CFM (40,800 m3/h) at 0.2 in w.c. (50 Pa) ESP"
+    },
+    "weight_kg": {
+      "value": 1314,
+      "unit": "kg",
+      "provenance": "vendor_spec",
+      "source": "vertiv-cw-design",
+      "note": "unit weight 2900 lb; 3200 lb (1450 kg) shipping"
+    },
+    "footprint_w_mm": {
+      "value": 3454,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "vertiv-cw-design"
+    },
+    "footprint_d_mm": {
+      "value": 1143,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "vertiv-cw-design"
+    },
+    "height_mm": {
+      "value": 2159,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "vertiv-cw-design"
+    },
+    "water_pressure_drop_kpa": {
+      "value": 38.9,
+      "unit": "kPa",
+      "provenance": "vendor_spec",
+      "source": "vertiv-cw-design",
+      "note": "at the 210 kW rating"
+    }
+  },
+  "attrs": {
+    "type": "perimeter CRAH",
+    "fan_motor": "EC"
+  },
+  "sources": [
+    {
+      "id": "vertiv-cw-design",
+      "title": "Vertiv Liebert CW System Design Catalog, CW038-CW181, 60 Hz (2024)",
+      "url": "https://www.vertiv.com/globalassets/products/thermal-management/room-cooling/liebert-cw-system-design-manual_00.pdf",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

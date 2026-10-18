@@ -1,0 +1,63 @@
+{
+  "kind": "equipment",
+  "id": "schneider-galaxy-vxl-1250kw",
+  "name": "Schneider Electric Galaxy VXL 1250 kW (400 V)",
+  "vendor": "Schneider Electric",
+  "model": "Galaxy VXL 500-1250 kW",
+  "category": "ups_module",
+  "as_of": "2026-10-18",
+  "description": "Modular 3-phase UPS, 500-1250 kW at 400 V in one 1.2 m2 frame using 125 kW/3U power modules; up to 4 frames in parallel (5 MW). Capacity here is the full frame.",
+  "params": {
+    "capacity_w": {
+      "value": 1250000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "se-galaxy-vxl-press-release",
+      "note": "full frame, 10 x 125 kW modules"
+    },
+    "efficiency": {
+      "value": 0.975,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "se-galaxy-vxl-press-release",
+      "note": "double conversion 'up to 97.5%'. eConversion up to 99% (not available on the 480 V version)"
+    },
+    "efficiency_eco": {
+      "value": 0.99,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "se-galaxy-vxl-press-release",
+      "note": "eConversion mode, up to"
+    },
+    "module_capacity_w": {
+      "value": 125000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "se-galaxy-vxl-press-release",
+      "note": "125 kW / 3U power module"
+    },
+    "voltage_v": {
+      "value": 400,
+      "unit": "V",
+      "provenance": "vendor_spec",
+      "source": "se-galaxy-vxl-press-release"
+    },
+    "weight_kg": {
+      "unit": "kg",
+      "provenance": "unknown",
+      "note": "not in press release; see Galaxy VXL technical specifications document"
+    }
+  },
+  "attrs": {
+    "status": "shipping",
+    "capacity_basis": "frame"
+  },
+  "sources": [
+    {
+      "id": "se-galaxy-vxl-press-release",
+      "title": "Schneider Electric announces Galaxy VXL UPS (press release, 2024-12-04)",
+      "url": "https://www.se.com/ww/en/about-us/newsroom/news/press-releases/schneider-electric-announces-galaxy-vxl-ups-the-industry's-most-compact-high-density-power-protection-system-for-ai-data-center-and-large-scale-electrical-workloads-674d295fa5833dcbf5002c43/",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

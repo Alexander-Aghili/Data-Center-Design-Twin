@@ -1,0 +1,84 @@
+{
+  "kind": "equipment",
+  "id": "vertiv-liebert-afc-fiz150",
+  "name": "Vertiv Liebert AFC FIZ150 free-cooling chiller",
+  "vendor": "Vertiv",
+  "model": "Liebert AFC FIZ150",
+  "category": "chiller",
+  "as_of": "2026-10-18",
+  "description": "Air-cooled inverter-screw chiller with integrated direct free-cooling coils, R1234ze, 20 EC fans, dual supply with ATS, fast restart. 900-1800 kW family designed for data centers with high return water temperatures.",
+  "params": {
+    "capacity_w": {
+      "value": 1652000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "vertiv-afc-na",
+      "note": "nominal 470 tons (1652 kW) at 95 F (35 C) ambient, fluid 82->66 F (27.8->18.9 C), 30% ethylene glycol; preliminary data"
+    },
+    "cop": {
+      "value": 3.96,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "vertiv-afc-na",
+      "note": "EER 13.5 Btu/W-h / 3.412 = 3.96 at the same conditions (cross-check 1652 kW / 417 kW = 3.96); mechanical mode"
+    },
+    "power_w": {
+      "value": 417000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "vertiv-afc-na",
+      "note": "power input at nominal conditions"
+    },
+    "weight_kg": {
+      "value": 13950,
+      "unit": "kg",
+      "provenance": "vendor_spec",
+      "source": "vertiv-afc-na",
+      "note": "estimated dry weight per Vertiv"
+    },
+    "length_mm": {
+      "value": 13386,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "vertiv-afc-na"
+    },
+    "footprint_w_mm": {
+      "value": 2362,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "vertiv-afc-na"
+    },
+    "height_mm": {
+      "value": 2896,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "vertiv-afc-na"
+    },
+    "noise_dba": {
+      "value": 82.8,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "vertiv-afc-na",
+      "note": "sound pressure at 1 m"
+    }
+  },
+  "attrs": {
+    "refrigerant": "R1234ze",
+    "free_cooling": "integrated direct free cooling (glycol)",
+    "compressor": "inverter screw"
+  },
+  "sources": [
+    {
+      "id": "vertiv-afc-na",
+      "title": "Vertiv Liebert AFC datasheet SL-71060 (R09/24), 900-1800 kW",
+      "url": "https://www.vertiv.com/49fe65/globalassets/shared/vertiv-liebert-afc_datasheet_en-na.pdf",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "vertiv-afc-emea",
+      "title": "Vertiv Liebert AFC datasheet EMEA rev0 03.2020 (free-cooling switch-over temperatures)",
+      "url": "https://www.vertiv.com/49dc08/globalassets/products/thermal-management/free-cooling-chillers/liebert-afc-ds-en-emea-rev0---03.2020.pdf",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

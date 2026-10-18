@@ -1,0 +1,225 @@
+{
+  "kind": "rack",
+  "id": "amd-helios",
+  "name": "AMD Helios (72x MI455X)",
+  "vendor": "AMD",
+  "model": "Helios rackscale reference design",
+  "generation": "Instinct MI400 series (MI455X, CDNA 5) + EPYC Venice (Zen 6)",
+  "availability": "Full production since July 2026; first shipments expected by end of Q3 2026, volume deployments 2H 2026. AMD reference design built by OEM/ODM partners (e.g. HPE, Supermicro, Celestica); figures can vary by OEM.",
+  "as_of": "2026-10-18",
+  "role": "compute",
+  "description": "Double-wide OCP Open Rack Wide (ORW) rack, 44 OU, 18 liquid-cooled compute trays (4x MI455X + 1x EPYC Venice SP7 + up to 12x Pensando Vulcano 800G AI NICs + 1x Pensando Salina 400G DPU each) and 6 liquid-cooled scale-up switch trays (2x 512-lane 200G UALoE switch ASICs each, Broadcom Tomahawk 6 class; HPE builds use Juniper QFX5252) forming one 72-GPU UALink-over-Ethernet domain. Power: in-rack power shelves feed a 50 V DC liquid-cooled vertical busbar at the rear; no Helios-specific 800 V DC input has been published (ORW allows side power racks, but this is not confirmed for Helios), so only ac_54v is listed. Cooling: rear blind-mate quick-disconnect manifolds to the facility loop (~385 L/min reported). The 2.4 Tb/s-per-GPU scale-out figure assumes 3 NICs per GPU; a 2-NIC-per-GPU option exists (144 ports).",
+  "electrical": {
+    "nominal_power_w": {
+      "low": 225000,
+      "high": 245000,
+      "unit": "W",
+      "provenance": "estimated",
+      "source": "register-helios",
+      "note": "press report (The Register and StorageReview, 23 July 2026): rack draws 225-245 kW depending on workload. AMD has not published a rack power figure. An early Introl blog figure of ~140 kW predates launch and is disregarded."
+    },
+    "peak_power_w": {
+      "value": 246000,
+      "unit": "W",
+      "provenance": "estimated",
+      "source": "schneider-helios-refdesign",
+      "note": "AMD/Schneider Electric Helios reference design (Reference Design 121) supports racks up to 246 kW; used as the planning peak. No EDPp or transient figure published; sub-second GPU transients may exceed this."
+    },
+    "power_shelves": {
+      "unit": "1",
+      "provenance": "unknown",
+      "note": "AMD describes in-rack power shelves feeding a vertical 50 V DC busbar but publishes no shelf count as of 2026-10."
+    },
+    "shelf_rating_w": {
+      "unit": "W",
+      "provenance": "unknown",
+      "note": "power shelf rating not published by AMD or OEMs as of 2026-10."
+    },
+    "supported_power_input": ["ac_54v"]
+  },
+  "thermal": {
+    "liquid_fraction": {
+      "low": 0.84,
+      "high": 0.95,
+      "unit": "1",
+      "provenance": "estimated",
+      "source": "schneider-helios-refdesign",
+      "note": "AMD/Schneider reference design says its CDU-based and hybrid air/liquid cooling removes up to 84% of heat (lower bound). AMD and press describe compute trays, switch trays and the busbar as liquid-cooled, so the real share may be higher; upper bound is an assumption."
+    },
+    "max_coolant_supply_c": {
+      "low": 20,
+      "high": 30,
+      "unit": "C",
+      "provenance": "estimated",
+      "source": "introl-helios",
+      "note": "low confidence: only figure found is a third-party blog table (Introl, Jan 2026) listing 20-30 C supply; that blog also misstates CPU count and power. No AMD or OEM figure published; confirm with the OEM."
+    },
+    "rack_pressure_drop_kpa": {
+      "unit": "kPa",
+      "provenance": "unknown",
+      "note": "not published by AMD or OEMs as of 2026-10."
+    },
+    "flow_lpm_per_kw": {
+      "low": 1.57,
+      "high": 1.71,
+      "unit": "L/min/kW",
+      "provenance": "estimated",
+      "source": "storagereview-helios",
+      "note": "press report: rear manifolds draw roughly 385 L/min from the facility loop; divided by 245 kW and 225 kW."
+    },
+    "quick_disconnect": "Rear blind-mate quick disconnects (BlindMate QD) on the cooling manifold; QD size/type not published"
+  },
+  "mechanical": {
+    "width_mm": {
+      "value": 1200,
+      "unit": "mm",
+      "provenance": "estimated",
+      "source": "dcd-helios-launch",
+      "note": "press report: ORW double-width frame spans 1200 mm (47.25 in); matches the EMCOR ORW frame datasheet (emcor-orw). Occupies two 600 mm slots."
+    },
+    "depth_mm": {
+      "low": 1219,
+      "high": 1300,
+      "unit": "mm",
+      "provenance": "estimated",
+      "source": "itdaily-helios",
+      "note": "press reports (ITdaily, StorageReview) give 1.3 m deep; the EMCOR ORW frame datasheet lists 1,219 mm. Range covers both; OEM depth may differ."
+    },
+    "height_mm": {
+      "value": 2390,
+      "unit": "mm",
+      "provenance": "estimated",
+      "source": "dcr-helios",
+      "note": "press report: 94 in tall frame (Data Center Richness); matches the EMCOR ORW frame datasheet height of 2,390 mm."
+    },
+    "rack_units": {
+      "value": 44,
+      "unit": "1",
+      "provenance": "estimated",
+      "source": "sth-hotchips-helios",
+      "note": "press report of AMD Hot Chips 2026 slide: 44 OU ORW-HPR chassis (OpenU = 48 mm), 18 compute + 6 switch trays."
+    },
+    "weight_kg": {
+      "low": 2267,
+      "high": 3175,
+      "unit": "kg",
+      "provenance": "estimated",
+      "source": "dcd-helios-launch",
+      "note": "reports conflict: DCD launch coverage (July 2026) says ~5,000 lb (2,267 kg); Lisa Su at CES (Jan 2026; sources techcrunch-helios-weight, dcr-helios) said nearly 7,000 lb (3,175 kg). Compute trays weigh ~77 kg each (itdaily-helios). Use the high end for floor loading until the OEM confirms."
+    },
+    "feet": {
+      "value": 4,
+      "unit": "1",
+      "provenance": "estimated",
+      "note": "assumed four corner leveling feet; not published. A 1.2 m wide frame carrying up to ~3.2 t may use extra mid-span feet; confirm point loads with the OEM."
+    },
+    "service_clearance_front_mm": {
+      "unit": "mm",
+      "provenance": "unknown",
+      "note": "not published; front access is needed to pull ~77 kg compute trays (lift assist likely)."
+    },
+    "service_clearance_rear_mm": {
+      "unit": "mm",
+      "provenance": "unknown",
+      "note": "not published; rear access is needed for the busbar, power shelves and coolant manifold."
+    }
+  },
+  "network": {
+    "scale_out_ports": {
+      "value": 216,
+      "unit": "1",
+      "provenance": "derived",
+      "source": "amd-helios-brochure",
+      "note": "AMD: up to 2.4 Tb/s scale-out per GPU using 800G Vulcano NICs, so 3 NICs x 72 GPUs = 216 ports. This matches AMD's 43 TB/s (216 x 800 Gb/s x 2 directions). The 2-NIC-per-GPU option gives 144. Excludes 18x Salina 400G front-end DPUs."
+    },
+    "port_speed_gbps": {
+      "value": 800,
+      "unit": "Gb/s",
+      "provenance": "vendor_spec",
+      "source": "amd-helios-page",
+      "note": "AMD Pensando Vulcano 800 AI NIC, single 800G Ethernet port, UEC-ready"
+    },
+    "scale_up_domain": {
+      "value": 72,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "amd-helios-page",
+      "note": "72 GPUs over UALink over Ethernet (UALoE) through 6 switch trays, single hop"
+    },
+    "scale_up_bandwidth_tbps": {
+      "value": 2080,
+      "unit": "Tb/s",
+      "provenance": "vendor_spec",
+      "source": "amd-helios-page",
+      "note": "AMD: 260 TB/s aggregate scale-up bandwidth (= 2,080 Tb/s), i.e. ~3.6 TB/s bidirectional per GPU"
+    },
+    "switch_slots": {
+      "value": 0,
+      "unit": "1",
+      "provenance": "derived",
+      "note": "compute rack. Its 6 internal UALoE scale-up switch trays (~7 kW each, liquid-cooled) are part of the rack; there are no slots for scale-out leaf switches."
+    },
+    "port_media": "800G Ethernet (Pensando Vulcano, one 800G port per NIC); inter-rack links are typically optics; scale-up is internal copper"
+  },
+  "compute": {
+    "accelerators": {
+      "value": 72,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "amd-helios-page"
+    },
+    "accelerator_model": "AMD Instinct MI455X (432 GB HBM4)",
+    "cpus": {
+      "value": 18,
+      "unit": "1",
+      "provenance": "oem_datasheet",
+      "source": "smc-helios-datasheet",
+      "note": "one EPYC Venice (6th Gen, SP7) per 4-GPU compute tray, 18 trays"
+    },
+    "hbm_tb": {
+      "value": 31,
+      "unit": "TB",
+      "provenance": "vendor_spec",
+      "source": "amd-helios-page",
+      "note": "72 x 432 GB HBM4 = 31.1 TB"
+    },
+    "fp4_pflops": {
+      "value": 2900,
+      "unit": "PFLOPS",
+      "provenance": "vendor_spec",
+      "source": "amd-helios-page",
+      "note": "2.9 EF peak OCP MXFP4 dense (~40 PF per GPU); AMD engineering projection"
+    },
+    "fp8_pflops": {
+      "value": 1400,
+      "unit": "PFLOPS",
+      "provenance": "vendor_spec",
+      "source": "amd-helios-page",
+      "note": "1.4 EF peak FP8 / MXFP8"
+    }
+  },
+  "overridable": [
+    "electrical.nominal_power_w",
+    "electrical.peak_power_w",
+    "mechanical.weight_kg",
+    "mechanical.depth_mm",
+    "thermal.max_coolant_supply_c",
+    "network.scale_out_ports"
+  ],
+  "sources": [
+    { "id": "amd-helios-page", "title": "AMD Helios Rackscale Solution product page", "url": "https://www.amd.com/en/products/rackscale-solutions/helios.html", "accessed": "2026-10-18" },
+    { "id": "amd-helios-brochure", "title": "AMD Helios Rack-Scale Solution brochure", "url": "https://www.amd.com/content/dam/amd/en/documents/solutions/ai/amd-helios-bro.pdf", "accessed": "2026-10-18" },
+    { "id": "amd-orw-blog", "title": "AMD blog: Helios built on Meta's 2025 OCP Open Rack for AI (ORW) design", "url": "https://www.amd.com/en/blogs/2025/amd-helios-ai-rack-built-on-metas-2025-ocp-design.html", "accessed": "2026-10-18" },
+    { "id": "smc-helios-datasheet", "title": "Supermicro AMD Helios Platform datasheet", "url": "https://www.supermicro.com/datasheet/datasheet_AMD_Helios.pdf", "accessed": "2026-10-18" },
+    { "id": "dcd-helios-launch", "title": "DCD: AMD officially launches Helios rackscale system (23 July 2026), Wayback copy", "url": "https://web.archive.org/web/20260724164314/https://www.datacenterdynamics.com/en/news/amd-officially-launches-helios-rackscale-system-with-mi455x-gpus-venice-epyc-cpus-and-pensando/", "accessed": "2026-10-18" },
+    { "id": "register-helios", "title": "The Register: AMD attacks the rack with Helios systems that rival Nvidia's (23 July 2026)", "url": "https://www.theregister.com/systems/2026/07/23/amd-attacks-the-rack-with-helios-systems-that-rival-nvidias/5277246", "accessed": "2026-10-18" },
+    { "id": "storagereview-helios", "title": "StorageReview: AMD MI455X and Helios: 432GB HBM4, 72-GPU Racks (23 July 2026)", "url": "https://www.storagereview.com/news/amd-mi455x-and-helios-432gb-hbm4-72-gpu-racks-and-a-real-answer-to-vera-rubin", "accessed": "2026-10-18" },
+    { "id": "sth-hotchips-helios", "title": "ServeTheHome: AMD Helios MI400 System Architecture at Hot Chips 2026", "url": "https://www.servethehome.com/amd-helios-mi400-system-architecture-at-hot-chips-2026/", "accessed": "2026-10-18" },
+    { "id": "itdaily-helios", "title": "ITdaily: AMD Helios scrutinized: the rack is the new server (24 July 2026)", "url": "https://itdaily.com/blogs/datacenter/amd-helios-analysis/", "accessed": "2026-10-18" },
+    { "id": "techcrunch-helios-weight", "title": "TechCrunch: AMD's Helios rack weighs the same as two compact cars (5 Jan 2026)", "url": "https://techcrunch.com/snippet/3080157/amds-helios-rack-weighs-the-same-as-two-compact-cars/", "accessed": "2026-10-18" },
+    { "id": "dcr-helios", "title": "Data Center Richness: AMD Helios Ultra-Wide Racks Enter the Market (24 July 2026)", "url": "https://datacenterrichness.substack.com/p/amd-helios-ultra-wide-racks-go-mainstream", "accessed": "2026-10-18" },
+    { "id": "schneider-helios-refdesign", "title": "Schneider Electric and AMD release first Helios platform reference design (23 July 2026)", "url": "https://www.se.com/ww/en/about-us/newsroom/news/press-releases/Schneider-Electric-and-AMD-release-first-Helios-platform-reference-design-to-accelerate-AI-Factory-deployment-6a60b540d574233932028c53/", "accessed": "2026-10-18" },
+    { "id": "emcor-orw", "title": "EMCOR OCP Open Rack Wide (ORW) cabinet datasheet", "url": "https://www.emcorenclosures.com/product/ocp-open-rack-wide-orw/", "accessed": "2026-10-18" },
+    { "id": "introl-helios", "title": "Introl blog: AMD Helios Challenges NVIDIA (8 Jan 2026)", "url": "https://introl.com/blog/amd-helios-mi455x-nvidia-competition-ces-2026", "accessed": "2026-10-18" }
+  ]
+}

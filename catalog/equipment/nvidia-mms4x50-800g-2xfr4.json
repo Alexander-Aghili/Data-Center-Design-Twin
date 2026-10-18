@@ -1,0 +1,58 @@
+{
+  "kind": "equipment",
+  "id": "nvidia-mms4x50-800g-2xfr4",
+  "name": "800G single-mode 2xFR4 optics link (NVIDIA MMS4X50-NM)",
+  "vendor": "NVIDIA",
+  "model": "MMS4X50-NM",
+  "category": "cable",
+  "as_of": "2026-10-18",
+  "description": "Twin-port OSFP 2 x 400G FR4 transceiver (CWDM, 4 wavelengths per port), two duplex LC connectors, 2 km over two single-mode duplex fibers.",
+  "params": {
+    "reach_m": {
+      "value": 2000,
+      "unit": "m",
+      "provenance": "vendor_spec",
+      "source": "nvidia-mms4x50"
+    },
+    "power_per_end_w": {
+      "value": 17,
+      "unit": "W/end",
+      "provenance": "vendor_spec",
+      "source": "nvidia-mms4x50",
+      "note": "max"
+    },
+    "weight_kg_per_m": {
+      "value": 0.015,
+      "low": 0.01,
+      "high": 0.02,
+      "unit": "kg/m",
+      "provenance": "estimated",
+      "note": "two duplex LC single-mode jumpers per link; duplex 2-3 mm zipcord assumed ~5-10 g/m each, comparable to a 3.0 mm 12-fiber cable (8.3 g/m, Neutrik datasheet)"
+    },
+    "port_speed_gbps": {
+      "value": 800,
+      "unit": "Gb/s",
+      "provenance": "vendor_spec",
+      "source": "nvidia-mms4x50"
+    }
+  },
+  "attrs": {
+    "media": "optics",
+    "type": "2xFR4 single-mode",
+    "connector": "OSFP, 2 x duplex LC"
+  },
+  "sources": [
+    {
+      "id": "neutrik-mtp-cable",
+      "title": "Neutrik opticalCON MTP patch and breakout cable datasheet (12-fiber 3.0 mm cable weight)",
+      "url": "https://www.neutrik.de/media/9963/download/cable-datasheet---opticalcon-mtp---patchundbreakout.pdf?v=1",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "nvidia-mms4x50",
+      "title": "NVIDIA MMS4X50-NM 800Gb/s twin-port OSFP 2xFR4 2x400G single-mode 2km",
+      "url": "https://networking-docs.nvidia.com/mms4x50nm800g2kmpub",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

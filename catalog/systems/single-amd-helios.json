@@ -1,0 +1,12 @@
+{
+  "kind": "system",
+  "id": "single-amd-helios",
+  "name": "Single AMD Helios rack",
+  "as_of": "2026-10-18",
+  "description": "One amd-helios rack placed as a unit. Helios is double-wide (1,200 mm ORW), so it occupies two 0.6 m slots starting at its slot offset.",
+  "members": [
+    { "key": "rack", "rack_type": "amd-helios", "slot_offset": 0 }
+  ],
+  "links": [],
+  "sources": []
+}

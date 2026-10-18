@@ -1,0 +1,84 @@
+{
+  "kind": "equipment",
+  "id": "siemens-energy-careco-2500kva-11kv",
+  "name": "Siemens Energy CARECO 2500 kVA cast-resin, 11 kV / 400 V",
+  "vendor": "Siemens Energy",
+  "model": "CARECO cast-resin transformer 2500 kVA, Um 12 kV",
+  "category": "transformer",
+  "as_of": "2026-10-18",
+  "description": "Cast-resin dry-type distribution transformer from Siemens Energy's Guangzhou JV (GEAFOL technology family), HV 6-11 kV, LV 400-433 V, copper windings. Standard Um 12 kV datasheet row.",
+  "params": {
+    "capacity_w": {
+      "value": 2500000,
+      "unit": "W",
+      "provenance": "derived",
+      "source": "siemens-energy-crt-catalog",
+      "note": "2500 kVA x 1000 at assumed pf 1.0"
+    },
+    "efficiency": {
+      "value": 0.99373,
+      "unit": "1",
+      "provenance": "derived",
+      "source": "siemens-energy-crt-catalog",
+      "note": "at 50% load, pf 1: 1250 kW / (1250 kW + P0 3600 W + 0.25 x Pk 17,170 W at 120 C) = 99.37%. Catalog also lists a second 2500 kVA row with 18,890 W load loss (likely higher impedance)"
+    },
+    "efficiency_full_load": {
+      "value": 0.99176,
+      "unit": "1",
+      "provenance": "derived",
+      "source": "siemens-energy-crt-catalog",
+      "note": "at 100% load, pf 1"
+    },
+    "no_load_loss_w": {
+      "value": 3600,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "siemens-energy-crt-catalog"
+    },
+    "load_loss_w": {
+      "value": 17170,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "siemens-energy-crt-catalog",
+      "note": "on-load loss at 120 C"
+    },
+    "weight_kg": {
+      "value": 5760,
+      "unit": "kg",
+      "provenance": "vendor_spec",
+      "source": "siemens-energy-crt-catalog",
+      "note": "active part with base; IP20/21 enclosure 2400 x 1650 x 2200 mm"
+    },
+    "footprint_w_mm": {
+      "value": 2400,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "siemens-energy-crt-catalog",
+      "note": "IP20/IP21 enclosure length"
+    },
+    "depth_mm": {
+      "value": 1650,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "siemens-energy-crt-catalog"
+    },
+    "height_mm": {
+      "value": 2200,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "siemens-energy-crt-catalog"
+    }
+  },
+  "attrs": {
+    "status": "shipping",
+    "insulation": "dry-type cast resin"
+  },
+  "sources": [
+    {
+      "id": "siemens-energy-crt-catalog",
+      "title": "Siemens Energy Transformer (Guangzhou) cast-resin (dry-type) transformer catalog (GEAFOL/CARECO)",
+      "url": "https://assets.siemens-energy.com/dam/4b13a19b-be4a-40b2-9fd7-b05800968a07/STGZT-Catalog-EN-pdf_Original%20file.pdf",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "kind": "system",
+  "id": "single-network-rack",
+  "name": "Single network rack",
+  "as_of": "2026-10-18",
+  "description": "One network-rack placed as a unit.",
+  "members": [
+    {
+      "key": "rack",
+      "rack_type": "network-rack",
+      "slot_offset": 0
+    }
+  ],
+  "links": [],
+  "sources": []
+}

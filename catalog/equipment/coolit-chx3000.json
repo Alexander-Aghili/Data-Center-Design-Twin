@@ -1,0 +1,70 @@
+{
+  "kind": "equipment",
+  "id": "coolit-chx3000",
+  "name": "CoolIT CHx3000 row/facility CDU",
+  "vendor": "CoolIT Systems (Ecolab)",
+  "model": "CHx3000",
+  "category": "cdu",
+  "as_of": "2026-10-18",
+  "description": "Row- or facility-based liquid-to-liquid CDU, IP54 enclosure for white or grey space (ambient to 50 C), N+1 pumps, filters and sensors, built-in ATS; CoolIT rates it for 18 AI racks at 190 kW.",
+  "params": {
+    "capacity_w": {
+      "value": 3000000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "coolit-chx3000-page",
+      "note": "3 MW at 3 C ATD; supply temperatures not published"
+    },
+    "max_flow_kg_s": {
+      "value": 74.85,
+      "unit": "kg/s",
+      "provenance": "vendor_spec",
+      "source": "coolit-chx3000-page",
+      "note": "4500 L/min * 0.998 / 60 = 74.85 kg/s"
+    },
+    "approach_k": {
+      "value": 3,
+      "unit": "K",
+      "provenance": "vendor_spec",
+      "source": "coolit-chx3000-page",
+      "note": "vendor-rated ATD at 3 MW"
+    },
+    "pump_head_kpa": {
+      "value": 344.7,
+      "unit": "kPa",
+      "provenance": "vendor_spec",
+      "source": "coolit-chx3000-page",
+      "note": "50 psi pressure head at 4500 L/min; 50 * 6.895 = 344.7 kPa"
+    },
+    "power_w": {
+      "value": 75000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "coolit-chx3000-page",
+      "note": "power consumption as listed on product page (likely maximum)"
+    },
+    "weight_kg": {
+      "unit": "kg",
+      "provenance": "unknown",
+      "note": "not published; product sheet is gated behind a form"
+    },
+    "flow_lpm": {
+      "value": 4500,
+      "unit": "L/min",
+      "provenance": "vendor_spec",
+      "source": "coolit-chx3000-page"
+    }
+  },
+  "attrs": {
+    "pump_redundancy": "N+1",
+    "placement": "in-row or facility (grey space)"
+  },
+  "sources": [
+    {
+      "id": "coolit-chx3000-page",
+      "title": "CoolIT CHx3000 product page",
+      "url": "https://www.coolitsystems.com/cdu-product/chx3000/",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "kind": "equipment",
+  "id": "nvidia-mms4x00-800g-dr8",
+  "name": "800G single-mode DR8 optics link (NVIDIA MMS4X00-NM, 2xDR4)",
+  "vendor": "NVIDIA",
+  "model": "MMS4X00-NM",
+  "category": "cable",
+  "as_of": "2026-10-18",
+  "description": "Twin-port OSFP 2 x 400G single-mode transceiver, 1310 nm, 8 fibers over two MPO-12/APC, 500 m (with two patch panels). 8 x 100G-PAM4.",
+  "params": {
+    "reach_m": {
+      "value": 500,
+      "unit": "m",
+      "provenance": "vendor_spec",
+      "source": "nvidia-mms4x00"
+    },
+    "power_per_end_w": {
+      "value": 17,
+      "unit": "W/end",
+      "provenance": "vendor_spec",
+      "source": "nvidia-mms4x00",
+      "note": "max"
+    },
+    "weight_kg_per_m": {
+      "value": 0.017,
+      "unit": "kg/m",
+      "provenance": "derived",
+      "source": "neutrik-mtp-cable",
+      "note": "two 12-fiber MPO jumpers per 800G twin-port link at 8.3 g/m each (Neutrik 3.0 mm 12-fiber cable datasheet); structured trunks carry more fibers per jacket and weigh less per link"
+    },
+    "port_speed_gbps": {
+      "value": 800,
+      "unit": "Gb/s",
+      "provenance": "vendor_spec",
+      "source": "nvidia-mms4x00"
+    }
+  },
+  "attrs": {
+    "media": "optics",
+    "type": "DR8 single-mode",
+    "connector": "OSFP, 2 x MPO-12/APC"
+  },
+  "sources": [
+    {
+      "id": "neutrik-mtp-cable",
+      "title": "Neutrik opticalCON MTP patch and breakout cable datasheet (12-fiber 3.0 mm cable weight)",
+      "url": "https://www.neutrik.de/media/9963/download/cable-datasheet---opticalcon-mtp---patchundbreakout.pdf?v=1",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "nvidia-mms4x00",
+      "title": "NVIDIA MMS4X00-NM 800Gb/s twin-port OSFP 2x400G single-mode 2xDR4 500m",
+      "url": "https://networking-docs.nvidia.com/mms4x00nm800g500m/",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

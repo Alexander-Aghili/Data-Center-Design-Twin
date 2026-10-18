@@ -1,0 +1,97 @@
+{
+  "kind": "equipment",
+  "id": "cisco-n9364e-sg2-leaf",
+  "name": "Cisco Nexus 9364E-SG2 800G AI switch (leaf)",
+  "vendor": "Cisco",
+  "model": "N9364E-SG2-O",
+  "category": "leaf_switch",
+  "as_of": "2026-10-18",
+  "description": "2RU air-cooled Cisco Silicon One G200 class (51.2 Tb/s) Nexus switch, 64 x 800G (OSFP -O or QSFP-DD -Q), 256 MB on-die buffer; positioned for AI/ML back-end fabrics. Cisco's '102.4 Tbps' figure is full duplex.",
+  "params": {
+    "ports": {
+      "value": 64,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "cisco-n9364e-sg2-ds"
+    },
+    "port_speed_gbps": {
+      "value": 800,
+      "unit": "Gb/s",
+      "provenance": "vendor_spec",
+      "source": "cisco-n9364e-sg2-ds"
+    },
+    "hop_latency_ns": {
+      "value": 700,
+      "low": 500,
+      "high": 1000,
+      "unit": "ns",
+      "provenance": "estimated",
+      "note": "not in Cisco data sheet; estimated as comparable to other 51.2 Tb/s shallow-pipeline Ethernet switches (Arista 7060X6 700 ns) with a wider range for the deeper on-die buffer design"
+    },
+    "power_w": {
+      "value": 995,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "cisco-n9364e-sg2-ds",
+      "note": "typical"
+    },
+    "power_max_w": {
+      "value": 2270,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "cisco-n9364e-sg2-ds",
+      "note": "maximum"
+    },
+    "rack_units": {
+      "value": 2,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "cisco-n9364e-sg2-ds"
+    },
+    "weight_kg": {
+      "value": 20.6,
+      "unit": "kg",
+      "provenance": "vendor_spec",
+      "source": "cisco-n9364e-sg2-ds",
+      "note": "with PSUs and fans"
+    },
+    "switch_capacity_tbps": {
+      "value": 51.2,
+      "unit": "Tb/s",
+      "provenance": "derived",
+      "note": "64 x 800G; Cisco states 102.4 Tbps counting both directions"
+    },
+    "width_mm": {
+      "value": 440,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "cisco-n9364e-sg2-ds"
+    },
+    "depth_mm": {
+      "value": 627,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "cisco-n9364e-sg2-ds"
+    }
+  },
+  "attrs": {
+    "fabric": "ethernet",
+    "cooling": "air",
+    "port_form_factor": "OSFP",
+    "availability": "Shipping"
+  },
+  "sources": [
+    {
+      "id": "arista-7060x6-ds",
+      "title": "Arista 7060X6 Series Data Sheet",
+      "url": "https://www.arista.com/assets/data/pdf/Datasheets/7060X6-Datasheet.pdf",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "cisco-n9364e-sg2-ds",
+      "title": "Cisco Nexus 9364E-SG2 Switches Data Sheet",
+      "url": "https://www.cisco.com/c/en/us/products/collateral/switches/nexus-9000-series-switches/nexus-9364e-sg2-switch-ds.html",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

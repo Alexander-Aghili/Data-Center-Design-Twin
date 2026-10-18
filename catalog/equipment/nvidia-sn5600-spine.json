@@ -1,0 +1,97 @@
+{
+  "kind": "equipment",
+  "id": "nvidia-sn5600-spine",
+  "name": "NVIDIA Spectrum-X SN5600 800GbE switch (spine)",
+  "vendor": "NVIDIA",
+  "model": "SN5600",
+  "category": "spine_switch",
+  "as_of": "2026-10-18",
+  "description": "2U air-cooled Spectrum-4 Ethernet switch, 64 x 800GbE OSFP, 51.2 Tb/s, 160 MB shared buffer; the Spectrum-X leaf and spine building block. This entry is the spine role.",
+  "params": {
+    "ports": {
+      "value": 64,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "nvidia-sn5000-specs",
+      "note": "64 OSFP ports at up to 800G"
+    },
+    "port_speed_gbps": {
+      "value": 800,
+      "unit": "Gb/s",
+      "provenance": "vendor_spec",
+      "source": "nvidia-sn5000-specs"
+    },
+    "hop_latency_ns": {
+      "value": 600,
+      "low": 400,
+      "high": 800,
+      "unit": "ns",
+      "provenance": "estimated",
+      "note": "NVIDIA describes Spectrum-4 as 'low cut-through latency' but publishes no figure. Estimated from comparable 51.2 Tb/s Ethernet switches (Arista 7060X6 datasheet: 700 ns) and the product spec's 'a few hundred ns per cut-through Ethernet hop'."
+    },
+    "power_w": {
+      "value": 940,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "nvidia-sn5000-specs",
+      "note": "typical with passive cables (ATIS); excludes optics"
+    },
+    "power_max_w": {
+      "value": 2200,
+      "unit": "W",
+      "provenance": "estimated",
+      "note": "not published for SN5600; sibling SN5610 lists 2.08 kW typical with 64 optical modules (same manual), rounded up"
+    },
+    "rack_units": {
+      "value": 2,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "nvidia-sn5000-specs"
+    },
+    "weight_kg": {
+      "value": 23.5,
+      "unit": "kg",
+      "provenance": "vendor_spec",
+      "source": "nvidia-sn5000-specs"
+    },
+    "switch_capacity_tbps": {
+      "value": 51.2,
+      "unit": "Tb/s",
+      "provenance": "vendor_spec",
+      "source": "nvidia-sn5000-specs"
+    },
+    "width_mm": {
+      "value": 438,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "nvidia-sn5000-specs"
+    },
+    "depth_mm": {
+      "value": 720,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "nvidia-sn5000-specs",
+      "note": "745 mm with fan levers"
+    }
+  },
+  "attrs": {
+    "fabric": "ethernet",
+    "cooling": "air",
+    "port_form_factor": "OSFP",
+    "availability": "Shipping"
+  },
+  "sources": [
+    {
+      "id": "arista-7060x6-ds",
+      "title": "Arista 7060X6 Series Data Sheet",
+      "url": "https://www.arista.com/assets/data/pdf/Datasheets/7060X6-Datasheet.pdf",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "nvidia-sn5000-specs",
+      "title": "NVIDIA Spectrum-4 SN5000 2U Switch Systems Hardware User Manual - Specifications",
+      "url": "https://networking-docs.nvidia.com/sn5000hw/specifications",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

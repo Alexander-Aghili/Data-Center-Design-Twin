@@ -1,0 +1,202 @@
+{
+  "kind": "rack",
+  "id": "hgx-b300-air",
+  "name": "Air-cooled HGX B300 rack (4 x 8-GPU servers)",
+  "vendor": "NVIDIA",
+  "model": "4 x DGX/HGX B300 10U air-cooled servers in a 48U MGX rack",
+  "generation": "Blackwell Ultra",
+  "availability": "Shipping",
+  "as_of": "2026-10-18",
+  "role": "compute",
+  "description": "Four air-cooled 10U HGX B300 8-GPU servers (32 GPUs) per 48U rack, following NVIDIA's DGX B300 high-density deployment pattern: MGX-style rack with an integrated rear 54 V DC busbar fed by four 1U 33 kW power shelves (N+1, at least three active), plus an active rear door heat exchanger (RDHx) to remove the air heat at the rack. Per server: 8 B300 GPUs, 2 Xeon 6776P CPUs, 8 ConnectX-8 800G ports, 2 dual-port BlueField-3, ~14.5 kW, 10U. OEM HGX B300 servers with their own AC PSUs fit the same profile; a low-density variant puts 2 AC-PDU-fed servers per rack (~30 kW average, 39.4 kW peak, 1,301 kg). Change the chassis count by overriding power and weight.",
+  "electrical": {
+    "nominal_power_w": {
+      "value": 58000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "nvidia-dgx-b300-dcbp",
+      "note": "NVIDIA: 58 kW average for 4 DC-busbar B300 systems per rack (estimated by NVIDIA at 25 C supply air); 4 x 14.5 kW system power"
+    },
+    "peak_power_w": {
+      "value": 76000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "nvidia-dgx-b300-dcbp",
+      "note": "NVIDIA: 76 kW peak per 4-system rack (19 kW estimated peak per busbar system)"
+    },
+    "power_shelves": {
+      "value": 4,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "nvidia-dgx-b300-dcbp",
+      "note": "four 1U 33 kW DC power shelves per rack, N+1"
+    },
+    "shelf_rating_w": {
+      "value": 33000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "nvidia-dgx-b300-dcbp"
+    },
+    "supported_power_input": ["ac_54v"]
+  },
+  "thermal": {
+    "liquid_fraction": {
+      "value": 0,
+      "unit": "1",
+      "provenance": "derived",
+      "note": "air-cooled servers; all heat leaves the servers in air. An active RDHx (recommended by NVIDIA at 4 systems per rack) moves that air heat to water at the rack door, which the cooling model should treat as an air-side load."
+    },
+    "max_coolant_supply_c": {
+      "unit": "C",
+      "provenance": "unknown",
+      "note": "not applicable: no coolant to the servers. Supply air 10-35 C (B300 rack spec; 10-30 C per the DGX B300 user guide). RDHx water limits depend on the chosen RDHx model."
+    },
+    "rack_pressure_drop_kpa": {
+      "unit": "kPa",
+      "provenance": "unknown",
+      "note": "not applicable: no liquid loop to the servers; RDHx pressure drop depends on the chosen model"
+    }
+  },
+  "mechanical": {
+    "width_mm": {
+      "value": 600,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "nvidia-dgx-b300-dcbp"
+    },
+    "depth_mm": {
+      "value": 1068,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "nvidia-dgx-b300-dcbp",
+      "note": "excluding rear door heat exchanger; NVIDIA's drawing shows a ~432 mm (17 in) RDHx on the rear"
+    },
+    "height_mm": {
+      "value": 2236,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "nvidia-dgx-b300-dcbp"
+    },
+    "rack_units": {
+      "value": 48,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "nvidia-dgx-b300-dcbp",
+      "note": "4 x 10U servers = 40U plus 4U power shelves"
+    },
+    "weight_kg": {
+      "value": 1122,
+      "unit": "kg",
+      "provenance": "vendor_spec",
+      "source": "nvidia-dgx-b300-dcbp",
+      "note": "NVIDIA estimate for the 4-system DC-busbar rack, excluding RDHx. Per server: 123 kg busbar version, 168 kg with PSUs (DGX B300 user guide)."
+    },
+    "feet": {
+      "value": 4,
+      "unit": "1",
+      "provenance": "estimated",
+      "note": "MGX rack with casters and four corner leveling feet assumed (casters visible in NVIDIA drawing)"
+    },
+    "service_clearance_front_mm": {
+      "value": 838,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "nvidia-dgx-b300-dcbp",
+      "note": "NVIDIA MGX rack front clearance for IT component servicing (33 in)"
+    },
+    "service_clearance_rear_mm": {
+      "value": 1041,
+      "unit": "mm",
+      "provenance": "estimated",
+      "source": "nvidia-dgx-b300-dcbp",
+      "note": "read from NVIDIA's RDHx clearance drawing: ~432 mm RDHx plus 609 mm (24 in) beyond it; RDHx dimensions vary by model"
+    }
+  },
+  "network": {
+    "scale_out_ports": {
+      "value": 32,
+      "unit": "1",
+      "provenance": "derived",
+      "source": "nvidia-dgx-b300-ug",
+      "note": "8 OSFP ConnectX-8 ports per server x 4 servers; BlueField-3 storage/in-band ports not counted"
+    },
+    "port_speed_gbps": {
+      "value": 800,
+      "unit": "Gb/s",
+      "provenance": "vendor_spec",
+      "source": "nvidia-dgx-b300-ug"
+    },
+    "scale_up_domain": {
+      "value": 8,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "nvidia-hgx-page",
+      "note": "NVLink domain is one 8-GPU server; the rack holds four separate domains"
+    },
+    "scale_up_bandwidth_tbps": {
+      "value": 115.2,
+      "unit": "Tb/s",
+      "provenance": "vendor_spec",
+      "source": "nvidia-hgx-page",
+      "note": "14.4 TB/s aggregate NVLink per 8-GPU server (1.8 TB/s per GPU) = 115.2 Tb/s per domain"
+    },
+    "switch_slots": {
+      "value": 0,
+      "unit": "1",
+      "provenance": "derived",
+      "note": "compute rack; 48U fully used by 4 servers and power shelves"
+    },
+    "port_media": "OSFP 800G (ConnectX-8 SuperNIC)"
+  },
+  "compute": {
+    "accelerators": {
+      "value": 32,
+      "unit": "1",
+      "provenance": "derived",
+      "source": "nvidia-dgx-b300-ug",
+      "note": "4 servers x 8 B300 GPUs"
+    },
+    "accelerator_model": "NVIDIA B300 SXM (Blackwell Ultra, 288 GB HBM3e)",
+    "cpus": {
+      "value": 8,
+      "unit": "1",
+      "provenance": "derived",
+      "source": "nvidia-dgx-b300-ug",
+      "note": "2 Intel Xeon 6776P per server x 4"
+    },
+    "hbm_tb": {
+      "value": 9.2,
+      "unit": "TB",
+      "provenance": "derived",
+      "source": "nvidia-dgx-b300-ug",
+      "note": "4 x 2.3 TB (8 x 288 GB) per DGX B300; NVIDIA's HGX page lists 2.1 TB per board, i.e. 8.4 TB"
+    },
+    "fp4_pflops": {
+      "value": 432,
+      "unit": "PFLOPS",
+      "provenance": "derived",
+      "source": "nvidia-hgx-page",
+      "note": "4 x 108 PFLOPS dense FP4 per HGX B300 (144 PFLOPS sparse)"
+    },
+    "fp8_pflops": {
+      "value": 144,
+      "unit": "PFLOPS",
+      "provenance": "derived",
+      "source": "nvidia-hgx-page",
+      "note": "4 x 36 PFLOPS dense FP8 (NVIDIA lists 72 sparse; dense is half)"
+    }
+  },
+  "overridable": [
+    "electrical.nominal_power_w",
+    "electrical.peak_power_w",
+    "mechanical.weight_kg",
+    "electrical.power_shelves",
+    "network.scale_out_ports",
+    "compute.accelerators"
+  ],
+  "sources": [
+    { "id": "nvidia-dgx-b300-dcbp", "title": "NVIDIA Data Center Best Practices with DGX B300 (rack specifications, power provisioning, service clearances)", "url": "https://docs.nvidia.com/dgx-pdf/data-center-best-practices-with-dgx-b300-v1.pdf", "accessed": "2026-10-18" },
+    { "id": "nvidia-dgx-b300-ug", "title": "NVIDIA DGX B300 User Guide: Introduction to DGX B300 systems", "url": "https://docs.nvidia.com/dgx/dgxb300-user-guide/introduction-to-dgxb300.html", "accessed": "2026-10-18" },
+    { "id": "nvidia-hgx-page", "title": "NVIDIA HGX platform page (HGX B300 specifications)", "url": "https://www.nvidia.com/en-us/data-center/hgx/", "accessed": "2026-10-18" }
+  ]
+}

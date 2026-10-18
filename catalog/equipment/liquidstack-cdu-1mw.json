@@ -1,0 +1,117 @@
+{
+  "kind": "equipment",
+  "id": "liquidstack-cdu-1mw",
+  "name": "LiquidStack CDU-1MW",
+  "vendor": "LiquidStack (Trane Technologies)",
+  "model": "CDU-1MW",
+  "category": "cdu",
+  "as_of": "2026-10-18",
+  "description": "Row-style liquid-to-liquid DTC CDU, 900 W x 1242 D x 2200 H mm; dual hot-swappable VSD pumps, 316SS plate HX, integrated ATS, dual 25 micron filtration, PN16, top/bottom piping.",
+  "params": {
+    "capacity_w": {
+      "value": 1350000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "liquidstack-slb001",
+      "note": "1350 kW at 4 C ATD with PG25 at 1500 L/min and 13 K TCS delta-T; 1202 kW at 12 K, 1004 kW at 10 K"
+    },
+    "max_flow_kg_s": {
+      "value": 24.95,
+      "unit": "kg/s",
+      "provenance": "vendor_spec",
+      "source": "liquidstack-slb001",
+      "note": "max TCS flow 1500 L/min * 0.998 / 60 = 24.95 kg/s"
+    },
+    "approach_k": {
+      "value": 4,
+      "unit": "K",
+      "provenance": "vendor_spec",
+      "source": "liquidstack-slb001",
+      "note": "vendor ATD at all three rating points"
+    },
+    "pump_head_kpa": {
+      "value": 275,
+      "unit": "kPa",
+      "provenance": "vendor_spec",
+      "source": "liquidstack-slb001",
+      "note": "read from the datasheet TCS pump curve: ~2.75 bar with both pumps at 1500 L/min (~4.5 bar at 400 L/min); single pump reaches ~2.6 bar at 1050 L/min. FWS side pressure drop ~0.9 bar at 1500 L/min"
+    },
+    "power_w": {
+      "value": 23000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "liquidstack-slb001",
+      "note": "power consumption 23 kW (11 kW per pump)"
+    },
+    "weight_kg": {
+      "value": 1165,
+      "unit": "kg",
+      "provenance": "vendor_spec",
+      "source": "liquidstack-slb001",
+      "note": "operating weight; dry 911 kg, shipping 1100 kg"
+    },
+    "weight_dry_kg": {
+      "value": 911,
+      "unit": "kg",
+      "provenance": "vendor_spec",
+      "source": "liquidstack-slb001"
+    },
+    "flow_lpm": {
+      "value": 1500,
+      "unit": "L/min",
+      "provenance": "vendor_spec",
+      "source": "liquidstack-slb001"
+    },
+    "facility_supply_max_c": {
+      "value": 45,
+      "unit": "C",
+      "provenance": "vendor_spec",
+      "source": "liquidstack-slb001",
+      "note": "FWS water temperature range 10-45 C"
+    },
+    "footprint_w_mm": {
+      "value": 900,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "liquidstack-slb001"
+    },
+    "footprint_d_mm": {
+      "value": 1242,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "liquidstack-slb001"
+    },
+    "height_mm": {
+      "value": 2200,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "liquidstack-slb001"
+    },
+    "filtration_um": {
+      "value": 25,
+      "unit": "um",
+      "provenance": "vendor_spec",
+      "source": "liquidstack-slb001",
+      "note": "dual 25 micron"
+    },
+    "noise_dba": {
+      "value": 68,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "liquidstack-slb001",
+      "note": "<68 dBA at 3 m, full load"
+    }
+  },
+  "attrs": {
+    "pump_redundancy": "dual hot-swappable VSD pumps (N+1 at reduced flow)",
+    "placement": "in-row"
+  },
+  "sources": [
+    {
+      "id": "liquidstack-slb001",
+      "title": "LiquidStack CDU-1MW datasheet CDU-SLB001-EN (04/20/2026)",
+      "url": "https://elibrary.tranetechnologies.com/public/commercial-hvac/Literature/Sales/CDU-SLB001-EN_04202026.pdf",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

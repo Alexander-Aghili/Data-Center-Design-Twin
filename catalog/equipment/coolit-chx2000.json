@@ -1,0 +1,103 @@
+{
+  "kind": "equipment",
+  "id": "coolit-chx2000",
+  "name": "CoolIT CHx2000 row-based CDU",
+  "vendor": "CoolIT Systems (Ecolab)",
+  "model": "CHx2000",
+  "category": "cdu",
+  "as_of": "2026-10-18",
+  "description": "Row-based liquid-to-liquid CDU in a 750 x 1200 mm footprint; CoolIT rates it for 12 x GB300 NVL72 racks. Hot-swappable pumps and TCS filters, 25 micron filtration, stainless piping, 4 in tri-clamp FWS/TCS, group control of 20 units.",
+  "params": {
+    "capacity_w": {
+      "value": 2000000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "coolit-chx2000-page",
+      "note": "2000 kW at 5 C ATD (facility supply to TCS supply); supply temperatures not published. CoolIT's own comparison table estimates 2269 kW at 4 C ATD with PG25 (press report, StorageReview)"
+    },
+    "max_flow_kg_s": {
+      "value": 35.35,
+      "unit": "kg/s",
+      "provenance": "vendor_spec",
+      "source": "coolit-chx2000-page",
+      "note": "2125 L/min at 35 psi from product page; 2125 * 0.998 / 60 = 35.35 kg/s. The 2026 sell sheet's '2 MW at 1.5 LPM/kW' implies ~3000 L/min, presumably at lower head; not used"
+    },
+    "approach_k": {
+      "value": 5,
+      "unit": "K",
+      "provenance": "vendor_spec",
+      "source": "coolit-chx2000-page",
+      "note": "vendor-rated ATD at 2000 kW"
+    },
+    "pump_head_kpa": {
+      "value": 241.3,
+      "unit": "kPa",
+      "provenance": "vendor_spec",
+      "source": "coolit-chx2000-page",
+      "note": "35 psi * 6.895 = 241.3 kPa available at 2125 L/min. Press (StorageReview) cites 53 psi secondary head pressure, likely at lower flow"
+    },
+    "power_w": {
+      "value": 12240,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "coolit-chx2000-page",
+      "note": "power consumption as listed on the product page"
+    },
+    "weight_kg": {
+      "unit": "kg",
+      "provenance": "unknown",
+      "note": "not published on CoolIT product page or sell sheet as of 2026-10"
+    },
+    "flow_lpm": {
+      "value": 2125,
+      "unit": "L/min",
+      "provenance": "vendor_spec",
+      "source": "coolit-chx2000-page"
+    },
+    "footprint_w_mm": {
+      "value": 750,
+      "unit": "mm",
+      "provenance": "estimated",
+      "source": "storagereview-chx2000",
+      "note": "press report: 750 x 1200 mm footprint"
+    },
+    "footprint_d_mm": {
+      "value": 1200,
+      "unit": "mm",
+      "provenance": "estimated",
+      "source": "storagereview-chx2000",
+      "note": "press report"
+    },
+    "filtration_um": {
+      "value": 25,
+      "unit": "um",
+      "provenance": "estimated",
+      "source": "storagereview-chx2000",
+      "note": "press report: integrated 25 micron filtration"
+    }
+  },
+  "attrs": {
+    "pump_redundancy": "redundant hot-swappable pumps (count not published on current page)",
+    "placement": "in-row"
+  },
+  "sources": [
+    {
+      "id": "coolit-chx2000-page",
+      "title": "CoolIT CHx2000 product page",
+      "url": "https://www.coolitsystems.com/cdu-product/chx2000/",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "coolit-chx2000-sheet",
+      "title": "CoolIT CHx 2000 sell sheet (08/26)",
+      "url": "https://44473873.fs1.hubspotusercontent-na1.net/hubfs/44473873/Brochure%20Download/CoolIT%20CHx%202000%20Sell%20Sheet%20Ecolab.pdf",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "storagereview-chx2000",
+      "title": "StorageReview: CoolIT unveils CHx2000 CDU with 2MW liquid cooling capacity",
+      "url": "https://www.storagereview.com/news/coolit-unveils-chx2000-cdu-with-2mw-liquid-cooling-capacity-in-standard-rack-footprint",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

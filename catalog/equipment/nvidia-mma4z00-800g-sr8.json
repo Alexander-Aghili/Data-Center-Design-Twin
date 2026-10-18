@@ -1,0 +1,58 @@
+{
+  "kind": "equipment",
+  "id": "nvidia-mma4z00-800g-sr8",
+  "name": "800G multimode SR8 optics link (NVIDIA MMA4Z00-NS, 2xSR4)",
+  "vendor": "NVIDIA",
+  "model": "MMA4Z00-NS",
+  "category": "cable",
+  "as_of": "2026-10-18",
+  "description": "Twin-port OSFP 2 x 400G multimode transceiver, 850 nm VCSEL, 8 fibers over two MPO-12/APC; 50 m on OM4, 30 m on OM3. A link is two transceivers plus MPO fiber.",
+  "params": {
+    "reach_m": {
+      "value": 50,
+      "unit": "m",
+      "provenance": "vendor_spec",
+      "source": "nvidia-mma4z00",
+      "note": "OM4; 30 m on OM3"
+    },
+    "power_per_end_w": {
+      "value": 17,
+      "unit": "W/end",
+      "provenance": "vendor_spec",
+      "source": "nvidia-mma4z00",
+      "note": "max"
+    },
+    "weight_kg_per_m": {
+      "value": 0.017,
+      "unit": "kg/m",
+      "provenance": "derived",
+      "source": "neutrik-mtp-cable",
+      "note": "two 12-fiber MPO jumpers per 800G twin-port link at 8.3 g/m each (Neutrik 3.0 mm 12-fiber cable datasheet); structured trunks carry more fibers per jacket and weigh less per link"
+    },
+    "port_speed_gbps": {
+      "value": 800,
+      "unit": "Gb/s",
+      "provenance": "vendor_spec",
+      "source": "nvidia-mma4z00"
+    }
+  },
+  "attrs": {
+    "media": "optics",
+    "type": "SR8 multimode",
+    "connector": "OSFP, 2 x MPO-12/APC"
+  },
+  "sources": [
+    {
+      "id": "neutrik-mtp-cable",
+      "title": "Neutrik opticalCON MTP patch and breakout cable datasheet (12-fiber 3.0 mm cable weight)",
+      "url": "https://www.neutrik.de/media/9963/download/cable-datasheet---opticalcon-mtp---patchundbreakout.pdf?v=1",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "nvidia-mma4z00",
+      "title": "NVIDIA MMA4Z00-NS 800Gb/s twin-port OSFP 2x400G multimode 2xSR4 50m",
+      "url": "https://networking-docs.nvidia.com/800gmma4z00ns/",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

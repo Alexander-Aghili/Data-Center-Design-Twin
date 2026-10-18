@@ -1,0 +1,90 @@
+{
+  "kind": "equipment",
+  "id": "arista-7060x6-64pe-leaf",
+  "name": "Arista 7060X6-64PE 800GbE switch (leaf)",
+  "vendor": "Arista",
+  "model": "7060X6-64PE",
+  "category": "leaf_switch",
+  "as_of": "2026-10-18",
+  "description": "2RU air-cooled 64 x 800G OSFP Ethernet switch, 51.2 Tb/s (Broadcom Tomahawk 5 class; Arista's datasheet does not name the chip), 165 MB buffer, LPO support. Used as AI leaf (or spine in two-tier fabrics).",
+  "params": {
+    "ports": {
+      "value": 64,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "arista-7060x6-ds"
+    },
+    "port_speed_gbps": {
+      "value": 800,
+      "unit": "Gb/s",
+      "provenance": "vendor_spec",
+      "source": "arista-7060x6-ds"
+    },
+    "hop_latency_ns": {
+      "value": 700,
+      "unit": "ns",
+      "provenance": "vendor_spec",
+      "source": "arista-7060x6-ds",
+      "note": "datasheet: 'Latency from 700ns'"
+    },
+    "power_w": {
+      "value": 640,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "arista-7060x6-ds",
+      "note": "typical: 25C ambient, 50% load, DACs"
+    },
+    "power_max_w": {
+      "value": 2218,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "arista-7060x6-ds",
+      "note": "max: 46C ambient, 100% load, high-power optics"
+    },
+    "rack_units": {
+      "value": 2,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "arista-7060x6-ds"
+    },
+    "weight_kg": {
+      "value": 20.86,
+      "unit": "kg",
+      "provenance": "vendor_spec",
+      "source": "arista-7060x6-ds"
+    },
+    "switch_capacity_tbps": {
+      "value": 51.2,
+      "unit": "Tb/s",
+      "provenance": "vendor_spec",
+      "source": "arista-7060x6-ds",
+      "note": "102.4 Tb/s full duplex"
+    },
+    "width_mm": {
+      "value": 440,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "arista-7060x6-ds"
+    },
+    "depth_mm": {
+      "value": 607,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "arista-7060x6-ds"
+    }
+  },
+  "attrs": {
+    "fabric": "ethernet",
+    "cooling": "air",
+    "port_form_factor": "OSFP",
+    "availability": "Shipping"
+  },
+  "sources": [
+    {
+      "id": "arista-7060x6-ds",
+      "title": "Arista 7060X6 Series Data Sheet",
+      "url": "https://www.arista.com/assets/data/pdf/Datasheets/7060X6-Datasheet.pdf",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

@@ -1,0 +1,223 @@
+{
+  "kind": "rack",
+  "id": "gb300-nvl72",
+  "name": "NVIDIA GB300 NVL72",
+  "vendor": "NVIDIA",
+  "model": "GB300 NVL72 (DGX GB300 / OEM MGX builds)",
+  "generation": "Blackwell Ultra",
+  "availability": "Shipping",
+  "as_of": "2026-10-18",
+  "role": "compute",
+  "description": "48U NVIDIA MGX (Oberon) rack: 18 x 1U compute trays (each 2 Grace CPUs + 4 B300 GPUs, 4 ConnectX-8 800G SuperNICs, 1 BlueField-3), 9 NVLink 5 switch trays forming one 72-GPU NVLink domain, 8 x 1U 33 kW power shelves (6 x 5.5 kW PSUs each, AC-fed 200-480 V) feeding a 50/54 V DC busbar, and 2 SN2201 management switches. Hybrid cooling: GPUs, CPUs, HBM, ConnectX-8 and NVLink switches on cold plates (about 90%), drives, OSFP optics, power shelves and ancillary gear on air (about 10%). Power shelves carry energy storage for power smoothing. Some OEMs (Lenovo, Gigabyte) also offer a 6-shelf non-redundant build.",
+  "electrical": {
+    "nominal_power_w": {
+      "low": 132000,
+      "high": 135000,
+      "unit": "W",
+      "provenance": "oem_datasheet",
+      "source": "lenovo-lp2357",
+      "note": "Lenovo: 135 kW TDP. Supermicro lists operating power 132-140 kW; HPE QuickSpecs (as summarized by flopper.io, HPE page not reachable) give 132 kW nominal TDP; Gigabyte lists up to 140 kW. Range spans the OEM TDP figures."
+    },
+    "peak_power_w": {
+      "value": 155000,
+      "unit": "W",
+      "provenance": "oem_datasheet",
+      "source": "lenovo-lp2357",
+      "note": "Lenovo: up to 155 kW peak depending on workload and EDP behavior. HPE (via flopper.io aggregator) gives the same ~155 kW EDPp and recommends provisioning busways for 192 kW."
+    },
+    "power_shelves": {
+      "value": 8,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "nvidia-dgx-gb300-ra",
+      "note": "NVIDIA DGX GB300: eight shelves per rack. Lenovo offers 6 (non-redundant) or 8 (redundant); Gigabyte lists 6."
+    },
+    "shelf_rating_w": {
+      "value": 33000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "nvidia-dgx-gb300-ra",
+      "note": "six 5.5 kW PSUs per shelf; 8 shelves = 264 kW installed for N+N-style redundancy"
+    },
+    "supported_power_input": ["ac_54v"]
+  },
+  "thermal": {
+    "liquid_fraction": {
+      "value": 0.9,
+      "unit": "1",
+      "provenance": "oem_datasheet",
+      "source": "lenovo-lp2357",
+      "note": "Lenovo: rack-level split about 90% to liquid and 10% to air; NVIDIA RA confirms hybrid liquid plus air cooling."
+    },
+    "max_coolant_supply_c": {
+      "value": 45,
+      "unit": "C",
+      "provenance": "oem_datasheet",
+      "source": "lenovo-lp2357",
+      "note": "Lenovo: allowable water inlet up to 45 C; compute/switch trays rated 2-50 C (ASHRAE W45). This is the TCS supply to the rack."
+    },
+    "rack_pressure_drop_kpa": {
+      "low": 15.9,
+      "high": 126.9,
+      "unit": "kPa",
+      "provenance": "oem_datasheet",
+      "source": "lenovo-lp2357",
+      "note": "Lenovo Table 27: 2.3 psi at 25 C supply (59 L/min), 3.2 psi at 30 C, 4.9 psi at 35 C, 8.5 psi at 40 C, 18.4 psi at 45 C (177 L/min). Pressure drop depends on supply temperature because required flow rises steeply."
+    },
+    "flow_lpm_per_kw": {
+      "low": 0.49,
+      "high": 1.46,
+      "unit": "L/min/kW",
+      "provenance": "derived",
+      "source": "lenovo-lp2357",
+      "note": "Lenovo required rack flow (59 L/min at 25 C supply to 177 L/min at 45 C) divided by liquid heat of 0.9 x 135 kW = 121.5 kW."
+    },
+    "quick_disconnect": "UQDB04 blind-mate QDs between trays and rear manifold (UQD04 bleed port); manifold-to-CDU 1-inch FD83 BSPP; 30 psi static at QD (Lenovo). Top- or bottom-feed manifold options."
+  },
+  "mechanical": {
+    "width_mm": {
+      "value": 600,
+      "unit": "mm",
+      "provenance": "oem_datasheet",
+      "source": "lenovo-lp2357"
+    },
+    "depth_mm": {
+      "value": 1068,
+      "unit": "mm",
+      "provenance": "oem_datasheet",
+      "source": "lenovo-lp2357",
+      "note": "Lenovo and Supermicro: 1,068 mm; Lenovo's rack expands to 1,200 mm with an extension frame."
+    },
+    "height_mm": {
+      "low": 2236,
+      "high": 2294,
+      "unit": "mm",
+      "provenance": "oem_datasheet",
+      "source": "lenovo-lp2357",
+      "note": "Lenovo 48U MGX rack 2,294 mm; Supermicro datasheet 2,236 mm. flopper.io lists 2,495 mm for HPE, likely an outer or shipping dimension, so it is not used."
+    },
+    "rack_units": {
+      "value": 48,
+      "unit": "1",
+      "provenance": "oem_datasheet",
+      "source": "lenovo-lp2357"
+    },
+    "weight_kg": {
+      "low": 1360,
+      "high": 1580,
+      "unit": "kg",
+      "provenance": "estimated",
+      "source": "moduledge-gb300",
+      "note": "No OEM rack weight found. Press/blog figures conflict: ModulEdge 1,580 kg populated; flopper.io summary of HPE ~3,300 lb (1,497 kg); Introl ~1.36 t (GB200-era figure). Lenovo component weights give a floor: rack 185 kg + 18 x 29 kg trays + 9 x 17 kg switch trays + 2 x 11.4 kg SN2201 = 883 kg before shelves, busbar, NVLink cartridges, manifolds and coolant."
+    },
+    "feet": {
+      "value": 4,
+      "unit": "1",
+      "provenance": "estimated",
+      "note": "MGX rack has casters plus leveling feet (visible in NVIDIA MGX clearance drawing); four corner leveling feet assumed. No point-load figure published."
+    },
+    "service_clearance_front_mm": {
+      "value": 838,
+      "unit": "mm",
+      "provenance": "estimated",
+      "source": "nvidia-dgx-b300-dcbp",
+      "note": "NVIDIA's MGX rack front service clearance (33 in) from its DGX B300 data center best-practices guide; applied here because GB300 uses the same 48U MGX rack. 1U trays are 766-799 mm deep."
+    },
+    "service_clearance_rear_mm": {
+      "unit": "mm",
+      "provenance": "unknown",
+      "note": "No GB300-specific rear clearance published; rear access is needed for manifold, busbar and NVLink cartridge service."
+    }
+  },
+  "network": {
+    "scale_out_ports": {
+      "value": 72,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "nvidia-dgx-gb300-ra",
+      "note": "four ConnectX-8 800G ports per compute tray x 18 trays (compute fabric only). Each tray also has one BlueField-3 with 2 x 400G for storage/in-band, not counted here."
+    },
+    "port_speed_gbps": {
+      "value": 800,
+      "unit": "Gb/s",
+      "provenance": "vendor_spec",
+      "source": "nvidia-gb300-page"
+    },
+    "scale_up_domain": {
+      "value": 72,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "nvidia-gb300-page"
+    },
+    "scale_up_bandwidth_tbps": {
+      "value": 1040,
+      "unit": "Tb/s",
+      "provenance": "vendor_spec",
+      "source": "nvidia-gb300-page",
+      "note": "130 TB/s aggregate NVLink 5 (1.8 TB/s per GPU) = 1,040 Tb/s"
+    },
+    "switch_slots": {
+      "value": 0,
+      "unit": "1",
+      "provenance": "derived",
+      "note": "compute rack; the two in-rack SN2201 switches are 1G management only"
+    },
+    "port_media": "OSFP 800G on front of trays (ConnectX-8 SuperNIC); optics or DAC/ACC per reach"
+  },
+  "compute": {
+    "accelerators": {
+      "value": 72,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "nvidia-gb300-page"
+    },
+    "accelerator_model": "NVIDIA B300 (Blackwell Ultra, 288 GB HBM3e)",
+    "cpus": {
+      "value": 36,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "nvidia-gb300-page",
+      "note": "Grace, 72 Neoverse V2 cores each"
+    },
+    "hbm_tb": {
+      "value": 20.7,
+      "unit": "TB",
+      "provenance": "oem_datasheet",
+      "source": "smc-gb300-datasheet",
+      "note": "72 x 288 GB HBM3e = 20.7 TB (Supermicro rounds to 21 TB; NVIDIA page says up to 20 TB)"
+    },
+    "fp4_pflops": {
+      "value": 1080,
+      "unit": "PFLOPS",
+      "provenance": "vendor_spec",
+      "source": "nvidia-gb300-page",
+      "note": "dense FP4; NVIDIA's headline 1,440 PFLOPS is with sparsity"
+    },
+    "fp8_pflops": {
+      "value": 360,
+      "unit": "PFLOPS",
+      "provenance": "derived",
+      "source": "nvidia-gb300-page",
+      "note": "NVIDIA lists 720 PFLOPS FP8/FP6 with sparsity; dense is half"
+    }
+  },
+  "overridable": [
+    "electrical.nominal_power_w",
+    "electrical.peak_power_w",
+    "electrical.power_shelves",
+    "mechanical.weight_kg",
+    "mechanical.height_mm",
+    "thermal.max_coolant_supply_c",
+    "thermal.rack_pressure_drop_kpa",
+    "thermal.flow_lpm_per_kw"
+  ],
+  "sources": [
+    { "id": "nvidia-gb300-page", "title": "NVIDIA GB300 NVL72 product page", "url": "https://www.nvidia.com/en-us/data-center/gb300-nvl72/", "accessed": "2026-10-18" },
+    { "id": "nvidia-dgx-gb300-ra", "title": "NVIDIA DGX SuperPOD Reference Architecture featuring DGX GB300 systems", "url": "https://docs.nvidia.com/pdf/dgx-spod-gb300-ra.pdf", "accessed": "2026-10-18" },
+    { "id": "lenovo-lp2357", "title": "Lenovo Press LP2357: Lenovo NVIDIA GB300 NVL72 Rack Scale AI product guide", "url": "https://lenovopress.lenovo.com/lp2357.pdf", "accessed": "2026-10-18" },
+    { "id": "smc-gb300-datasheet", "title": "Supermicro NVIDIA GB300 NVL72 SuperCluster datasheet (SRS-GB300-NVL72-M1/M0), reseller-hosted copy", "url": "https://gpusolutions.hrp.hu/wp-content/uploads/2026/05/datasheet_SuperCluster_GB300_NVL72.pdf", "accessed": "2026-10-18" },
+    { "id": "nvidia-dgx-b300-dcbp", "title": "NVIDIA Data Center Best Practices with DGX B300 (MGX rack service clearances)", "url": "https://docs.nvidia.com/dgx-pdf/data-center-best-practices-with-dgx-b300-v1.pdf", "accessed": "2026-10-18" },
+    { "id": "moduledge-gb300", "title": "ModulEdge: NVIDIA GB300 NVL72 specs, power, capacity (press/blog)", "url": "https://moduledge.com/blog/gb300-nvl72", "accessed": "2026-10-18" },
+    { "id": "flopper-hpe-gb300", "title": "flopper.io spec sheet: HPE NVIDIA GB300 NVL72 (aggregator summary of HPE QuickSpecs a50009244enw)", "url": "https://flopper.io/system/hpe-nvidia-gb300-nvl72/spec-sheet", "accessed": "2026-10-18" }
+  ]
+}

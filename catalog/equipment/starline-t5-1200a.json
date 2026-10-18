@@ -1,0 +1,65 @@
+{
+  "kind": "equipment",
+  "id": "starline-t5-1200a",
+  "name": "Starline T5 Track Busway 1200/1250 A",
+  "vendor": "Legrand (Starline)",
+  "model": "Track Busway T5 1200/1250 A",
+  "category": "busway",
+  "as_of": "2026-10-18",
+  "description": "Largest Starline T5 overhead track busway: copper conductors in an extruded aluminium housing, 600 V AC or DC, 75 kAIC, UL 857 / IEC 61439. Plug-in units interchangeable across T5 sizes.",
+  "params": {
+    "capacity_w": {
+      "value": 862561,
+      "unit": "W",
+      "provenance": "derived",
+      "note": "1200 A x 415 V x sqrt(3) = 862.6 kW at 415 V 3-phase, unity pf, 100% rated busway. At 480 V: 997.7 kW. 1250 A IEC rating gives 898.5 kW at 415 V"
+    },
+    "rating_a": {
+      "value": 1200,
+      "unit": "A",
+      "provenance": "vendor_spec",
+      "source": "legrand-starline-bus-brochure-2025",
+      "note": "listed as 1200/1250 A (UL/IEC)"
+    },
+    "voltage_v": {
+      "value": 415,
+      "unit": "V",
+      "provenance": "estimated",
+      "note": "assumed 415 V 3-phase AI-row distribution; busway rated voltage is 600 V AC or DC"
+    },
+    "rated_voltage_v": {
+      "value": 600,
+      "unit": "V",
+      "provenance": "vendor_spec",
+      "source": "legrand-starline-bus-brochure-2025",
+      "note": "600 V AC or DC"
+    },
+    "short_circuit_a": {
+      "value": 75000,
+      "unit": "A",
+      "provenance": "vendor_spec",
+      "source": "legrand-starline-bus-brochure-2025",
+      "note": "75 kAIC rated short-circuit capacity"
+    },
+    "weight_kg_per_m": {
+      "value": 31.3,
+      "unit": "kg/m",
+      "provenance": "derived",
+      "source": "legrand-starline-bus-brochure-2025",
+      "note": "brochure: 21 lb (9.53 kg) per 1 ft (0.3048 m) straight section, 4-pole"
+    }
+  },
+  "attrs": {
+    "power_input": "ac_54v",
+    "status": "shipping",
+    "conductor": "copper"
+  },
+  "sources": [
+    {
+      "id": "legrand-starline-bus-brochure-2025",
+      "title": "Legrand Starline Track Busway Mission Critical Brochure (2025)",
+      "url": "https://assets.legrand.com/webf/ldcs/LDCS_2025_BUS_Mission%20Critical%20Brochure.pdf",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

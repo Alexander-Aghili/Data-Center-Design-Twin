@@ -1,0 +1,53 @@
+{
+  "kind": "equipment",
+  "id": "schneider-800vdc-sidecar",
+  "name": "Schneider Electric 800 VDC sidecar (in development)",
+  "vendor": "Schneider Electric",
+  "model": "800 VDC sidecar",
+  "category": "rectifier",
+  "as_of": "2026-10-18",
+  "description": "AC-to-800 VDC sidecar being co-developed with NVIDIA: modular power conversion shelves, modular energy storage for short-term backup and load smoothing, Live Swap. No model name, efficiency or ship date published.",
+  "params": {
+    "capacity_w": {
+      "value": 1200000,
+      "unit": "W",
+      "provenance": "estimated",
+      "source": "se-800vdc-press-release-2025-10",
+      "note": "vendor press release: 'capable of powering racks of up to 1.2 MW'; product in development, not a datasheet rating"
+    },
+    "efficiency": {
+      "low": 0.97,
+      "high": 0.98,
+      "unit": "1",
+      "provenance": "estimated",
+      "source": "delta-gtc-2026-brandnews",
+      "note": "Schneider only says 'industry-leading efficiency'. Assumed equal to peer 800 VDC rectifier racks (Delta: AC-DC up to 98%)"
+    },
+    "voltage_v": {
+      "value": 800,
+      "unit": "V",
+      "provenance": "estimated",
+      "source": "se-800vdc-press-release-2025-10",
+      "note": "800 VDC output per press release"
+    }
+  },
+  "attrs": {
+    "power_input": "dc_800v",
+    "input": "ac",
+    "status": "in development (announced 2025-10)"
+  },
+  "sources": [
+    {
+      "id": "se-800vdc-press-release-2025-10",
+      "title": "Schneider Electric highlights innovation in 800 VDC power systems (press release, 2025-10-13)",
+      "url": "https://www.se.com/ww/en/about-us/newsroom/news/press-releases/schneider-electric-highlights-innovation-in-800-vdc-power-systems-in-support-of-nvidia%E2%80%99s-next-generation-gpus-68ecb631098fd4ea49024353",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "delta-gtc-2026-brandnews",
+      "title": "Delta exhibits energy-saving solutions for 800 VDC at NVIDIA GTC 2026 (Delta brand news)",
+      "url": "https://brandnews.deltaww.com/EN/IoTSolutionsDetail/12772",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

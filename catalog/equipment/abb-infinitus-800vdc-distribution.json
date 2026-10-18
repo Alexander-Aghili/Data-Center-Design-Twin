@@ -1,0 +1,53 @@
+{
+  "kind": "equipment",
+  "id": "abb-infinitus-800vdc-distribution",
+  "name": "ABB Infinitus 800 VDC distribution and protection (announced)",
+  "vendor": "ABB",
+  "model": "Infinitus DC power distribution / DC protection",
+  "category": "switchgear",
+  "as_of": "2026-10-18",
+  "description": "DC power distribution and DC protection blocks of ABB's Infinitus source-to-rack 800 VDC portfolio (launched Sept 2026). No ratings published; ABB says major components enter production within 12 months. Ratings estimated from ABB's shipping DC breakers.",
+  "params": {
+    "capacity_w": {
+      "low": 2000000,
+      "high": 4000000,
+      "unit": "W",
+      "provenance": "estimated",
+      "source": "abb-emax-dc-catalogue",
+      "note": "no Infinitus switchgear rating published. Estimated as 2500-5000 A main bus x 800 V = 2.0-4.0 MW; 5000 A is the top SACE Emax DC frame (up to 1000 V DC), 2500 A the SACE Infinitus solid-state breaker frame (press reports). Matches one 2-3 MW SST per lineup"
+    },
+    "rating_a": {
+      "low": 2500,
+      "high": 5000,
+      "unit": "A",
+      "provenance": "estimated",
+      "source": "abb-emax-dc-catalogue",
+      "note": "assumed main bus 2500-5000 A, based on ABB DC breaker frames"
+    },
+    "voltage_v": {
+      "value": 800,
+      "unit": "V",
+      "provenance": "estimated",
+      "source": "convergedigest-abb-infinitus",
+      "note": "press report: Infinitus portfolio is built around 800 VDC"
+    }
+  },
+  "attrs": {
+    "power_input": "dc_800v",
+    "status": "announced 2026-09; production expected within 12 months (press report)"
+  },
+  "sources": [
+    {
+      "id": "convergedigest-abb-infinitus",
+      "title": "ABB launches source-to-rack 800 VDC architecture (Converge Digest, 2026-09-22)",
+      "url": "https://convergedigest.com/abb-infinitus-800-vdc-ai-data-centers/",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "abb-emax-dc-catalogue",
+      "title": "ABB SACE Emax DC technical catalogue 1SDC200012D0202",
+      "url": "https://library.e.abb.com/public/676fe10fedcd484280466863ab50a791/1SDC200012D0202.pdf",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

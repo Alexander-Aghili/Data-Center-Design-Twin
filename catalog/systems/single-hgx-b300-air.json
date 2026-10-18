@@ -1,0 +1,12 @@
+{
+  "kind": "system",
+  "id": "single-hgx-b300-air",
+  "name": "Single air-cooled HGX B300 rack",
+  "as_of": "2026-10-18",
+  "description": "One hgx-b300-air rack (4 x 8-GPU HGX B300 servers) placed as a unit in one 600 mm slot. Each server is its own 8-GPU NVLink domain, so no inter-rack copper links are needed.",
+  "members": [
+    { "key": "rack", "rack_type": "hgx-b300-air", "slot_offset": 0 }
+  ],
+  "links": [],
+  "sources": []
+}

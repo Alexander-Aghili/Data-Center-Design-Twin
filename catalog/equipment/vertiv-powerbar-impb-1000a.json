@@ -1,0 +1,79 @@
+{
+  "kind": "equipment",
+  "id": "vertiv-powerbar-impb-1000a",
+  "name": "Vertiv Powerbar iMPB 1000 A (aluminium)",
+  "vendor": "Vertiv",
+  "model": "Powerbar iMPB 1000 A",
+  "category": "busway",
+  "as_of": "2026-10-18",
+  "description": "Flexible modular overhead busway 160-1000 A, 3-phase 600 V AC, IEC 61439-6. 1000 A is the aluminium-conductor top rating (copper tops out at 800 A).",
+  "params": {
+    "capacity_w": {
+      "value": 718801,
+      "unit": "W",
+      "provenance": "derived",
+      "note": "1000 A x 415 V x sqrt(3) = 718.8 kW at 415 V 3-phase, unity pf"
+    },
+    "rating_a": {
+      "value": 1000,
+      "unit": "A",
+      "provenance": "vendor_spec",
+      "source": "vertiv-impb-datasheet-emea",
+      "note": "aluminium busway; copper version up to 800 A"
+    },
+    "voltage_v": {
+      "value": 415,
+      "unit": "V",
+      "provenance": "estimated",
+      "note": "assumed 415 V 3-phase row distribution; rated operational voltage 600 V"
+    },
+    "rated_voltage_v": {
+      "value": 600,
+      "unit": "V",
+      "provenance": "vendor_spec",
+      "source": "vertiv-impb-datasheet-emea",
+      "note": "rated operational voltage 600 V, insulation 1000 V"
+    },
+    "short_circuit_a": {
+      "value": 35000,
+      "unit": "A",
+      "provenance": "vendor_spec",
+      "source": "vertiv-impb-datasheet-emea",
+      "note": "35 kA rms 1 s short-circuit rating (73.5 kA peak), 1000 A Al"
+    },
+    "weight_kg_per_m": {
+      "value": 17.7,
+      "unit": "kg/m",
+      "provenance": "vendor_spec",
+      "source": "vertiv-impb-datasheet-emea",
+      "note": "4-bar system; 22.1 kg/m for 5-bar"
+    },
+    "height_mm": {
+      "value": 74,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "vertiv-impb-datasheet-emea",
+      "note": "4-bar system section 74 x 202 mm"
+    },
+    "footprint_w_mm": {
+      "value": 202,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "vertiv-impb-datasheet-emea",
+      "note": "4-bar system width"
+    }
+  },
+  "attrs": {
+    "power_input": "ac_54v",
+    "status": "shipping",
+    "conductor": "aluminium"
+  },
+  "sources": [
+    {
+      "id": "vertiv-impb-datasheet-emea",
+      "title": "Vertiv Powerbar iMPB datasheet (EMEA, MKA4L0UKMBX R03/22)",
+      "url": "https://www.vertiv.com/499f3c/globalassets/shared/vertiv-powerbarimpb-ds-en-emea-mka4l0ukmbx-web.pdf",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

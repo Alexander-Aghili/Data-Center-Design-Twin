@@ -1,0 +1,52 @@
+{
+  "kind": "equipment",
+  "id": "delta-800vdc-dc-busway",
+  "name": "Delta 800 VDC DC Busway (announced)",
+  "vendor": "Delta Electronics",
+  "model": "DC Busway (800 VDC)",
+  "category": "busway",
+  "as_of": "2026-10-18",
+  "description": "Row-level DC busway Delta showed at OCP Global Summit 2026 for 800 VDC architectures. Announced only; Delta published no ampere, voltage or kW rating. Values below are placeholders for sizing.",
+  "params": {
+    "capacity_w": {
+      "low": 800000,
+      "high": 2000000,
+      "unit": "W",
+      "provenance": "estimated",
+      "source": "delta-ocp-2026-prn",
+      "note": "no rating published. Estimated as 1000-2500 A (the ampacity band of today's AC AI-row busways, e.g. Starline T5 1200 A, Siemens LData 2500 A) x 800 V two-conductor DC = 0.8-2.0 MW"
+    },
+    "rating_a": {
+      "low": 1000,
+      "high": 2500,
+      "unit": "A",
+      "provenance": "estimated",
+      "note": "assumed equal to AC row busway ampacities (1000-2500 A); no Delta figure"
+    },
+    "voltage_v": {
+      "value": 800,
+      "unit": "V",
+      "provenance": "vendor_spec",
+      "source": "delta-ocp-2026-prn",
+      "note": "Delta: 'efficient power distribution for upcoming 800 VDC architectures'; NVIDIA says 800 VDC carries 85% more power than 415 VAC in the same conductor"
+    }
+  },
+  "attrs": {
+    "power_input": "dc_800v",
+    "status": "announced (OCP 2026), no datasheet"
+  },
+  "sources": [
+    {
+      "id": "delta-ocp-2026-prn",
+      "title": "Delta highlights 800 VDC power and cooling at OCP Global Summit 2026 (PR Newswire, 2026-10-15)",
+      "url": "https://www.prnewswire.com/news-releases/delta-highlights-collaboration-with-nvidia-in-advancing-energy-efficient-800-vdc-power-and-cooling-solutions-for-ai-data-centers-at-ocp-global-summit-2026-302909912.html",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "nvidia-800vdc-blog-2025",
+      "title": "NVIDIA 800 V HVDC architecture will power the next generation of AI factories (NVIDIA Technical Blog, 2025-05-20)",
+      "url": "https://developer.nvidia.com/blog/nvidia-800-v-hvdc-architecture-will-power-the-next-Generation-of-ai-factories",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

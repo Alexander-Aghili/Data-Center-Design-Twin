@@ -1,0 +1,102 @@
+{
+  "kind": "equipment",
+  "id": "arista-7060xe7-64ps-spine",
+  "name": "Arista 7060XE7-64PS 102.4 Tb/s switch (spine)",
+  "vendor": "Arista",
+  "model": "7060XE7-64PS",
+  "category": "spine_switch",
+  "as_of": "2026-10-18",
+  "description": "4RU air-cooled Broadcom Tomahawk 6 class switch (per press), 64 x 1.6T OSFP, 102.4 Tb/s, 267 MB buffer. Modeled here as 128 x 800G (2 x 800G per 1.6T cage, the datasheet's max 800G port count). Arista lists Q4 2026 availability; power and weight not yet published.",
+  "params": {
+    "ports": {
+      "value": 128,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "arista-7060xe7-ql",
+      "note": "max 800G ports (64 x 1.6T OSFP cages, 2 x 800G each)"
+    },
+    "port_speed_gbps": {
+      "value": 800,
+      "unit": "Gb/s",
+      "provenance": "vendor_spec",
+      "source": "arista-7060xe7-ql",
+      "note": "native 1600G per cage; 800G per logical port here"
+    },
+    "hop_latency_ns": {
+      "value": 840,
+      "unit": "ns",
+      "provenance": "vendor_spec",
+      "source": "arista-7060xe7-ql",
+      "note": "quick look: 'From 840 ns'"
+    },
+    "power_w": {
+      "value": 1300,
+      "low": 1000,
+      "high": 1600,
+      "unit": "W",
+      "provenance": "estimated",
+      "note": "typical with DACs, not published. Scaled from Arista 7060X6-64PE (640 W typical at 51.2 Tb/s) for 2x bandwidth on a newer process node"
+    },
+    "power_max_w": {
+      "value": 4500,
+      "low": 3800,
+      "high": 5200,
+      "unit": "W",
+      "provenance": "estimated",
+      "note": "max with optics, not published. 7060X6-64PE max 2218 W at 51.2 Tb/s doubled, plus higher-power 1.6T optics"
+    },
+    "rack_units": {
+      "value": 4,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "arista-7060xe7-ql"
+    },
+    "weight_kg": {
+      "value": 35,
+      "low": 28,
+      "high": 45,
+      "unit": "kg",
+      "provenance": "estimated",
+      "note": "not published; typical of 4RU 64 x 1.6T air-cooled switches (Celestica DS6001 2OU liquid is 30 kg)"
+    },
+    "switch_capacity_tbps": {
+      "value": 102.4,
+      "unit": "Tb/s",
+      "provenance": "vendor_spec",
+      "source": "arista-7060xe7-ql"
+    }
+  },
+  "attrs": {
+    "fabric": "ethernet",
+    "cooling": "air",
+    "port_form_factor": "OSFP 1.6T (IHS)",
+    "asic": "Broadcom Tomahawk 6 (press)",
+    "availability": "Q4 2026 (vendor)"
+  },
+  "sources": [
+    {
+      "id": "arista-7060x6-ds",
+      "title": "Arista 7060X6 Series Data Sheet",
+      "url": "https://www.arista.com/assets/data/pdf/Datasheets/7060X6-Datasheet.pdf",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "arista-7060xe7-ql",
+      "title": "Arista 7060XE7 Series Quick Look (June 2026)",
+      "url": "https://www.arista.com/assets/data/pdf/Datasheets/7060XE7-Series-Quick-Look.pdf",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "arista-pr-1p6t",
+      "title": "Arista press release: Next-Generation 1.6Terabit Portfolio for AI Fabrics (2026-06-09)",
+      "url": "https://www.arista.com/en/company/news/press-release/24102-pr-20260609",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "heise-7060xe7",
+      "title": "heise: Arista 7060XE7 1.6 Tbit/s switches for AI networks",
+      "url": "https://www.heise.de/en/news/Arista-7060XE7-1-6-Tbit-s-switches-for-AI-networks-11328793.html",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

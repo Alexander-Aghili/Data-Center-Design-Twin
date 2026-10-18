@@ -1,0 +1,55 @@
+{
+  "kind": "system",
+  "id": "amd-helios-pod4",
+  "name": "AMD Helios pod (4 racks + 2 network racks)",
+  "as_of": "2026-10-18",
+  "description": "Four amd-helios racks (288 MI455X GPUs, 4 separate 72-GPU UALoE scale-up domains) in a row with one network-rack holding scale-out leaf switches. In 0.6 m slot units, each double-wide Helios takes 2 slots (offsets 0, 2, 4, 6) and the network rack sits at slot 8.",
+  "members": [
+    {
+      "key": "helios-1",
+      "rack_type": "amd-helios",
+      "slot_offset": 0
+    },
+    {
+      "key": "helios-2",
+      "rack_type": "amd-helios",
+      "slot_offset": 2
+    },
+    {
+      "key": "helios-3",
+      "rack_type": "amd-helios",
+      "slot_offset": 4
+    },
+    {
+      "key": "helios-4",
+      "rack_type": "amd-helios",
+      "slot_offset": 6
+    },
+    {
+      "key": "net-1",
+      "rack_type": "network-rack",
+      "slot_offset": 8
+    },
+    {
+      "key": "net-2",
+      "rack_type": "network-rack",
+      "slot_offset": 10
+    }
+  ],
+  "links": [],
+  "notes": "The pod size is an assumption. AMD publishes no pod grouping for Helios: the scale-up domain is one rack, and racks join only over the Ethernet scale-out fabric. The Schneider/AMD reference design sizes clusters by MW (up to 10.4 MW), not by a fixed rack count. Four racks were chosen as a convenient row unit of about 1 MW (4 x 246 kW planning peak). Scale-out links are not listed here: the twin's network solver derives them from each rack's scale_out_ports (216 x 800G per Helios with 3 Vulcano NICs per GPU) and routes them. Two network racks are included because 864 leaf-facing 800G ports exceed one network rack: at 1:1 oversubscription a 144-port leaf has 72 downlinks, so 864 ports need 12 leaves, and the catalog network rack holds 8 switches (estimated). Front-end (18 Salina 400G DPUs per rack) and management links are not counted.",
+  "sources": [
+    {
+      "id": "amd-helios-page",
+      "title": "AMD Helios Rackscale Solution product page",
+      "url": "https://www.amd.com/en/products/rackscale-solutions/helios.html",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "schneider-helios-refdesign",
+      "title": "Schneider Electric and AMD release first Helios platform reference design (23 July 2026)",
+      "url": "https://www.se.com/ww/en/about-us/newsroom/news/press-releases/Schneider-Electric-and-AMD-release-first-Helios-platform-reference-design-to-accelerate-AI-Factory-deployment-6a60b540d574233932028c53/",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

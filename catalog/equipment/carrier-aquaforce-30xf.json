@@ -1,0 +1,54 @@
+{
+  "kind": "equipment",
+  "id": "carrier-aquaforce-30xf",
+  "name": "Carrier AquaForce 30XF variable-speed air-cooled screw chiller",
+  "vendor": "Carrier",
+  "model": "AquaForce 30XF",
+  "category": "chiller",
+  "as_of": "2026-10-18",
+  "description": "Air-cooled VFD screw chiller with optional hydronic free cooling (FreeBoost), R1234ze/R515B/R513A/R134a, active harmonic filter, ATS, 120 s recovery to full load. First free-cooling process chiller with Eurovent data-centre certification. Range entry: size not fixed.",
+  "params": {
+    "capacity_w": {
+      "low": 738000,
+      "high": 2520000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "carrier-30xf-in",
+      "note": "nominal range across sizes 738-2520 kW; Carrier data-centre brochure bases capacity on 20 C LWT and 35 C outdoor air"
+    },
+    "cop": {
+      "value": 3.9,
+      "low": 3.3,
+      "high": 3.9,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "carrier-dc-page",
+      "note": "'COP up to 3.9' at data-centre condition 30 C EWT / 20 C LWT, 35 C ambient, without free cooling (carrier-dc-page); the product page states 'COP up to 3.3' with unstated (likely standard 12/7 C) conditions"
+    }
+  },
+  "attrs": {
+    "refrigerant": "R1234ze / R515B / R513A / R134a",
+    "free_cooling": "optional hydronic free cooling",
+    "compressor": "VFD screw"
+  },
+  "sources": [
+    {
+      "id": "carrier-dc-page",
+      "title": "Carrier data centers page (India): AquaForce 30XF COP up to 3.9",
+      "url": "https://www.carrier.com/commercial/en/in/data-centers/",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "carrier-30xf-in",
+      "title": "Carrier AquaForce 30XF product page (India)",
+      "url": "https://www.carrier.com/commercial/en/in/products/commercial-products/chillers/30XF",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "carrier-30xf-eu",
+      "title": "Carrier 30XF product page (EU)",
+      "url": "https://www.carrier.com/commercial/en/eu/products/air-conditioning/air-cooled-chillers/30xf/",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

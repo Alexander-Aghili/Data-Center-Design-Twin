@@ -1,0 +1,251 @@
+{
+  "kind": "rack",
+  "id": "mi355x-dlc-rack",
+  "name": "AMD Instinct MI355X DLC rack (8x 8-GPU, 48U)",
+  "vendor": "Supermicro (AMD Instinct MI355X)",
+  "model": "SRS-48ULC-MI355-4U8N-R0 (8x AS-4126GS-NMR-LCC)",
+  "generation": "Instinct MI350 series (MI355X, CDNA 4) + EPYC 9005 (Turin)",
+  "availability": "Shipping",
+  "as_of": "2026-10-18",
+  "role": "compute",
+  "description": "Basis: Supermicro L11 rack SRS-48ULC-MI355-4U8N-R0. It is a 48U 19-inch rack with 8x AS-4126GS-NMR-LCC 4U direct-to-chip liquid-cooled servers (8x MI355X 288 GB, 1400 W TBP, plus 2x EPYC 9005 each), giving 64 GPUs per rack. It also holds a 4U in-rack CDU (100 or 250 kW, supports up to 45 C facility water), a vertical manifold plus 8 horizontal manifolds, 2 data switches and 1 management switch. Each server has 4x 6600 W (2+2) Titanium PSUs on 200-240 VAC; there is no rack busbar or power shelf, so the PSU sets are modeled as 8 'shelves'. The 'ac_54v' input means AC-fed. Because the CDU is in the rack, the rack connects to facility water, not a hall CDU secondary loop. Cold plates cool the GPUs and CPUs; fans cool memory, NICs, drives and PSUs. The rack is useful as a mixed-hall type next to Helios or NVIDIA racks. Dell's alternative is the PowerEdge XE9785L: 3 OU nodes in an IR7000 21-inch rack with 33 kW power shelves.",
+  "electrical": {
+    "nominal_power_w": {
+      "value": 120360,
+      "unit": "W",
+      "provenance": "oem_datasheet",
+      "source": "smc-amd-enterprise-ai",
+      "note": "Supermicro 'Rack Power' for SRS-48ULC-MI355-4U8N-R0 (about 15 kW per node). This is probably a planning power, not measured draw. The 52U 12-node variant lists 178.71 kW."
+    },
+    "peak_power_w": {
+      "low": 120360,
+      "high": 135000,
+      "unit": "W",
+      "provenance": "estimated",
+      "note": "no EDPp published. The low end is Supermicro's rack power. The high end adds about 12% for MI355X power transients above TBP. Not sourced."
+    },
+    "power_shelves": {
+      "value": 32,
+      "unit": "1",
+      "provenance": "derived",
+      "source": "smc-as4126",
+      "note": "no rack power shelves: 8 servers x 4 PSUs, each PSU counted as one 'shelf'. Each server's PSUs are 2+2 redundant, so losing one feed leaves 16 PSUs = 105.6 kW for the servers; Supermicro's 120.36 kW rack power also covers the in-rack CDU and switches, assumed on separate PDU outlets. The rack-level shelf check (lose one shelf) does not capture per-server 2+2 limits."
+    },
+    "shelf_rating_w": {
+      "value": 6600,
+      "unit": "W",
+      "provenance": "oem_datasheet",
+      "source": "smc-as4126",
+      "note": "6600 W Titanium PSU at 239-240 VAC; 5900 W at 200-208 VAC."
+    },
+    "supported_power_input": [
+      "ac_54v"
+    ]
+  },
+  "thermal": {
+    "liquid_fraction": {
+      "low": 0.75,
+      "high": 0.85,
+      "unit": "1",
+      "provenance": "estimated",
+      "source": "amd-mi355x",
+      "note": "cold plates cover the GPUs (8x 1400 W TBP) and CPUs (2x up to 500 W), about 12.2 kW of the roughly 15 kW per node (0.81). Fans cool DIMMs, NICs, drives, PSUs and the rack switches. Supermicro gives no capture figure for this server; its DLC-2 claim of 98% applies to HGX B200/B300 systems, not this one."
+    },
+    "max_coolant_supply_c": {
+      "value": 45,
+      "unit": "C",
+      "provenance": "oem_datasheet",
+      "source": "smc-lc-solutions",
+      "note": "Supermicro in-rack CDU supports facility water up to 45 C. This is the facility-water limit at the rack. The secondary loop to the cold plates is warmer by the CDU approach, which is not published. Coolant is 25 wt% propylene glycol."
+    },
+    "rack_pressure_drop_kpa": {
+      "unit": "kPa",
+      "provenance": "unknown",
+      "note": "facility-side pressure drop across the in-rack CDU is not published as of 2026-10."
+    },
+    "flow_lpm_per_kw": {
+      "value": 1.5,
+      "unit": "L/min/kW",
+      "provenance": "estimated",
+      "note": "not published. Assumes 25% propylene glycol (Supermicro CDU spec) at about a 10 K rise, which is roughly 1.5 L/min per kW of liquid heat. For water alone the figure is about 1.43."
+    },
+    "quick_disconnect": "Supermicro non-spill, one-handed, color-coded QDCs on the vertical/horizontal manifolds (size not published)"
+  },
+  "mechanical": {
+    "width_mm": {
+      "low": 600,
+      "high": 750,
+      "unit": "mm",
+      "provenance": "estimated",
+      "source": "sr-smc-racks",
+      "note": "press report: Supermicro AI racks come in 600 mm and 750 mm widths. Liquid-cooled racks with vertical manifolds and PDUs are often 750 mm wide, which would need two 600 mm slots. Choose per order."
+    },
+    "depth_mm": {
+      "value": 1200,
+      "unit": "mm",
+      "provenance": "estimated",
+      "note": "not published. The in-rack CDU is 1,160.7 mm deep (smc-lc-solutions) and the servers are 895 mm deep, so the rack is assumed to be at least 1,200 mm deep."
+    },
+    "height_mm": {
+      "value": 2286,
+      "unit": "mm",
+      "provenance": "estimated",
+      "note": "48U x 44.45 mm = 2,134 mm of mounting space, plus the frame top and base. 2,286 mm (90 in) is typical for a 48U rack. Not published for this SKU."
+    },
+    "rack_units": {
+      "value": 48,
+      "unit": "1",
+      "provenance": "oem_datasheet",
+      "source": "smc-lc-solutions",
+      "note": "Uses 39U: 8x 4U servers, a 4U CDU and 3x 1U switches."
+    },
+    "weight_kg": {
+      "low": 800,
+      "high": 1100,
+      "unit": "kg",
+      "provenance": "estimated",
+      "source": "smc-as4126",
+      "note": "Sum of parts. The 8 servers weigh 8 x 53-63.5 kg (Supermicro lists 53 kg net and 63.5 kg gross; its 80 lb net figure conflicts) for about 425-510 kg. The CDU with coolant and the manifolds add an assumed 150-250 kg, the frame 150-200 kg, and switches and PDUs 50-100 kg. Supermicro rack frames are rated to 2,500 kg static load."
+    },
+    "feet": {
+      "value": 4,
+      "unit": "1",
+      "provenance": "estimated",
+      "note": "assumes standard 4 corner leveling feet plus casters, as on a typical 19-inch rack."
+    },
+    "service_clearance_front_mm": {
+      "value": 1200,
+      "unit": "mm",
+      "provenance": "estimated",
+      "note": "assumed front clearance to slide out a 4U, 895 mm deep server of about 53 kg. Not published."
+    },
+    "service_clearance_rear_mm": {
+      "value": 1000,
+      "unit": "mm",
+      "provenance": "estimated",
+      "note": "assumed rear clearance for PSU, QDC and manifold service. Not published."
+    }
+  },
+  "network": {
+    "scale_out_ports": {
+      "value": 64,
+      "unit": "1",
+      "provenance": "derived",
+      "source": "smc-amd-enterprise-ai",
+      "note": "Supermicro lists 10 Pensando AI NICs per server (40 per 4 servers). Assumes 8 are back-end scale-out NICs (1 per GPU) and 2 are front-end. 8 x 8 = 64 per rack."
+    },
+    "port_speed_gbps": {
+      "value": 400,
+      "unit": "Gb/s",
+      "provenance": "estimated",
+      "source": "amd-pollara",
+      "note": "assumes the Pensando AI NIC is a Pollara 400 (400 Gb/s, QSFP112), AMD's AI NIC for the MI350 generation. Supermicro does not name the NIC model."
+    },
+    "scale_up_domain": {
+      "value": 8,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "amd-mi355x",
+      "note": "8-GPU OAM platform with an all-to-all Infinity Fabric mesh (7 links per GPU, 153 GB/s each). The rack therefore holds 8 separate scale-up domains."
+    },
+    "switch_slots": {
+      "value": 0,
+      "unit": "1",
+      "provenance": "derived",
+      "note": "compute rack. Supermicro's L11 configuration includes 2 data switches and 1 management switch in the rack, but leaf/spine switches are modeled in network racks."
+    },
+    "port_media": "400G Ethernet, QSFP112 (Pensando Pollara 400 assumed), optics or AEC to leaf"
+  },
+  "compute": {
+    "accelerators": {
+      "value": 64,
+      "unit": "1",
+      "provenance": "derived",
+      "source": "smc-lc-solutions",
+      "note": "8 servers x 8 MI355X GPUs, per Supermicro's 48U liquid-cooled rack configuration"
+    },
+    "accelerator_model": "AMD Instinct MI355X (288 GB HBM3E, 1400 W TBP, OAM)",
+    "cpus": {
+      "value": 16,
+      "unit": "1",
+      "provenance": "derived",
+      "source": "smc-as4126",
+      "note": "2 EPYC 9005 per server x 8 servers"
+    },
+    "hbm_tb": {
+      "value": 18.432,
+      "unit": "TB",
+      "provenance": "derived",
+      "source": "amd-mi355x",
+      "note": "64 x 288 GB HBM3E"
+    },
+    "fp4_pflops": {
+      "value": 646.4,
+      "unit": "PFLOPS",
+      "provenance": "derived",
+      "source": "amd-mi355x",
+      "note": "64 x 10.1 PFLOPS peak MXFP4, dense"
+    },
+    "fp8_pflops": {
+      "value": 320,
+      "unit": "PFLOPS",
+      "provenance": "derived",
+      "source": "amd-mi355x",
+      "note": "64 x 5 PFLOPS peak OCP-FP8, dense; doubles with structured sparsity"
+    }
+  },
+  "overridable": [
+    "electrical.nominal_power_w",
+    "electrical.peak_power_w",
+    "mechanical.weight_kg",
+    "mechanical.width_mm",
+    "thermal.liquid_fraction",
+    "compute.accelerators",
+    "network.scale_out_ports",
+    "network.port_speed_gbps"
+  ],
+  "sources": [
+    {
+      "id": "smc-amd-enterprise-ai",
+      "title": "Supermicro AMD Enterprise AI page (L11 rack configurations table, SRS-48ULC-MI355-4U8N-R0)",
+      "url": "https://www.supermicro.com/en/accelerators/amd/enterprise-ai",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "smc-as4126",
+      "title": "Supermicro AS-4126GS-NMR-LCC product specifications",
+      "url": "https://www.supermicro.com/en/products/system/gpu/4u/as-4126gs-nmr-lcc",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "smc-lc-solutions",
+      "title": "Supermicro Liquid-Cooling Solutions datasheet (Feb 2025)",
+      "url": "https://www.supermicro.com/solutions/datasheet_Liquid_Cooling_Solutions.pdf",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "amd-mi355x",
+      "title": "AMD Instinct MI355X specifications",
+      "url": "https://www.amd.com/en/products/accelerators/instinct/mi350/mi355x.html",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "amd-pollara",
+      "title": "AMD Pensando Pollara 400 AI NIC product brief",
+      "url": "https://www.amd.com/content/dam/amd/en/documents/pensando-technical-docs/product-briefs/pollara-product-brief.pdf",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "sr-smc-racks",
+      "title": "StorageReview: Supermicro rack series adds ten models rated for 5,500 lb (1 Aug 2026)",
+      "url": "https://www.storagereview.com/news/supermicro-rack-series-adds-ten-models-rated-for-5500-lb-and-3000-racks-a-month",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "dell-xe-spec",
+      "title": "Dell PowerEdge XE AI spec sheet (XE9785L, IR7000)",
+      "url": "https://www.delltechnologies.com/asset/en-ie/products/servers/technical-support/poweredge-xe-ai-spec-sheet.pdf",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

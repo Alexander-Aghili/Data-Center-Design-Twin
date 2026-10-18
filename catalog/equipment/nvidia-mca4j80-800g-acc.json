@@ -1,0 +1,66 @@
+{
+  "kind": "equipment",
+  "id": "nvidia-mca4j80-800g-acc",
+  "name": "800G active copper cable (NVIDIA MCA4J80 ACC, OSFP twin-port 2x400G)",
+  "vendor": "NVIDIA",
+  "model": "MCA4J80-Nxxx",
+  "category": "cable",
+  "as_of": "2026-10-18",
+  "description": "Linear active copper cable (equalizer IC per end), 3-5 m, 8 x 100G-PAM4, propagation delay max 4.5 ns/m. NVIDIA recommends passive DAC below 3 m.",
+  "params": {
+    "reach_m": {
+      "value": 5,
+      "unit": "m",
+      "provenance": "vendor_spec",
+      "source": "nvidia-mca4j80",
+      "note": "lengths 3, 4, 5 m; 5 m max"
+    },
+    "power_per_end_w": {
+      "value": 1.5,
+      "unit": "W/end",
+      "provenance": "vendor_spec",
+      "source": "nvidia-mca4j80-specs",
+      "note": "max"
+    },
+    "weight_kg_per_m": {
+      "value": 0.15,
+      "low": 0.1,
+      "high": 0.2,
+      "unit": "kg/m",
+      "provenance": "estimated",
+      "note": "not published; 30AWG (7.2 mm) at 3-4 m, 26AWG (8.9 mm) at 5 m per NVIDIA spec. Estimated like the DAC entry"
+    },
+    "port_speed_gbps": {
+      "value": 800,
+      "unit": "Gb/s",
+      "provenance": "vendor_spec",
+      "source": "nvidia-mca4j80"
+    },
+    "diameter_mm": {
+      "value": 8.9,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "nvidia-mca4j80-specs",
+      "note": "26AWG 5 m; 7.2 mm for 30AWG"
+    }
+  },
+  "attrs": {
+    "media": "copper",
+    "type": "active copper (ACC)",
+    "connector": "OSFP"
+  },
+  "sources": [
+    {
+      "id": "nvidia-mca4j80",
+      "title": "NVIDIA MCA4J80-Nxxx 800Gb/s twin-port OSFP active copper cable (ACC)",
+      "url": "https://networking-docs.nvidia.com/mca4j80nxxx800pub",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "nvidia-mca4j80-specs",
+      "title": "NVIDIA MCA4J80-Nxxx ACC - Specifications",
+      "url": "https://networking-docs.nvidia.com/mca4j80nxxx800pub/specifications",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "kind": "equipment",
+  "id": "nvidia-mms4a00-800g-xdr-dr4",
+  "name": "800G XDR single-mode DR4 optics link (half of NVIDIA MMS4A00 1.6T twin-port)",
+  "vendor": "NVIDIA",
+  "model": "MMS4A00-XM",
+  "category": "cable",
+  "as_of": "2026-10-18",
+  "description": "One 800 Gb/s XDR port (4 x 200G-PAM4) of the 1.6T twin-port 2xDR4 OSFP transceiver used in Q3400 cages (2 x 800G per cage). 500 m over MPO-12/APC single-mode. Power per 800G end is half the module.",
+  "params": {
+    "reach_m": {
+      "value": 500,
+      "unit": "m",
+      "provenance": "vendor_spec",
+      "source": "nvidia-mms4a00"
+    },
+    "power_per_end_w": {
+      "value": 16.75,
+      "unit": "W/end",
+      "provenance": "derived",
+      "source": "nvidia-mms4a00",
+      "note": "33.5 W max per 1.6T twin-port module / 2 ports"
+    },
+    "weight_kg_per_m": {
+      "value": 0.0083,
+      "unit": "kg/m",
+      "provenance": "derived",
+      "source": "neutrik-mtp-cable",
+      "note": "one 12-fiber MPO jumper per 800G DR4 port at 8.3 g/m (Neutrik 3.0 mm cable)"
+    },
+    "port_speed_gbps": {
+      "value": 800,
+      "unit": "Gb/s",
+      "provenance": "vendor_spec",
+      "source": "nvidia-mms4a00"
+    },
+    "module_power_w": {
+      "value": 33.5,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "nvidia-mms4a00",
+      "note": "max, whole 1.6T twin-port module"
+    }
+  },
+  "attrs": {
+    "media": "optics",
+    "type": "DR4 single-mode, 200G/lane",
+    "connector": "OSFP 1.6T, MPO-12/APC"
+  },
+  "sources": [
+    {
+      "id": "neutrik-mtp-cable",
+      "title": "Neutrik opticalCON MTP patch and breakout cable datasheet (12-fiber 3.0 mm cable weight)",
+      "url": "https://www.neutrik.de/media/9963/download/cable-datasheet---opticalcon-mtp---patchundbreakout.pdf?v=1",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "nvidia-mms4a00",
+      "title": "NVIDIA MMS4A00 1600Gb/s 2xDR4 twin-port OSFP single-mode transceiver (XDR, 500m)",
+      "url": "https://networking-docs.nvidia.com/9iahx00xmosfptcvr1600",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

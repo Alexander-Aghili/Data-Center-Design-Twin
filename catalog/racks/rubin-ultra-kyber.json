@@ -1,0 +1,194 @@
+{
+  "kind": "rack",
+  "id": "rubin-ultra-kyber",
+  "name": "NVIDIA Rubin Ultra Kyber rack (NVL576 / NVL144)",
+  "vendor": "NVIDIA",
+  "model": "Vera Rubin Ultra in Kyber rack (announced as NVL576 counting GPU dies; now NVL144 counting packages)",
+  "generation": "Rubin Ultra",
+  "availability": "Roadmap: H2 2027 (SemiAnalysis reported a slip to 2028 in July 2026; NVIDIA says its roadmap is intact)",
+  "as_of": "2026-10-18",
+  "role": "compute",
+  "description": "Roadmap entry; most values are estimates. Kyber rotates compute blades vertically like books: GTC 2026 showed 2 chassis x 18 compute sleds, each with 4 Rubin Ultra GPU packages (4 reticle dies, 1 TB HBM4e each) and 2 Vera CPUs, i.e. 144 packages / 576 dies in one NVLink 7 domain. Rear NVLink switch blades plug into a passive midplane instead of cable cartridges. Power is 800 V DC only (NVIDIA: 54 V in-rack distribution hits physical limits above ~200 kW; it showed an 800 V sidecar powering 576 Rubin Ultra GPUs in one Kyber rack at GTC 2025): an adjacent power sidecar rectifies 415/480 V AC to 800 V DC; the APC sidecar shown at GTC 2026 held 7 x 3U 110 kW 800 V power shelves, 4 x 2U DC output PDUs, a 4U power management controller and 5 Li-ion battery backup units. The footprint here treats the compute rack plus its power sidecar as one placed unit (about two 600 mm slots). Cooling is all-liquid via the facility TCS through a CDU; NVIDIA has not published whether a cooling sidecar is used.",
+  "electrical": {
+    "nominal_power_w": {
+      "value": 600000,
+      "unit": "W",
+      "provenance": "estimated",
+      "source": "lockwood-gtc26",
+      "note": "NVIDIA presented Kyber as a ~600 kW rack at GTC 2025 (press report). The GTC 2026 design looks half as dense (144 packages instead of 576), and NVIDIA did not restate power; one analyst suspects closer to 300 kW. 600 kW kept as the planning figure; override when NVIDIA publishes."
+    },
+    "peak_power_w": {
+      "value": 660000,
+      "unit": "W",
+      "provenance": "estimated",
+      "source": "lockwood-gtc26",
+      "note": "no EDPp published; set to the N capacity of the GTC 2026 sidecar (6 of 7 x 110 kW shelves = 660 kW)"
+    },
+    "power_shelves": {
+      "value": 7,
+      "unit": "1",
+      "provenance": "estimated",
+      "source": "lockwood-gtc26",
+      "note": "blog report of the APC 800 VDC sidecar at GTC 2026: 7 x 3U 110 kW shelves (6+1). Shelves sit in the sidecar, not the compute rack; the rack on display also seemed to have ~8 integrated shelves."
+    },
+    "shelf_rating_w": {
+      "value": 110000,
+      "unit": "W",
+      "provenance": "estimated",
+      "source": "lockwood-gtc26",
+      "note": "blog report: 3U 110 kW 800 Vdc power shelves in the sidecar"
+    },
+    "supported_power_input": ["dc_800v"]
+  },
+  "thermal": {
+    "liquid_fraction": {
+      "low": 0.95,
+      "high": 1.0,
+      "unit": "1",
+      "provenance": "estimated",
+      "note": "press reports describe all-liquid cooling; Vera Rubin NVL72 trays are already 100% liquid-cooled. Sidecar rectifier losses may go to air. No vendor figure."
+    },
+    "max_coolant_supply_c": {
+      "value": 45,
+      "unit": "C",
+      "provenance": "estimated",
+      "note": "assumed same 45 C inlet as Vera Rubin NVL72; not published for Kyber"
+    },
+    "rack_pressure_drop_kpa": {
+      "unit": "kPa",
+      "provenance": "unknown",
+      "note": "not published; roadmap product"
+    },
+    "flow_lpm_per_kw": {
+      "unit": "L/min/kW",
+      "provenance": "unknown",
+      "note": "not published; roadmap product"
+    },
+    "quick_disconnect": "not published"
+  },
+  "mechanical": {
+    "width_mm": {
+      "value": 1200,
+      "unit": "mm",
+      "provenance": "estimated",
+      "note": "compute rack (assumed 600 mm MGX-class width) plus 800 VDC power sidecar (assumed 600 mm); NVIDIA publishes no Kyber dimensions"
+    },
+    "depth_mm": {
+      "value": 1200,
+      "unit": "mm",
+      "provenance": "estimated",
+      "note": "assumed same 1,200 mm planning depth as Vera Rubin NVL72; not published"
+    },
+    "height_mm": {
+      "value": 2300,
+      "unit": "mm",
+      "provenance": "estimated",
+      "note": "assumed same ~2,300 mm as Vera Rubin NVL72; not published"
+    },
+    "weight_kg": {
+      "unit": "kg",
+      "provenance": "unknown",
+      "note": "not published; expect well above Vera Rubin NVL72 (~1,800 kg) plus a sidecar with batteries. Get structural sign-off before planning."
+    },
+    "feet": {
+      "value": 8,
+      "unit": "1",
+      "provenance": "estimated",
+      "note": "assumed four leveling feet each for compute rack and sidecar"
+    }
+  },
+  "network": {
+    "scale_out_ports": {
+      "low": 576,
+      "high": 1152,
+      "unit": "1",
+      "provenance": "estimated",
+      "source": "lockwood-gtc26",
+      "note": "GTC 2025 NVL576 figure was 115.2 TB/s ConnectX-9 (= 1,152 x 800G, press). The GTC 2026 sleds show 2 or 4 NICs each, so the count may be half. Expressed in 800G ports."
+    },
+    "port_speed_gbps": {
+      "value": 800,
+      "unit": "Gb/s",
+      "provenance": "estimated",
+      "note": "ConnectX-9 1.6 Tb/s NICs modeled as 2 x 800G ports, as on Vera Rubin NVL72"
+    },
+    "scale_up_domain": {
+      "value": 144,
+      "unit": "1",
+      "provenance": "estimated",
+      "source": "planettools-kyber",
+      "note": "144 Rubin Ultra packages (576 dies) in one NVLink domain; NVIDIA's 2025 blog says 576 Rubin Ultra GPUs, counting dies"
+    },
+    "scale_up_bandwidth_tbps": {
+      "value": 12000,
+      "unit": "Tb/s",
+      "provenance": "estimated",
+      "note": "press report of GTC 2025 figure: 1.5 PB/s NVLink 7 for NVL576 = 12,000 Tb/s; may change with the GTC 2026 redesign"
+    },
+    "switch_slots": {
+      "value": 0,
+      "unit": "1",
+      "provenance": "derived",
+      "note": "compute rack"
+    },
+    "port_media": "OSFP-class front ports (ConnectX-9); details not published"
+  },
+  "compute": {
+    "accelerators": {
+      "value": 144,
+      "unit": "1",
+      "provenance": "estimated",
+      "source": "heise-kyber",
+      "note": "press report: 144 Rubin Ultra packages per system (4 compute dies each = 576 dies, the 'NVL576' count)"
+    },
+    "accelerator_model": "NVIDIA Rubin Ultra (4 reticle dies, 1 TB HBM4e)",
+    "cpus": {
+      "value": 72,
+      "unit": "1",
+      "provenance": "estimated",
+      "source": "lockwood-gtc26",
+      "note": "36 sleds x 2 Vera CPUs (blog report of GTC 2026 hardware)"
+    },
+    "hbm_tb": {
+      "value": 144,
+      "unit": "TB",
+      "provenance": "estimated",
+      "source": "heise-kyber",
+      "note": "press report: 1 TB HBM4e per Rubin Ultra x 144. NVIDIA's 365 TB 'fast memory' figure includes CPU LPDDR."
+    },
+    "fp4_pflops": {
+      "low": 10500,
+      "high": 15000,
+      "unit": "PFLOPS",
+      "provenance": "estimated",
+      "source": "heise-kyber",
+      "note": "press report: 15 EF FP4 (100 PF per GPU), an inference (sparse-basis) figure. Dense not published; ~10.5 EF if the Vera Rubin dense/inference ratio (2,520/3,600) holds."
+    },
+    "fp8_pflops": {
+      "value": 5000,
+      "unit": "PFLOPS",
+      "provenance": "estimated",
+      "source": "heise-kyber",
+      "note": "press report: 5 EF FP8 training"
+    }
+  },
+  "overridable": [
+    "electrical.nominal_power_w",
+    "electrical.peak_power_w",
+    "mechanical.weight_kg",
+    "mechanical.width_mm",
+    "mechanical.depth_mm",
+    "mechanical.height_mm",
+    "thermal.liquid_fraction",
+    "thermal.max_coolant_supply_c",
+    "network.scale_out_ports",
+    "compute.accelerators"
+  ],
+  "sources": [
+    { "id": "nvidia-ocp-blog", "title": "NVIDIA blog: gigawatt AI factories, OCP, Vera Rubin, Kyber (Oct 2025)", "url": "https://blogs.nvidia.com/blog/gigawatt-ai-factories-ocp-vera-rubin", "accessed": "2026-10-18" },
+    { "id": "nvidia-800vdc-blog", "title": "NVIDIA Technical Blog: NVIDIA 800 V HVDC architecture will power the next generation of AI factories", "url": "https://developer.nvidia.com/blog/nvidia-800-v-hvdc-architecture-will-power-the-next-generation-of-ai-factories/", "accessed": "2026-10-18" },
+    { "id": "lockwood-gtc26", "title": "Glenn K. Lockwood: GTC 2026 recap (blog; Kyber sleds and APC 800 V sidecar)", "url": "https://blog.glennklockwood.com/2026/03/gtc-2026-recap.html", "accessed": "2026-10-18" },
+    { "id": "heise-kyber", "title": "heise: Kyber rack, Nvidia shows Rubin Ultra boards (17 Mar 2026)", "url": "https://heise.de/-11213103", "accessed": "2026-10-18" },
+    { "id": "planettools-kyber", "title": "The Planet Tools: NVIDIA Kyber NVL144 delayed to 2028? Report vs denial", "url": "https://theplanettools.ai/blog/nvidia-kyber-nvl144-rubin-ultra-delay-report-denial-2026", "accessed": "2026-10-18" }
+  ]
+}

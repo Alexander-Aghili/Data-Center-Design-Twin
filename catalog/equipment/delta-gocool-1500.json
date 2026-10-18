@@ -1,0 +1,112 @@
+{
+  "kind": "equipment",
+  "id": "delta-gocool-1500",
+  "name": "Delta GoCool-1500 liquid-to-liquid CDU",
+  "vendor": "Delta Electronics",
+  "model": "GoCool-1500",
+  "category": "cdu",
+  "as_of": "2026-10-18",
+  "description": "1.5 MW row liquid-to-liquid CDU, 1200 x 1200 x 2300 mm; 3+1 pumps, hot-swappable 500 um primary and 50 um secondary filters, dual feed with ATS.",
+  "params": {
+    "capacity_w": {
+      "value": 1500000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "delta-gocool1500",
+      "note": "1500 kW at 6 C approach, 1500 L/min secondary, 1300 L/min primary (1.0 L/min/kW). Other ratings: 1375 kW @6 C/1650 L/min; 1250 kW @5 C/1500 L/min; 1016 kW @4 C/1524 L/min with 17 C primary inlet and PG25 secondary"
+    },
+    "max_flow_kg_s": {
+      "value": 27.45,
+      "unit": "kg/s",
+      "provenance": "vendor_spec",
+      "source": "delta-gocool1500",
+      "note": "highest listed secondary flow 1650 L/min * 0.998 / 60 = 27.45 kg/s"
+    },
+    "approach_k": {
+      "value": 6,
+      "unit": "K",
+      "provenance": "vendor_spec",
+      "source": "delta-gocool1500",
+      "note": "approach at the 1500 kW rating; 4 K available at 1016 kW"
+    },
+    "pump_head_kpa": {
+      "value": 331,
+      "unit": "kPa",
+      "provenance": "vendor_spec",
+      "source": "delta-gocool1500",
+      "note": "secondary external pressure drop available at nominal flow"
+    },
+    "power_w": {
+      "value": 18000,
+      "low": 12000,
+      "high": 25000,
+      "unit": "W",
+      "provenance": "estimated",
+      "note": "not published. Hydraulic power ~ 1524 L/min (0.0254 m3/s) * (331 kPa external + ~100 kPa internal) = 11 kW; divided by 0.45-0.9 wire-to-water efficiency gives 12-25 kW"
+    },
+    "weight_kg": {
+      "value": 1900,
+      "unit": "kg",
+      "provenance": "vendor_spec",
+      "source": "delta-gocool1500",
+      "note": "with coolant; 1600 kg without"
+    },
+    "flow_lpm": {
+      "value": 1500,
+      "unit": "L/min",
+      "provenance": "vendor_spec",
+      "source": "delta-gocool1500",
+      "note": "secondary flow at 1500 kW rating"
+    },
+    "primary_pressure_drop_kpa": {
+      "value": 114,
+      "unit": "kPa",
+      "provenance": "vendor_spec",
+      "source": "delta-gocool1500"
+    },
+    "footprint_w_mm": {
+      "value": 1200,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "delta-gocool1500"
+    },
+    "footprint_d_mm": {
+      "value": 1200,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "delta-gocool1500"
+    },
+    "height_mm": {
+      "value": 2300,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "delta-gocool1500"
+    },
+    "filtration_um": {
+      "value": 50,
+      "unit": "um",
+      "provenance": "vendor_spec",
+      "source": "delta-gocool1500",
+      "note": "secondary 50 um (upgradable to 25 um); primary 500 um"
+    },
+    "noise_dba": {
+      "value": 76,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "delta-gocool1500",
+      "note": "<76 dBA at 1 m"
+    }
+  },
+  "attrs": {
+    "pump_redundancy": "3+1 (N+1) or 4 pumps N mode",
+    "placement": "in-row"
+  },
+  "sources": [
+    {
+      "id": "delta-gocool1500",
+      "title": "Delta liquid-to-liquid CDU 1500 kW specifications",
+      "url": "https://deltapowersolutions.com/en/mcis/liquid-to-liquid-coolant-distribution-unit-1500kw-specifications.php",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

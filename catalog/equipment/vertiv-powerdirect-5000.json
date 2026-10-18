@@ -1,0 +1,60 @@
+{
+  "kind": "equipment",
+  "id": "vertiv-powerdirect-5000",
+  "name": "Vertiv PowerDirect 5000 800 VDC sidecar (pre-release)",
+  "vendor": "Vertiv",
+  "model": "PowerDirect 5000",
+  "category": "rectifier",
+  "as_of": "2026-10-18",
+  "description": "800 VDC sidecar beside the IT rack, part of Vertiv's 800 VDC portfolio (centralized rectifiers, DC busway, rack DC-DC, DC backup) slated for H2 2026 commercialization with customer pilots and ramp through 2027. No datasheet yet.",
+  "params": {
+    "capacity_w": {
+      "low": 400000,
+      "high": 900000,
+      "unit": "W",
+      "provenance": "estimated",
+      "source": "vertiv-rack-to-data-hall-800vdc",
+      "note": "Vertiv blog: 'an 800 VDC sidecar, delivering from 400 kW up to 900 kW'; pre-release, no datasheet"
+    },
+    "efficiency": {
+      "low": 0.97,
+      "high": 0.98,
+      "unit": "1",
+      "provenance": "estimated",
+      "source": "delta-gtc-2026-brandnews",
+      "note": "no Vertiv figure. Assumed equal to peer 800 VDC rectifier racks (Delta: AC-DC up to 98%), lower bound allowing for partial-load and BBU losses"
+    },
+    "voltage_v": {
+      "value": 800,
+      "unit": "V",
+      "provenance": "estimated",
+      "source": "vertiv-rack-to-data-hall-800vdc",
+      "note": "800 VDC output per Vertiv blog"
+    }
+  },
+  "attrs": {
+    "power_input": "dc_800v",
+    "input": "ac",
+    "status": "pre-release; Vertiv portfolio planned H2 2026"
+  },
+  "sources": [
+    {
+      "id": "vertiv-rack-to-data-hall-800vdc",
+      "title": "Vertiv blog: From rack to data hall, the practical path to 800 VDC (2026-07-17)",
+      "url": "https://www.vertiv.com/es-emea/insights/articles/blog-posts/from-rack-to-data-hall-the-practical-path-to-800-vdc/",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "vertiv-800vdc-pr-2025-10",
+      "title": "From Vision to Readiness: Vertiv collaborates with NVIDIA on 800 VDC (2025-10-13)",
+      "url": "https://investors.vertiv.com/news/news-details/2025/From-Vision-to-Readiness-Vertiv-Collaborates-with-NVIDIA-to-Advance-800-VDC-Platform-Designs-to-Power-the-Next-Generation-of-AI-Factories/default.aspx",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "delta-gtc-2026-brandnews",
+      "title": "Delta exhibits energy-saving solutions for 800 VDC at NVIDIA GTC 2026 (Delta brand news)",
+      "url": "https://brandnews.deltaww.com/EN/IoTSolutionsDetail/12772",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

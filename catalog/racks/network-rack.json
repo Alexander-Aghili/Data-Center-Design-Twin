@@ -1,0 +1,156 @@
+{
+  "kind": "rack",
+  "id": "network-rack",
+  "name": "Network rack (InfiniBand leaf/spine, 48U, 800 mm)",
+  "vendor": "Generic",
+  "model": "48U 800 x 1200 network cabinet",
+  "generation": "XDR / 800G",
+  "availability": "Generic design",
+  "as_of": "2026-10-18",
+  "role": "network",
+  "description": "Air-cooled 800 mm wide 48U network cabinet sized for 8 NVIDIA Q3400-RA 4U switches (32U) plus patch panels, cable managers and a management switch. Wide cabinet for 144-port cable management. Power and weight are typical estimates; switch ports are modeled through the switch equipment entries.",
+  "electrical": {
+    "nominal_power_w": {
+      "value": 36300,
+      "unit": "W",
+      "provenance": "estimated",
+      "note": "8 x Q3400-RA at 2.9 kW typical (vendor, passive cables) plus ~1.6 kW optics each (72 x 1.6T twin-port modules at ~22 W typical vs 33.5 W max), plus ~0.3 kW management"
+    },
+    "peak_power_w": {
+      "value": 56300,
+      "unit": "W",
+      "provenance": "estimated",
+      "note": "8 x 7.0 kW vendor max with active cables plus ~0.3 kW management; actual depends on populated switches"
+    },
+    "power_shelves": {
+      "value": 0,
+      "unit": "1",
+      "provenance": "derived",
+      "note": "no 54 V power shelves; switch PSUs are fed by AC rack PDUs"
+    },
+    "shelf_rating_w": {
+      "unit": "W",
+      "provenance": "unknown",
+      "note": "not applicable: no power shelves"
+    },
+    "supported_power_input": [
+      "ac_54v"
+    ]
+  },
+  "thermal": {
+    "liquid_fraction": {
+      "value": 0,
+      "unit": "1",
+      "provenance": "derived",
+      "note": "basis is air-cooled Q3400-RA; use Q3450-LD for a liquid-cooled spine rack"
+    },
+    "max_coolant_supply_c": {
+      "unit": "C",
+      "provenance": "unknown",
+      "note": "not applicable: air-cooled rack, no coolant loop"
+    },
+    "rack_pressure_drop_kpa": {
+      "unit": "kPa",
+      "provenance": "unknown",
+      "note": "not applicable: air-cooled rack, no coolant loop"
+    }
+  },
+  "mechanical": {
+    "width_mm": {
+      "value": 800,
+      "unit": "mm",
+      "provenance": "estimated",
+      "note": "standard 800 mm network cabinet width for side cable management"
+    },
+    "depth_mm": {
+      "value": 1200,
+      "unit": "mm",
+      "provenance": "estimated",
+      "note": "1200 mm depth needed for 850 mm deep Q3400 plus rear cabling"
+    },
+    "height_mm": {
+      "value": 2260,
+      "unit": "mm",
+      "provenance": "estimated",
+      "note": "typical 48U cabinet external height"
+    },
+    "rack_units": {
+      "value": 48,
+      "unit": "1",
+      "provenance": "estimated",
+      "note": "typical 48U network cabinet"
+    },
+    "weight_kg": {
+      "value": 800,
+      "unit": "kg",
+      "provenance": "estimated",
+      "note": "8 x 60 kg switches (vendor) + ~180 kg empty 48U 800x1200 cabinet + ~140 kg optics, cables, patch panels, PDUs"
+    },
+    "feet": {
+      "value": 4,
+      "unit": "1",
+      "provenance": "estimated",
+      "note": "standard leveling feet"
+    }
+  },
+  "network": {
+    "scale_out_ports": {
+      "value": 0,
+      "unit": "1",
+      "provenance": "derived",
+      "note": "switch ports are modeled by the switch equipment placed in this rack"
+    },
+    "port_speed_gbps": {
+      "value": 800,
+      "unit": "Gb/s",
+      "provenance": "derived",
+      "note": "XDR 800 Gb/s ports of the Q3400 basis"
+    },
+    "scale_up_domain": {
+      "value": 0,
+      "unit": "1",
+      "provenance": "derived",
+      "note": "no accelerators, no scale-up domain"
+    },
+    "switch_slots": {
+      "value": 8,
+      "unit": "1",
+      "provenance": "estimated",
+      "note": "8 x 4U Q3400-class switches in 48U leaves 16U for patch panels and management; ~16 2U 51.2 Tb/s switches also fit"
+    },
+    "port_media": "OSFP optics and DAC"
+  },
+  "compute": {
+    "accelerators": {
+      "value": 0,
+      "unit": "1",
+      "provenance": "derived",
+      "note": "network rack, no accelerators"
+    },
+    "fp4_pflops": {
+      "value": 0,
+      "unit": "PFLOPS",
+      "provenance": "derived",
+      "note": "network rack, no compute"
+    }
+  },
+  "overridable": [
+    "electrical.nominal_power_w",
+    "electrical.peak_power_w",
+    "mechanical.weight_kg"
+  ],
+  "sources": [
+    {
+      "id": "nvidia-mms4a00",
+      "title": "NVIDIA MMS4A00 1600Gb/s 2xDR4 twin-port OSFP single-mode transceiver (XDR, 500m)",
+      "url": "https://networking-docs.nvidia.com/9iahx00xmosfptcvr1600",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "nvidia-xdr-specs",
+      "title": "NVIDIA Q32xx and Q34xx XDR 800Gb/s InfiniBand Switch Systems User Manual - Specifications",
+      "url": "https://networking-docs.nvidia.com/xdrswitcheshw/specifications",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

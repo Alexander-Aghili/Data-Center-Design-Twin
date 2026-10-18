@@ -1,0 +1,12 @@
+{
+  "kind": "system",
+  "id": "single-gb300-nvl72",
+  "name": "Single NVIDIA GB300 NVL72 rack",
+  "as_of": "2026-10-18",
+  "description": "One gb300-nvl72 rack placed as a unit: a complete 72-GPU NVLink domain in one 600 mm rack (one slot).",
+  "members": [
+    { "key": "rack", "rack_type": "gb300-nvl72", "slot_offset": 0 }
+  ],
+  "links": [],
+  "sources": []
+}

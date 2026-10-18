@@ -1,0 +1,64 @@
+{
+  "kind": "equipment",
+  "id": "abb-mns-6300a",
+  "name": "ABB MNS LV switchgear, 6300 A main busbar",
+  "vendor": "ABB",
+  "model": "MNS (6300 A main busbar)",
+  "category": "switchgear",
+  "as_of": "2026-10-18",
+  "description": "IEC 61439-1/-2 modular LV switchgear with rear main busbars (copper, up to 6300 A), Form 4 separation, IEC 61641 arc containment. ABB lists data centers among applications.",
+  "params": {
+    "capacity_w": {
+      "value": 4528447,
+      "unit": "W",
+      "provenance": "derived",
+      "note": "6300 A x 415 V x sqrt(3) = 4.53 MW at unity pf (maximum main busbar rating)"
+    },
+    "rating_a": {
+      "value": 6300,
+      "unit": "A",
+      "provenance": "vendor_spec",
+      "source": "abb-mns-system-guide",
+      "note": "copper main busbars, rated current Ie up to 6300 A"
+    },
+    "voltage_v": {
+      "value": 415,
+      "unit": "V",
+      "provenance": "estimated",
+      "note": "assumed 415 V system; MNS rated operating voltage up to 690 V AC (750 V DC)"
+    },
+    "rated_voltage_v": {
+      "value": 690,
+      "unit": "V",
+      "provenance": "vendor_spec",
+      "source": "abb-mns-system-guide"
+    },
+    "short_circuit_a": {
+      "value": 100000,
+      "unit": "A",
+      "provenance": "vendor_spec",
+      "source": "abb-mns-system-guide",
+      "note": "Icw up to 100 kA (1 s), Ipk up to 250 kA"
+    },
+    "height_mm": {
+      "value": 2200,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "abb-mns-system-guide",
+      "note": "recommended height; widths 400-1200 mm"
+    }
+  },
+  "attrs": {
+    "power_input": "ac_54v",
+    "status": "shipping",
+    "standard": "IEC 61439-1/-2"
+  },
+  "sources": [
+    {
+      "id": "abb-mns-system-guide",
+      "title": "ABB MNS System Guide 1TGC902030B0204 Rev 04",
+      "url": "https://library.e.abb.com/public/e1866cb0247ba992c1257ab400104b58/MNS_System_Guide_1TGC902030B0204_Rev04.pdf",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

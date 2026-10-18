@@ -687,7 +687,8 @@
             "rack_delta_t_k",
             "coolant",
             "fabric",
-            "models"
+            "models",
+            "dc_models"
           ],
           "properties": {
             "redundancy": {
@@ -777,6 +778,27 @@
                   "type": "string"
                 },
                 "air_handler": {
+                  "type": "string"
+                }
+              }
+            },
+            "dc_models": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "busway",
+                "switchgear",
+                "transformer"
+              ],
+              "description": "Models used instead of models.busway/switchgear/transformer when power_input is dc_800v",
+              "properties": {
+                "busway": {
+                  "type": "string"
+                },
+                "switchgear": {
+                  "type": "string"
+                },
+                "transformer": {
                   "type": "string"
                 }
               }

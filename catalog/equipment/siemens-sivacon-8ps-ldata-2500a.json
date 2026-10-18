@@ -1,0 +1,69 @@
+{
+  "kind": "equipment",
+  "id": "siemens-sivacon-8ps-ldata-2500a",
+  "name": "Siemens SIVACON 8PS LData 2500 A",
+  "vendor": "Siemens",
+  "model": "SIVACON 8PS LData 2500 A",
+  "category": "busway",
+  "as_of": "2026-10-18",
+  "description": "Siemens busbar trunking designed for data centers: 1000-2500 A, 600 V AC, tap-off units up to 250 A pluggable anywhere along the run, powerline data transmission. Top 2500 A rating used here.",
+  "params": {
+    "capacity_w": {
+      "value": 1797003,
+      "unit": "W",
+      "provenance": "derived",
+      "note": "2500 A x 415 V x sqrt(3) = 1797 kW at 415 V 3-phase, unity pf"
+    },
+    "rating_a": {
+      "value": 2500,
+      "unit": "A",
+      "provenance": "vendor_spec",
+      "source": "siemens-lv10-busbar-2021",
+      "note": "LData rated current range 1000...2500 A"
+    },
+    "voltage_v": {
+      "value": 415,
+      "unit": "V",
+      "provenance": "estimated",
+      "note": "assumed 415 V 3-phase; LData rated operational voltage 600 V AC"
+    },
+    "rated_voltage_v": {
+      "value": 600,
+      "unit": "V",
+      "provenance": "vendor_spec",
+      "source": "siemens-lv10-busbar-2021"
+    },
+    "short_circuit_a": {
+      "value": 40000,
+      "unit": "A",
+      "provenance": "vendor_spec",
+      "source": "siemens-lv10-busbar-2021",
+      "note": "Icw (1 s) min. 40 kA; Ipk min. 84 kA"
+    },
+    "tap_off_rating_a": {
+      "value": 250,
+      "unit": "A",
+      "provenance": "vendor_spec",
+      "source": "siemens-lv10-busbar-2021",
+      "note": "tap-off units up to 250 A"
+    },
+    "weight_kg_per_m": {
+      "unit": "kg/m",
+      "provenance": "unknown",
+      "note": "not in LV 10 quick selection guide; see LV 70 catalog"
+    }
+  },
+  "attrs": {
+    "power_input": "ac_54v",
+    "status": "shipping",
+    "conductor": "aluminium"
+  },
+  "sources": [
+    {
+      "id": "siemens-lv10-busbar-2021",
+      "title": "Siemens LV 10 04/2021 chapter 16: SIVACON 8PS busbar trunking systems",
+      "url": "https://cache.industry.siemens.com/dl/files/656/109750656/att_1069681/v1/16_BusbarTrunkingSystems_LV10_042021_EN.pdf",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

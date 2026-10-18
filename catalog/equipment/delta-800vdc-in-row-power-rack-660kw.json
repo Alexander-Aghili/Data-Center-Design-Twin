@@ -1,0 +1,70 @@
+{
+  "kind": "equipment",
+  "id": "delta-800vdc-in-row-power-rack-660kw",
+  "name": "Delta 800 VDC In-Row Power Rack 660 kW",
+  "vendor": "Delta Electronics",
+  "model": "800 VDC In-Row 660 kW Power Rack",
+  "category": "rectifier",
+  "as_of": "2026-10-18",
+  "description": "In-row AC-to-800 VDC power rack (sidecar) for NVIDIA Vera Rubin NVL72 / MGX: six 7RU modules, each a 3RU 110 kW power shelf plus a 4RU 80 kW BBU (480 kW backup). Built from 18.5 kW AC/DC PSUs. Shown at GTC 2026 and OCP 2026; a compact 800 kW no-BBU version is also mentioned.",
+  "params": {
+    "capacity_w": {
+      "value": 660000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "delta-gtc-2026-brandnews",
+      "note": "6 x 110 kW power shelves"
+    },
+    "efficiency": {
+      "value": 0.98,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "delta-gtc-2026-brandnews",
+      "note": "'AC-DC efficiency as high as 98%' (peak, PSU level); whole-rack efficiency at partial load not published"
+    },
+    "bbu_power_w": {
+      "value": 480000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "delta-gtc-2026-brandnews",
+      "note": "6 x 80 kW embedded BBUs"
+    },
+    "shelf_rating_w": {
+      "value": 110000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "delta-ocp-2026-prn"
+    },
+    "voltage_v": {
+      "value": 800,
+      "unit": "V",
+      "provenance": "vendor_spec",
+      "source": "delta-gtc-2026-brandnews",
+      "note": "800 VDC output"
+    },
+    "input_voltage_v": {
+      "unit": "V",
+      "provenance": "unknown",
+      "note": "AC input voltage not published"
+    }
+  },
+  "attrs": {
+    "power_input": "dc_800v",
+    "input": "ac",
+    "status": "showcased GTC/OCP 2026; shipping date not published"
+  },
+  "sources": [
+    {
+      "id": "delta-gtc-2026-brandnews",
+      "title": "Delta exhibits energy-saving solutions for 800 VDC at NVIDIA GTC 2026 (Delta brand news)",
+      "url": "https://brandnews.deltaww.com/EN/IoTSolutionsDetail/12772",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "delta-ocp-2026-prn",
+      "title": "Delta highlights 800 VDC power and cooling at OCP Global Summit 2026 (PR Newswire, 2026-10-15)",
+      "url": "https://www.prnewswire.com/news-releases/delta-highlights-collaboration-with-nvidia-in-advancing-energy-efficient-800-vdc-power-and-cooling-solutions-for-ai-data-centers-at-ocp-global-summit-2026-302909912.html",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

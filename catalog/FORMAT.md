@@ -69,6 +69,10 @@ Optional extras are in the schema: `flow_lpm_per_kw`, `rack_units`, `hbm_tb`, `f
 
 Add any other useful params, such as `weight_kg`, `footprint_w_mm`, `voltage_v`, `rating_a`, `flow_lpm`, `noise_dba` or `rack_units`, each as a Quantity.
 
+## Systems
+
+A system lists member racks with `slot_offset`s in 0.6 m slot units: a 1,200 mm double-wide rack takes 2 slots. `links` lists only links that must stay inside the system, such as copper scale-up cables between member racks. The twin's network solver checks them for copper reach. Do not list scale-out links to leaf switches here; the network solver derives them from each rack's `scale_out_ports` and routes them.
+
 ## Example (a rack, abbreviated values)
 
 ```json

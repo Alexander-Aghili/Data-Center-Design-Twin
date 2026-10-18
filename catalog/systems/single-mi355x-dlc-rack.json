@@ -1,0 +1,12 @@
+{
+  "kind": "system",
+  "id": "single-mi355x-dlc-rack",
+  "name": "Single MI355X DLC rack",
+  "as_of": "2026-10-18",
+  "description": "One mi355x-dlc-rack (Supermicro 48U, 8x 8-GPU MI355X liquid-cooled servers) placed as a unit.",
+  "members": [
+    { "key": "rack", "rack_type": "mi355x-dlc-rack", "slot_offset": 0 }
+  ],
+  "links": [],
+  "sources": []
+}

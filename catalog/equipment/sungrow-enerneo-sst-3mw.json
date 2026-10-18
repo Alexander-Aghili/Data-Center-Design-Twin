@@ -1,0 +1,61 @@
+{
+  "kind": "equipment",
+  "id": "sungrow-enerneo-sst-3mw",
+  "name": "Sungrow EnerNeo solid-state transformer 3 MW (MV AC to 800 VDC)",
+  "vendor": "Sungrow",
+  "model": "EnerNeo SST",
+  "category": "transformer",
+  "as_of": "2026-10-18",
+  "description": "Commercial SiC solid-state transformer launched 2026-07-09: converts 10-13.8 kV MV AC directly to 800 VDC. 3 MW standard unit, 1.5 MW minimum block, 3 or 4.5 MW systems. Deliveries 2026-2028 under >130 MW of framework agreements. In the dc_800v chain it replaces the MV/LV transformer plus rectifier.",
+  "params": {
+    "capacity_w": {
+      "value": 3000000,
+      "unit": "W",
+      "provenance": "estimated",
+      "source": "pvmag-sungrow-enerneo",
+      "note": "press report: standard unit rated 3 MW (1.5 MW block; 4.5 MW configurable)"
+    },
+    "efficiency": {
+      "value": 0.985,
+      "unit": "1",
+      "provenance": "estimated",
+      "source": "pvmag-sungrow-enerneo",
+      "note": "press report: 98.5% conversion efficiency (Bayern Innovativ: 'up to'); load point not stated, treat as peak"
+    },
+    "voltage_v": {
+      "value": 800,
+      "unit": "V",
+      "provenance": "estimated",
+      "source": "pvmag-sungrow-enerneo",
+      "note": "press report: 800 VDC output"
+    },
+    "input_voltage_v": {
+      "low": 10000,
+      "high": 13800,
+      "unit": "V",
+      "provenance": "estimated",
+      "source": "pvmag-sungrow-enerneo",
+      "note": "press report: 10-13.8 kV MV AC input"
+    }
+  },
+  "attrs": {
+    "power_input": "dc_800v",
+    "type": "solid-state transformer",
+    "input": "mv_ac",
+    "status": "launched 2026-07; first deliveries 2026"
+  },
+  "sources": [
+    {
+      "id": "pvmag-sungrow-enerneo",
+      "title": "Sungrow launches 3 MW solid-state transformer (pv magazine, 2026-07-10)",
+      "url": "https://www.pv-magazine.com/2026/07/10/sungrow-launches-3-mw-solid-state-transformer/",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "bayern-innovativ-sst-2026",
+      "title": "New transformer for data centers (Bayern Innovativ / E&M powernews, 2026-08-14)",
+      "url": "https://www.bayern-innovativ.de/en/emagazine/detail/new-transformer-for-data-centers",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

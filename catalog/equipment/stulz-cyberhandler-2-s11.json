@@ -1,0 +1,84 @@
+{
+  "kind": "equipment",
+  "id": "stulz-cyberhandler-2-s11",
+  "name": "STULZ CyberHandler 2 size S11 indirect evaporative AHU",
+  "vendor": "STULZ",
+  "model": "CyberHandler 2 CH2-S11",
+  "category": "air_handler",
+  "as_of": "2026-10-18",
+  "description": "Outdoor packaged air handler with indirect air-to-air heat exchanger, adiabatic cooling and optional chilled-water or DX top-up; largest of 11 sizes. Returns data-hall air without mixing it with outside air.",
+  "params": {
+    "capacity_w": {
+      "value": 206000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "stulz-ch2-brochure",
+      "note": "nominal net cooling 206 kW at 40,450 m3/h; supply air 25 C with 15 K delta-T, 50 Pa ESP, ambient 35.8 C DB / 22.3 C WB. Maximum net capacity 531 kW at 113,050 m3/h"
+    },
+    "power_w": {
+      "value": 11360,
+      "unit": "W",
+      "provenance": "derived",
+      "source": "stulz-ch2-brochure",
+      "note": "nominal capacity / EER = 206 kW / 18.13 = 11.36 kW total unit input (fans + adiabatic pumps) at nominal conditions"
+    },
+    "capacity_max_w": {
+      "value": 531000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "stulz-ch2-brochure",
+      "note": "max net cooling capacity at max airflow"
+    },
+    "airflow_m3_s": {
+      "value": 11.24,
+      "unit": "m3/s",
+      "provenance": "vendor_spec",
+      "source": "stulz-ch2-brochure",
+      "note": "nominal data-center airflow 40,450 m3/h; max 113,050 m3/h (31.4 m3/s)"
+    },
+    "weight_kg": {
+      "value": 9690,
+      "unit": "kg",
+      "provenance": "vendor_spec",
+      "source": "stulz-ch2-brochure",
+      "note": "vendor estimate; depends on cooling/installation configuration"
+    },
+    "footprint_w_mm": {
+      "value": 3860,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "stulz-ch2-brochure"
+    },
+    "footprint_d_mm": {
+      "value": 5210,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "stulz-ch2-brochure"
+    },
+    "height_mm": {
+      "value": 5450,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "stulz-ch2-brochure"
+    },
+    "ppue_annual": {
+      "value": 1.033,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "stulz-ch2-brochure",
+      "note": "annual pPUE, London Heathrow weather, nominal conditions"
+    }
+  },
+  "attrs": {
+    "type": "indirect evaporative AHU",
+    "fan_motor": "EC plug fans"
+  },
+  "sources": [
+    {
+      "id": "stulz-ch2-brochure",
+      "title": "STULZ CyberHandler 2 brochure (technical data and nomenclature)",
+      "url": "https://repository.stulz.com/02A291F1/",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

@@ -1,0 +1,221 @@
+{
+  "kind": "rack",
+  "id": "vera-rubin-nvl72",
+  "name": "NVIDIA Vera Rubin NVL72",
+  "vendor": "NVIDIA",
+  "model": "Vera Rubin NVL72 (DGX Vera Rubin NVL72 / OEM MGX builds; formerly branded NVL144)",
+  "generation": "Rubin",
+  "availability": "Shipping (in full production, ramping H2 2026)",
+  "as_of": "2026-10-18",
+  "role": "compute",
+  "description": "48U NVIDIA MGX (Oberon) rack: 18 x 1U compute trays (each 2 Vera CPUs + 4 Rubin GPUs, 100% liquid-cooled, 8 x 800G OSFP from ConnectX-9 SuperNICs plus a BlueField-4 with 2 x 400G), 9 NVLink 6 switch trays (one 72-GPU domain) and 4 NVLink cable cartridges. Power: 4 x 3U 110 kW power shelves (6 x 18.3 kW air-cooled PSUs each, two 100 A whips per shelf at 415-480 V AC), three needed for full load, feeding a liquid-cooled 54 V DC, 5,000 A busbar; shelves add bulk energy storage for power smoothing (NVIDIA: 20x more than prior generation). 800 V DC: NVIDIA demonstrated an 800 VDC power sidecar feeding an NVL72 rack (July 2026, press), so dc_800v is listed as a supported option; the standard DGX configuration is AC-fed shelves. Rack power is not published by NVIDIA: Max-Q / Max-P provisioning profiles are reported at about 190 / 230 kW.",
+  "electrical": {
+    "nominal_power_w": {
+      "low": 190000,
+      "high": 230000,
+      "unit": "W",
+      "provenance": "estimated",
+      "source": "spheron-vr",
+      "note": "press report: supply-chain analysis (Ming-Chi Kuo) of ~190 kW Max-Q and ~230 kW Max-P profiles (GPU ~1.8 / 2.3 kW). NVIDIA publishes no rack power figure. NVIDIA's RA gives ~2 MW TDP per 8-rack SU including network, consistent with this range. A press report (The Register, Aug 2026) quoting 120 kW looks like a GB200-era figure and is not used."
+    },
+    "peak_power_w": {
+      "value": 240000,
+      "unit": "W",
+      "provenance": "oem_datasheet",
+      "source": "gigabyte-vr-pod",
+      "note": "Gigabyte: rack power consumption up to 240 kW. Supermicro sizes its cooling for 227 kW per rack. Shelf capacity is 3 x 110 kW = 330 kW with one redundant shelf."
+    },
+    "power_shelves": {
+      "value": 4,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "nvidia-dgx-vr-hw",
+      "note": "NVIDIA DGX VR user guide: four shelves per rack. The DGX VR SuperPOD RA adds that only three are required for full rack power (one redundant)."
+    },
+    "shelf_rating_w": {
+      "value": 110000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "nvidia-dgx-vr-hw",
+      "note": "3U shelf, 6 x 18.3 kW PSUs, AC input 415-480 V"
+    },
+    "supported_power_input": ["ac_54v", "dc_800v"]
+  },
+  "thermal": {
+    "liquid_fraction": {
+      "low": 0.95,
+      "high": 0.98,
+      "unit": "1",
+      "provenance": "estimated",
+      "source": "nvidia-ocp-blog",
+      "note": "NVIDIA: compute trays are 100% liquid-cooled and the busbar is liquid-cooled. The power shelf PSUs are air-cooled (NVIDIA DGX VR guide), so conversion losses (~3-4% of rack power) plus management switches and optics go to air. No vendor split published."
+    },
+    "max_coolant_supply_c": {
+      "value": 45,
+      "unit": "C",
+      "provenance": "vendor_spec",
+      "source": "nvidia-vr-page",
+      "note": "NVIDIA lists a 45 C inlet temperature; NVIDIA states a heat exchanger (no chiller) can cool the system at or below 45 C inlet."
+    },
+    "rack_pressure_drop_kpa": {
+      "unit": "kPa",
+      "provenance": "unknown",
+      "note": "not published by NVIDIA or OEMs as of 2026-10"
+    },
+    "flow_lpm_per_kw": {
+      "unit": "L/min/kW",
+      "provenance": "unknown",
+      "note": "required rack flow not published as of 2026-10; GB300 NVL72 needs 0.5-1.5 L/min/kW depending on supply temperature (Lenovo), a likely similar range"
+    },
+    "quick_disconnect": "not published; rear manifold with blind-mate QDs per NVIDIA MGX reference (GB300 generation used UQDB04)"
+  },
+  "mechanical": {
+    "width_mm": {
+      "value": 600,
+      "unit": "mm",
+      "provenance": "oem_datasheet",
+      "source": "gigabyte-vr-rack"
+    },
+    "depth_mm": {
+      "low": 1068,
+      "high": 1200,
+      "unit": "mm",
+      "provenance": "oem_datasheet",
+      "source": "gigabyte-vr-rack",
+      "note": "Gigabyte DLB5-CB0: 1,200 mm. The Register (press) gives the NVIDIA MGX rack as ~1,068 mm deep, which matches the GB300 MGX rack without extension frame. Plan for 1,200 mm."
+    },
+    "height_mm": {
+      "low": 2293,
+      "high": 2300,
+      "unit": "mm",
+      "provenance": "oem_datasheet",
+      "source": "gigabyte-vr-rack",
+      "note": "Gigabyte 2,300 mm; The Register (press) ~2,293 mm"
+    },
+    "rack_units": {
+      "value": 48,
+      "unit": "1",
+      "provenance": "oem_datasheet",
+      "source": "gigabyte-vr-pod"
+    },
+    "weight_kg": {
+      "value": 1800,
+      "unit": "kg",
+      "provenance": "estimated",
+      "source": "register-vr-weight",
+      "note": "press report: The Register (25 Aug 2026) quotes NVIDIA saying each unit plus rack weighs roughly 4,000 lb (~1,800 kg). Plausible versus GB300 NVL72 (~1,360-1,580 kg) given full cold-plate coverage, liquid-cooled 5,000 A busbar and 3U 110 kW shelves. No OEM weight published."
+    },
+    "feet": {
+      "value": 4,
+      "unit": "1",
+      "provenance": "estimated",
+      "note": "MGX rack with casters and four corner leveling feet assumed; no point-load data published"
+    },
+    "service_clearance_front_mm": {
+      "value": 838,
+      "unit": "mm",
+      "provenance": "estimated",
+      "source": "nvidia-dgx-b300-dcbp",
+      "note": "NVIDIA's MGX rack front service clearance (33 in) from its DGX B300 guide, assumed to apply to the same MGX rack family"
+    },
+    "service_clearance_rear_mm": {
+      "unit": "mm",
+      "provenance": "unknown",
+      "note": "not published; rear access needed for manifolds, busbar and NVLink cartridges"
+    }
+  },
+  "network": {
+    "scale_out_ports": {
+      "value": 144,
+      "unit": "1",
+      "provenance": "oem_datasheet",
+      "source": "gigabyte-vr-rack",
+      "note": "8 x 800G OSFP (ConnectX-9, 1.6 Tb/s per GPU) per tray x 18 trays; NVIDIA RA: two compute-fabric planes, eight Quantum-X800 connections per tray. BlueField-4 2 x 400G per tray not counted."
+    },
+    "port_speed_gbps": {
+      "value": 800,
+      "unit": "Gb/s",
+      "provenance": "oem_datasheet",
+      "source": "gigabyte-vr-rack"
+    },
+    "scale_up_domain": {
+      "value": 72,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "nvidia-vr-page"
+    },
+    "scale_up_bandwidth_tbps": {
+      "low": 1728,
+      "high": 2074,
+      "unit": "Tb/s",
+      "provenance": "vendor_spec",
+      "source": "nvidia-vr-page",
+      "note": "NVIDIA product page: 216 TB/s (3 TB/s per GPU, footnoted 'at-scale AI factory with MaxLPS'); NVIDIA DGX VR SuperPOD RA: 3.6 TB/s per GPU (259 TB/s). 216-259 TB/s = 1,728-2,074 Tb/s."
+    },
+    "switch_slots": {
+      "value": 0,
+      "unit": "1",
+      "provenance": "derived",
+      "note": "compute rack; two in-rack out-of-band management switches only"
+    },
+    "port_media": "OSFP 800G on front of trays (ConnectX-9 SuperNIC, two ports per 1.6T NIC)"
+  },
+  "compute": {
+    "accelerators": {
+      "value": 72,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "nvidia-vr-page"
+    },
+    "accelerator_model": "NVIDIA Rubin (288 GB HBM4)",
+    "cpus": {
+      "value": 36,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "nvidia-vr-page",
+      "note": "Vera, 88 Olympus cores each"
+    },
+    "hbm_tb": {
+      "value": 20.7,
+      "unit": "TB",
+      "provenance": "vendor_spec",
+      "source": "nvidia-vr-page"
+    },
+    "fp4_pflops": {
+      "value": 2520,
+      "unit": "PFLOPS",
+      "provenance": "vendor_spec",
+      "source": "nvidia-vr-page",
+      "note": "NVFP4 training, dense. NVIDIA's NVFP4 inference headline is 3,600 PFLOPS (sparse)."
+    },
+    "fp8_pflops": {
+      "value": 1260,
+      "unit": "PFLOPS",
+      "provenance": "vendor_spec",
+      "source": "nvidia-vr-page",
+      "note": "FP8/FP6 dense"
+    }
+  },
+  "overridable": [
+    "electrical.nominal_power_w",
+    "electrical.peak_power_w",
+    "mechanical.weight_kg",
+    "mechanical.depth_mm",
+    "thermal.liquid_fraction",
+    "thermal.rack_pressure_drop_kpa",
+    "thermal.flow_lpm_per_kw"
+  ],
+  "sources": [
+    { "id": "nvidia-vr-page", "title": "NVIDIA Vera Rubin NVL72 product page", "url": "https://www.nvidia.com/en-us/data-center/vera-rubin-nvl72/", "accessed": "2026-10-18" },
+    { "id": "nvidia-dgx-vr-ra", "title": "NVIDIA DGX SuperPOD Reference Architecture featuring DGX Vera Rubin NVL72", "url": "https://docs.nvidia.com/dgx-superpod-reference-architecture-with-dgx-vera-rubin-nvl72.pdf", "accessed": "2026-10-18" },
+    { "id": "nvidia-dgx-vr-hw", "title": "NVIDIA DGX Vera Rubin NVL72 User Guide: Hardware", "url": "https://docs.nvidia.com/dgx/dgxvr-user-guide/hardware.html", "accessed": "2026-10-18" },
+    { "id": "nvidia-ocp-blog", "title": "NVIDIA blog: gigawatt AI factories, OCP, Vera Rubin (Oct 2025)", "url": "https://blogs.nvidia.com/blog/gigawatt-ai-factories-ocp-vera-rubin", "accessed": "2026-10-18" },
+    { "id": "gigabyte-vr-rack", "title": "Gigabyte AI DLC Rack NVIDIA Vera Rubin NVL72 (DLB5-CB0) specifications", "url": "https://www.gigabyte.com/Enterprise/GIGAPOD-Rack-Scale/AI-DLC-Rack_NVIDIA-Vera-Rubin-NVL72", "accessed": "2026-10-18" },
+    { "id": "gigabyte-vr-pod", "title": "Gigabyte AI DLC POD NVIDIA Vera Rubin NVL72 specifications", "url": "https://www.gigabyte.com/Enterprise/GIGAPOD-Pod-Scale/AI-DLC-POD_NVIDIA-Vera-Rubin-NVL72", "accessed": "2026-10-18" },
+    { "id": "smc-vr-page", "title": "Supermicro NVIDIA Vera Rubin NVL72 page (cooling sized for 227 kW per rack)", "url": "https://www.supermicro.com/en/accelerators/nvidia/vera-rubin", "accessed": "2026-10-18" },
+    { "id": "spheron-vr", "title": "Spheron: NVIDIA Vera Rubin NVL72 guide (press/blog; Kuo power estimates)", "url": "https://www.spheron.network/blog/nvidia-vera-rubin-nvl72-guide/", "accessed": "2026-10-18" },
+    { "id": "register-vr-weight", "title": "The Register: SpaceX claims it will put a Vera Rubin NVL72 rack-scale system into orbit (25 Aug 2026)", "url": "https://www.theregister.com/a/5292067", "accessed": "2026-10-18" },
+    { "id": "tomshw-superlab", "title": "Tom's Hardware: Behind the scenes at Nvidia's Engineering SuperLab, 800VDC demonstrated (21 Jul 2026)", "url": "https://www.tomshardware.com/tech-industry/artificial-intelligence/behind-the-scenes-at-nvidias-engineering-superlab-vera-rubin-nvl72-running-openai-workloads-800vdc-demonstrated-and-more", "accessed": "2026-10-18" },
+    { "id": "nvidia-dgx-b300-dcbp", "title": "NVIDIA Data Center Best Practices with DGX B300 (MGX rack service clearances)", "url": "https://docs.nvidia.com/dgx-pdf/data-center-best-practices-with-dgx-b300-v1.pdf", "accessed": "2026-10-18" }
+  ]
+}

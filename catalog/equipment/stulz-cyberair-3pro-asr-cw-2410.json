@@ -1,0 +1,75 @@
+{
+  "kind": "equipment",
+  "id": "stulz-cyberair-3pro-asr-cw-2410",
+  "name": "STULZ CyberAir 3PRO ASR 2410 CW",
+  "vendor": "STULZ",
+  "model": "CyberAir 3PRO ASR 2410 CW (size 8)",
+  "category": "air_handler",
+  "as_of": "2026-10-18",
+  "description": "Precision chilled-water CRAH, raised-floor (downflow) version, size 8 (largest), one chilled water circuit, EC fans.",
+  "params": {
+    "capacity_w": {
+      "value": 272800,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "stulz-cyberair-cw",
+      "note": "272.8 kW total at return air 33 C / 30% RH, water 12/18 C, no glycol, 20 Pa ESP, 400 V/50 Hz"
+    },
+    "power_w": {
+      "value": 7700,
+      "unit": "W",
+      "provenance": "derived",
+      "source": "stulz-cyberair-cw",
+      "note": "fan power = capacity / EER = 272.8 kW / 35.43 = 7.70 kW; cross-check AER 0.17 W/(m3/h) * 46,000 m3/h = 7.8 kW"
+    },
+    "airflow_m3_s": {
+      "value": 12.78,
+      "unit": "m3/s",
+      "provenance": "vendor_spec",
+      "source": "stulz-cyberair-cw",
+      "note": "46,000 m3/h"
+    },
+    "weight_kg": {
+      "unit": "kg",
+      "provenance": "unknown",
+      "note": "not listed in the brochure"
+    },
+    "footprint_w_mm": {
+      "value": 3350,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "stulz-cyberair-cw"
+    },
+    "footprint_d_mm": {
+      "value": 980,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "stulz-cyberair-cw"
+    },
+    "height_mm": {
+      "value": 2495,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "stulz-cyberair-cw"
+    },
+    "noise_dba": {
+      "value": 59,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "stulz-cyberair-cw",
+      "note": "at 2 m free field"
+    }
+  },
+  "attrs": {
+    "type": "perimeter CRAH",
+    "fan_motor": "EC"
+  },
+  "sources": [
+    {
+      "id": "stulz-cyberair-cw",
+      "title": "STULZ CyberAir 3PRO CW brochure (technical data, 7 sizes)",
+      "url": "https://repository.stulz.com/049A5E67",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

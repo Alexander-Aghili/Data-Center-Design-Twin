@@ -1,0 +1,73 @@
+{
+  "kind": "equipment",
+  "id": "nvidia-mcp4y10-800g-dac",
+  "name": "800G passive copper DAC (NVIDIA MCP4Y10, OSFP twin-port 2x400G)",
+  "vendor": "NVIDIA",
+  "model": "MCP4Y10-Nxxx",
+  "category": "cable",
+  "as_of": "2026-10-18",
+  "description": "Passive direct-attach copper, 8 x 100G-PAM4 lanes, 0.5-2 m (30AWG to 1.5 m, 26AWG at 2 m), 16 twinax pairs. Switch-to-switch or in-rack links only.",
+  "params": {
+    "reach_m": {
+      "value": 2,
+      "unit": "m",
+      "provenance": "vendor_spec",
+      "source": "nvidia-mcp4y10-overview",
+      "note": "max length 2 m"
+    },
+    "power_per_end_w": {
+      "value": 0.1,
+      "unit": "W/end",
+      "provenance": "vendor_spec",
+      "source": "nvidia-mcp4y10-specs",
+      "note": "max power consumption 0.1 W (EEPROM only); passive, effectively zero"
+    },
+    "weight_kg_per_m": {
+      "value": 0.12,
+      "low": 0.09,
+      "high": 0.18,
+      "unit": "kg/m",
+      "provenance": "estimated",
+      "note": "not published. 16-pair 30AWG twinax, 7.2 mm OD (26AWG 8.9 mm) per NVIDIA spec; scaled from Credo 800G AEC weights (slope ~0.08 kg/m for a thinner cable) by cross-section"
+    },
+    "port_speed_gbps": {
+      "value": 800,
+      "unit": "Gb/s",
+      "provenance": "vendor_spec",
+      "source": "nvidia-mcp4y10-overview",
+      "note": "2 x 400G per OSFP"
+    },
+    "diameter_mm": {
+      "value": 7.2,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "nvidia-mcp4y10-specs",
+      "note": "30AWG; 8.9 mm for 26AWG 2 m"
+    }
+  },
+  "attrs": {
+    "media": "copper",
+    "type": "passive DAC",
+    "connector": "OSFP"
+  },
+  "sources": [
+    {
+      "id": "credo-span-aec",
+      "title": "Credo ZeroFlap HiWire SPAN AEC 800G OSFP to OSFP-RHS product brief (REV 092625)",
+      "url": "https://credosemi.com/wp-content/uploads/Credo_AEC_800G_SPAN_O_O_RHS_Product_Brief_2025Sept26.pdf",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "nvidia-mcp4y10-overview",
+      "title": "NVIDIA MCP4Y10-Nxxx 800Gb/s twin-port OSFP passive DAC - Overview",
+      "url": "https://networking-docs.nvidia.com/mcp4y10nxxx2x400pub/overview",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "nvidia-mcp4y10-specs",
+      "title": "NVIDIA MCP4Y10-Nxxx 800Gb/s twin-port OSFP passive DAC - Specifications",
+      "url": "https://networking-docs.nvidia.com/mcp4y10nxxx2x400pub/specifications",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

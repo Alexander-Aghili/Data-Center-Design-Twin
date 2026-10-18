@@ -1,0 +1,59 @@
+{
+  "kind": "equipment",
+  "id": "eaton-envirotran-hdc-3000kva",
+  "name": "Eaton (Cooper Power) Envirotran HDC 3000 kVA liquid-filled",
+  "vendor": "Eaton (Cooper Power series)",
+  "model": "Envirotran HDC (Hardened Data Center) 3000 kVA",
+  "category": "transformer",
+  "as_of": "2026-10-18",
+  "description": "Liquid-filled (Envirotemp FR3 natural ester) substation transformer designed for data centers, close-coupled to LV switchgear; 15/25/35 kV class primaries, 1000-5000 kVA. 3000 kVA is the most common data center size. Ratings from press; no Eaton datasheet opened.",
+  "params": {
+    "capacity_w": {
+      "value": 3000000,
+      "unit": "W",
+      "provenance": "estimated",
+      "source": "csemag-hdc-transformer",
+      "note": "press report: most commissioned units 3000 kVA (range 1000-5000 kVA); kVA x 1000 at assumed pf 1.0"
+    },
+    "efficiency": {
+      "low": 0.9953,
+      "high": 0.997,
+      "unit": "1",
+      "provenance": "estimated",
+      "source": "csemag-hdc-transformer",
+      "note": "at 50% load. High: ~99.7% (press report). Low: DOE 2016 minimum for 3-phase liquid-immersed 2500 kVA, 99.53% (10 CFR 431.196(b)(2)); 3000 kVA is above the 2016 table, so the 2500 kVA floor is used"
+    },
+    "efficiency_full_load": {
+      "low": 0.993,
+      "high": 0.994,
+      "unit": "1",
+      "provenance": "estimated",
+      "source": "csemag-hdc-transformer",
+      "note": "press report: typically 99.3-99.4% at 100% load"
+    },
+    "weight_kg": {
+      "unit": "kg",
+      "provenance": "unknown",
+      "note": "not published in the cited source"
+    }
+  },
+  "attrs": {
+    "status": "shipping",
+    "insulation": "liquid-filled (FR3 ester)",
+    "standard": "DOE 2016 (10 CFR 431)"
+  },
+  "sources": [
+    {
+      "id": "csemag-hdc-transformer",
+      "title": "The 'HDC' transformer: a liquid-filled transformer designed for large data centers (Consulting-Specifying Engineer, 2012)",
+      "url": "https://www.csemag.com/the-hdc-transformer-a-liquid-filled-transformer-designed-specifically-for-application-within-large-data-centers/",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "ecfr-10cfr431-196",
+      "title": "10 CFR 431.196 energy conservation standards for distribution transformers (eCFR)",
+      "url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-10?part=431&section=431.196",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

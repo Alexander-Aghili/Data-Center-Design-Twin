@@ -1,0 +1,160 @@
+{
+  "kind": "rack",
+  "id": "storage-rack",
+  "name": "AI storage rack (10 x DDN AI400X3M class appliances)",
+  "vendor": "Generic (DDN AI400X3M basis)",
+  "model": "42U storage rack, 10 x 2U all-flash appliances",
+  "generation": "XDR / 800G",
+  "availability": "Generic design; AI400X3M announced ISC 2026",
+  "as_of": "2026-10-18",
+  "role": "storage",
+  "description": "Air-cooled 600 mm 42U rack of ten 2U all-NVMe parallel file system appliances (DDN AI400X3M basis: 24 NVMe drives, 4 x XDR/400GbE OSFP host ports, up to 190 GB/s read each). Similar density to VAST/WEKA reference racks. Values are typical estimates to override per design.",
+  "electrical": {
+    "nominal_power_w": {
+      "value": 20000,
+      "unit": "W",
+      "provenance": "estimated",
+      "note": "10 appliances at ~2.0 kW typical (DDN cites a 2400 W 2U AI400X3 appliance; typical taken ~85%) plus ~0.2 kW management switch"
+    },
+    "peak_power_w": {
+      "value": 24500,
+      "unit": "W",
+      "provenance": "estimated",
+      "source": "ddn-pr-ai400x3",
+      "note": "press release: 10 x 2400 W per 2U appliance, plus management; not a datasheet value"
+    },
+    "power_shelves": {
+      "value": 0,
+      "unit": "1",
+      "provenance": "derived",
+      "note": "no 54 V power shelves; appliances use 2 x C20 AC PSUs on rack PDUs"
+    },
+    "shelf_rating_w": {
+      "unit": "W",
+      "provenance": "unknown",
+      "note": "not applicable: no power shelves"
+    },
+    "supported_power_input": [
+      "ac_54v"
+    ]
+  },
+  "thermal": {
+    "liquid_fraction": {
+      "value": 0,
+      "unit": "1",
+      "provenance": "derived",
+      "note": "air-cooled storage appliances"
+    },
+    "max_coolant_supply_c": {
+      "unit": "C",
+      "provenance": "unknown",
+      "note": "not applicable: air-cooled rack, no coolant loop"
+    },
+    "rack_pressure_drop_kpa": {
+      "unit": "kPa",
+      "provenance": "unknown",
+      "note": "not applicable: air-cooled rack, no coolant loop"
+    }
+  },
+  "mechanical": {
+    "width_mm": {
+      "value": 600,
+      "unit": "mm",
+      "provenance": "estimated",
+      "note": "standard 600 mm server cabinet"
+    },
+    "depth_mm": {
+      "value": 1200,
+      "unit": "mm",
+      "provenance": "estimated",
+      "note": "typical deep cabinet for 2U storage appliances"
+    },
+    "height_mm": {
+      "value": 2000,
+      "unit": "mm",
+      "provenance": "estimated",
+      "note": "typical 42U cabinet external height"
+    },
+    "rack_units": {
+      "value": 42,
+      "unit": "1",
+      "provenance": "estimated",
+      "note": "typical 42U cabinet"
+    },
+    "weight_kg": {
+      "value": 700,
+      "unit": "kg",
+      "provenance": "estimated",
+      "source": "ddn-ai400x3m",
+      "note": "10 x 49 kg max appliance weight (AI400X3M spec table, press) + ~150 kg cabinet + ~60 kg PDUs/cables/switch"
+    },
+    "feet": {
+      "value": 4,
+      "unit": "1",
+      "provenance": "estimated",
+      "note": "standard leveling feet"
+    }
+  },
+  "network": {
+    "scale_out_ports": {
+      "value": 40,
+      "unit": "1",
+      "provenance": "estimated",
+      "source": "ddn-ai400x3m",
+      "note": "10 appliances x 4 XDR/400GbE OSFP host ports (AI400X3M spec table, press report)"
+    },
+    "port_speed_gbps": {
+      "value": 800,
+      "unit": "Gb/s",
+      "provenance": "estimated",
+      "source": "ddn-ai400x3m",
+      "note": "XDR InfiniBand 800 Gb/s option; Ethernet option is 400GbE (override to 400 for Ethernet storage fabrics)"
+    },
+    "scale_up_domain": {
+      "value": 0,
+      "unit": "1",
+      "provenance": "derived",
+      "note": "no accelerators, no scale-up domain"
+    },
+    "switch_slots": {
+      "value": 1,
+      "unit": "1",
+      "provenance": "estimated",
+      "note": "1U out-of-band management switch; storage fabric leaves sit in network racks"
+    },
+    "port_media": "OSFP optics"
+  },
+  "compute": {
+    "accelerators": {
+      "value": 0,
+      "unit": "1",
+      "provenance": "derived",
+      "note": "storage rack, no accelerators"
+    },
+    "fp4_pflops": {
+      "value": 0,
+      "unit": "PFLOPS",
+      "provenance": "derived",
+      "note": "storage rack, no compute"
+    }
+  },
+  "overridable": [
+    "electrical.nominal_power_w",
+    "electrical.peak_power_w",
+    "mechanical.weight_kg"
+  ],
+  "sources": [
+    {
+      "id": "ddn-ai400x3m",
+      "title": "StorageReview: DDN launches AI400X3M (ISC 2026), spec table",
+      "url": "https://www.storagereview.com/news/ddn-launches-ai400x3m-and-dynamo-integrated-kv-cache-acceleration-at-isc-2026",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "ddn-pr-ai400x3",
+      "title": "DDN press release: AI400X3 record-breaking performance density (2400 W 2U appliance)",
+      "url": "https://www.ddn.com/press-releases/ddn-powers-the-ai-factory-of-the-future-with-record-breaking-performance-density/",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

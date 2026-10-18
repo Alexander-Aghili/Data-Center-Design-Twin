@@ -1,0 +1,16 @@
+{
+  "kind": "system",
+  "id": "single-storage-rack",
+  "name": "Single storage rack",
+  "as_of": "2026-10-18",
+  "description": "One storage-rack placed as a unit.",
+  "members": [
+    {
+      "key": "rack",
+      "rack_type": "storage-rack",
+      "slot_offset": 0
+    }
+  ],
+  "links": [],
+  "sources": []
+}

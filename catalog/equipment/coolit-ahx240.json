@@ -1,0 +1,95 @@
+{
+  "kind": "equipment",
+  "id": "coolit-ahx240",
+  "name": "CoolIT AHx240 liquid-to-air CDU",
+  "vendor": "CoolIT Systems (Ecolab)",
+  "model": "AHx240",
+  "category": "cdu",
+  "as_of": "2026-10-18",
+  "description": "LIQUID-TO-AIR (sidecar-style) CDU: rejects TCS heat to room air through an 8-fan radiator, no facility water. For deploying DLC racks in air-cooled halls; CoolIT rates it for 2 x GB300/GB200 NVL72 racks. The air-side heat becomes room load for the air handlers.",
+  "params": {
+    "capacity_w": {
+      "value": 240000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "coolit-ahx240-page",
+      "note": "240 kW at 15 C ATD, where ATD = TCS supply temperature minus room air inlet temperature (e.g. 40 C coolant with 25 C air)"
+    },
+    "max_flow_kg_s": {
+      "value": 4.66,
+      "unit": "kg/s",
+      "provenance": "vendor_spec",
+      "source": "coolit-ahx240-page",
+      "note": "280 L/min at 35 psi; 280 * 0.998 / 60 = 4.66 kg/s"
+    },
+    "approach_k": {
+      "value": 15,
+      "unit": "K",
+      "provenance": "vendor_spec",
+      "source": "coolit-ahx240-page",
+      "note": "liquid-to-air approach (TCS supply minus air inlet), not facility-water approach"
+    },
+    "pump_head_kpa": {
+      "value": 241.3,
+      "unit": "kPa",
+      "provenance": "vendor_spec",
+      "source": "coolit-ahx240-page",
+      "note": "35 psi * 6.895 = 241.3 kPa at 280 L/min"
+    },
+    "power_w": {
+      "value": 15500,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "coolit-ahx240-page",
+      "note": "power consumption incl. fans and pumps"
+    },
+    "weight_kg": {
+      "unit": "kg",
+      "provenance": "unknown",
+      "note": "not published on product page or product sheet"
+    },
+    "flow_lpm": {
+      "value": 280,
+      "unit": "L/min",
+      "provenance": "vendor_spec",
+      "source": "coolit-ahx240-page"
+    },
+    "footprint_w_mm": {
+      "value": 1200,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "coolit-ahx240-sheet"
+    },
+    "footprint_d_mm": {
+      "value": 1199,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "coolit-ahx240-sheet"
+    },
+    "height_mm": {
+      "value": 2293,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "coolit-ahx240-sheet"
+    }
+  },
+  "attrs": {
+    "heat_rejection": "liquid-to-air",
+    "pump_redundancy": "N+1",
+    "placement": "in-row sidecar"
+  },
+  "sources": [
+    {
+      "id": "coolit-ahx240-page",
+      "title": "CoolIT AHx240 product page",
+      "url": "https://www.coolitsystems.com/cdu-product/ahx240/",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "coolit-ahx240-sheet",
+      "title": "CoolIT AHx240 product sheet",
+      "url": "https://44473873.fs1.hubspotusercontent-na1.net/hubfs/44473873/Brochure%20Download/CoolIT-Product%20Sheet-CDU-AHx240.pdf",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

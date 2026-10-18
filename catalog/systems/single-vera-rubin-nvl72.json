@@ -1,0 +1,12 @@
+{
+  "kind": "system",
+  "id": "single-vera-rubin-nvl72",
+  "name": "Single NVIDIA Vera Rubin NVL72 rack",
+  "as_of": "2026-10-18",
+  "description": "One vera-rubin-nvl72 rack placed as a unit: a complete 72-GPU NVLink 6 domain in one 600 mm rack (one slot).",
+  "members": [
+    { "key": "rack", "rack_type": "vera-rubin-nvl72", "slot_offset": 0 }
+  ],
+  "links": [],
+  "sources": []
+}

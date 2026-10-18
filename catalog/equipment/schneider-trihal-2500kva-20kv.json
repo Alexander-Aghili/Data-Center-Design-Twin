@@ -1,0 +1,91 @@
+{
+  "kind": "equipment",
+  "id": "schneider-trihal-2500kva-20kv",
+  "name": "Schneider Electric Trihal 2500 kVA cast-resin, 20 kV / 400 V",
+  "vendor": "Schneider Electric",
+  "model": "Trihal 2500 kVA 17.5-24 kV A0Ak",
+  "category": "transformer",
+  "as_of": "2026-10-18",
+  "description": "Cast-resin dry-type MV/LV distribution transformer, 15 or 20 kV primary, 400-433 V secondary, Dyn11, 6% impedance, C3 E3 F1, A0Ak (EU Tier 1) losses.",
+  "params": {
+    "capacity_w": {
+      "value": 2500000,
+      "unit": "W",
+      "provenance": "derived",
+      "source": "schneider-trihal-catalog-2018",
+      "note": "2500 kVA x 1000 at assumed pf 1.0 (AN rating)"
+    },
+    "efficiency": {
+      "value": 0.99376,
+      "unit": "1",
+      "provenance": "derived",
+      "source": "schneider-trihal-catalog-2018",
+      "note": "at 50% load, pf 1: 1250 kW / (1250 kW + P0 3100 W + 0.25 x Pk 19,000 W at 120 C) = 99.38%. Catalog A0Ak set is EU Tier 1; Tier 2 (from 2021) caps P0 at 2790 W per Reg. 548/2014 Table I.2"
+    },
+    "efficiency_full_load": {
+      "value": 0.99124,
+      "unit": "1",
+      "provenance": "derived",
+      "source": "schneider-trihal-catalog-2018",
+      "note": "at 100% load, pf 1, Pk at 120 C"
+    },
+    "no_load_loss_w": {
+      "value": 3100,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "schneider-trihal-catalog-2018"
+    },
+    "load_loss_w": {
+      "value": 19000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "schneider-trihal-catalog-2018",
+      "note": "at 120 C; 17,100 W at 75 C"
+    },
+    "weight_kg": {
+      "value": 6510,
+      "unit": "kg",
+      "provenance": "vendor_spec",
+      "source": "schneider-trihal-catalog-2018",
+      "note": "with IP31 enclosure; 6160 kg IP00"
+    },
+    "footprint_w_mm": {
+      "value": 2470,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "schneider-trihal-catalog-2018",
+      "note": "IP31 enclosure 2470 L x 1240 W x 2880 H mm"
+    },
+    "depth_mm": {
+      "value": 1240,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "schneider-trihal-catalog-2018"
+    },
+    "height_mm": {
+      "value": 2880,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "schneider-trihal-catalog-2018"
+    }
+  },
+  "attrs": {
+    "status": "shipping",
+    "insulation": "dry-type cast resin",
+    "standard": "IEC 60076-11"
+  },
+  "sources": [
+    {
+      "id": "schneider-trihal-catalog-2018",
+      "title": "Schneider Electric Trihal catalog NRJED315663EN (cast resin up to 36 kV)",
+      "url": "https://www1.lk.dk/flipbooks/Trihal_Catalog_2018-Cast_resin_transformer_up_to_36kV_Distribution_Transformers_NRJED31566/content/Trihal%20Catalog_NRJED315663EN_030418.pdf",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "eu-reg-548-2014",
+      "title": "Commission Regulation (EU) No 548/2014 (Ecodesign for transformers), Annex I Tables I.1-I.2",
+      "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32014R0548",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

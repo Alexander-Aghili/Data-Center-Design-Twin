@@ -1,0 +1,110 @@
+{
+  "kind": "equipment",
+  "id": "nvidia-q3400-ra-leaf",
+  "name": "NVIDIA Quantum-X800 Q3400-RA XDR InfiniBand switch (leaf)",
+  "vendor": "NVIDIA",
+  "model": "Q3400-RA",
+  "category": "leaf_switch",
+  "as_of": "2026-10-18",
+  "description": "4U air-cooled XDR InfiniBand switch, 144 x 800 Gb/s over 72 OSFP cages, 115.2 Tb/s. Used as both leaf and spine in two-level fat trees (up to 10,368 NICs); this entry is the leaf role. AC PSUs (8, 200-240 V).",
+  "params": {
+    "ports": {
+      "value": 144,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "nvidia-xdr-intro",
+      "note": "144 XDR ports over 72 OSFP cages"
+    },
+    "port_speed_gbps": {
+      "value": 800,
+      "unit": "Gb/s",
+      "provenance": "vendor_spec",
+      "source": "nvidia-xdr-specs"
+    },
+    "hop_latency_ns": {
+      "value": 130,
+      "low": 90,
+      "high": 300,
+      "unit": "ns",
+      "provenance": "estimated",
+      "note": "NVIDIA does not publish a port-to-port latency for Quantum-X800. Estimated from the previous-generation QM8700 HDR brief ('sub-130ns port-to-port latency', source nvidia-qm8700-brief) and an integrator blog claiming sub-100 ns for Quantum-X800 (introl-x800, unverified). Range widened upward because the 4U system is built from multiple Quantum-3 ASICs (the 2U Q3200 is '2 independent 28.8Tb/s switches') and the internal path is not published."
+    },
+    "power_w": {
+      "value": 2900,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "nvidia-xdr-specs",
+      "note": "typical with passive cables (ATIS); excludes optics"
+    },
+    "power_max_w": {
+      "value": 7000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "nvidia-xdr-specs",
+      "note": "max with active cables / optics"
+    },
+    "rack_units": {
+      "value": 4,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "nvidia-xdr-specs"
+    },
+    "weight_kg": {
+      "value": 60,
+      "unit": "kg",
+      "provenance": "vendor_spec",
+      "source": "nvidia-xdr-specs",
+      "note": "with 8 PSUs"
+    },
+    "switch_capacity_tbps": {
+      "value": 115.2,
+      "unit": "Tb/s",
+      "provenance": "vendor_spec",
+      "source": "nvidia-xdr-specs"
+    },
+    "width_mm": {
+      "value": 438,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "nvidia-xdr-specs"
+    },
+    "depth_mm": {
+      "value": 850,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "nvidia-xdr-specs"
+    }
+  },
+  "attrs": {
+    "fabric": "infiniband",
+    "cooling": "air",
+    "port_form_factor": "OSFP (2 x 800G per cage)",
+    "availability": "Shipping"
+  },
+  "sources": [
+    {
+      "id": "introl-x800",
+      "title": "Introl blog: InfiniBand Switches - NVIDIA Quantum-X800 and the XDR Generation",
+      "url": "https://introl.com/blog/infiniband-switches-quantum-x800-xdr-sharp-ai-supercomputer-2025",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "nvidia-qm8700-brief",
+      "title": "NVIDIA Mellanox QM8700 HDR InfiniBand switch product brief (previous generation, latency reference)",
+      "url": "https://network.nvidia.com/files/doc-2020/pb-qm8700.pdf",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "nvidia-xdr-intro",
+      "title": "NVIDIA Q32xx and Q34xx XDR 800Gb/s InfiniBand Switch Systems User Manual - Introduction",
+      "url": "https://networking-docs.nvidia.com/xdrswitcheshw/introduction",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "nvidia-xdr-specs",
+      "title": "NVIDIA Q32xx and Q34xx XDR 800Gb/s InfiniBand Switch Systems User Manual - Specifications",
+      "url": "https://networking-docs.nvidia.com/xdrswitcheshw/specifications",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "kind": "system",
+  "id": "gb300-su8",
+  "name": "GB300 NVL72 scalable unit (8 racks + 2 network racks)",
+  "as_of": "2026-10-18",
+  "description": "DGX SuperPOD-style scalable unit (SU): 8 gb300-nvl72 racks (576 GPUs, eight separate 72-GPU NVLink domains) in one row with 2 network-rack members in the middle. In 0.6 m slot units, compute racks take one slot each (offsets 0-3 and 8-11) and each 800 mm network rack takes two slots (offsets 4 and 6), so all members are contiguous. NVIDIA's DGX GB300 SuperPOD RA gives ~1.2 MW TDP per SU.",
+  "members": [
+    { "key": "gb300-1", "rack_type": "gb300-nvl72", "slot_offset": 0 },
+    { "key": "gb300-2", "rack_type": "gb300-nvl72", "slot_offset": 1 },
+    { "key": "gb300-3", "rack_type": "gb300-nvl72", "slot_offset": 2 },
+    { "key": "gb300-4", "rack_type": "gb300-nvl72", "slot_offset": 3 },
+    { "key": "net-compute", "rack_type": "network-rack", "slot_offset": 4 },
+    { "key": "net-ethernet", "rack_type": "network-rack", "slot_offset": 6 },
+    { "key": "gb300-5", "rack_type": "gb300-nvl72", "slot_offset": 8 },
+    { "key": "gb300-6", "rack_type": "gb300-nvl72", "slot_offset": 9 },
+    { "key": "gb300-7", "rack_type": "gb300-nvl72", "slot_offset": 10 },
+    { "key": "gb300-8", "rack_type": "gb300-nvl72", "slot_offset": 11 }
+  ],
+  "links": [],
+  "notes": "From NVIDIA's DGX SuperPOD RA for DGX GB300: each SU is 8 DGX GB300 NVL72 racks at ~1.2 MW TDP. The compute fabric is a rail-optimized, non-blocking fat tree on Quantum-X800 Q3400-RD (144 x 800G) switches, with 8 leaf switches per SU (4 rails x 2 leaves). Spines are added only beyond one SU (8 spines for 2 SUs, 36 for 8 SUs). The storage/in-band Ethernet fabric adds 4 SN5600 leaves per SU, plus SN2201 out-of-band switches and management/UFM nodes. The network-rack count is an estimate: NVIDIA's rack-layout figure is not in text form. Sizing: 8 racks x 72 ConnectX-8 800G ports = 576 compute-fabric ports. At 1:1, a 144-port leaf has 72 downlinks, so 576 / 72 = 8 leaves, which matches NVIDIA's count and fills one catalog network-rack (8 switches). A second network rack holds the 4 SN5600 Ethernet leaves, OOB and management gear, and room for spines when SUs are combined. Both network racks sit mid-row to shorten leaf cable runs. links is empty because each NVL72 is a self-contained NVLink domain: there is no inter-rack copper scale-up cabling. Scale-out links are derived by the network solver from each rack's scale_out_ports. Some OEM SU layouts differ: Gigabyte's GB300 GIGAPOD uses 16 compute + 8 management racks per SU.",
+  "sources": [
+    { "id": "nvidia-dgx-gb300-ra", "title": "NVIDIA DGX SuperPOD Reference Architecture featuring DGX GB300 systems", "url": "https://docs.nvidia.com/pdf/dgx-spod-gb300-ra.pdf", "accessed": "2026-10-18" },
+    { "id": "gigabyte-gb300-pod", "title": "Gigabyte AI DLC POD NVIDIA GB300 NVL72 specifications", "url": "https://www.gigabyte.com/Enterprise/GIGAPOD-Pod-Scale/AI-DLC-POD_NVIDIA-GB300-NVL72", "accessed": "2026-10-18" }
+  ]
+}

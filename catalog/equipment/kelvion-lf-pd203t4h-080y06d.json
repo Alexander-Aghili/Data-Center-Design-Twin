@@ -1,0 +1,86 @@
+{
+  "kind": "equipment",
+  "id": "kelvion-lf-pd203t4h-080y06d",
+  "name": "Kelvion LF-PD203T4H-080Y06D flatbed dry cooler",
+  "vendor": "Kelvion",
+  "model": "LF-PD203T4H-080Y06D",
+  "category": "dry_cooler",
+  "as_of": "2026-10-18",
+  "description": "Horizontal-coil (flatbed) dry cooler, 6 x 800 mm AC fans, Eurovent-certified range; selection shown is a warm-water point (55->42 C) typical of liquid-cooled AI heat rejection. Much smaller than the hyperscale double-stack units.",
+  "params": {
+    "capacity_w": {
+      "value": 515870,
+      "unit": "W",
+      "provenance": "oem_datasheet",
+      "source": "kelvion-select-rt",
+      "note": "515.87 kW at fluid 55 C in / 42 C out, 30% ethylene glycol, 36.41 m3/h, 32 C ambient, 41% RH, dry operation"
+    },
+    "approach_k": {
+      "value": 10,
+      "unit": "K",
+      "provenance": "oem_datasheet",
+      "source": "kelvion-select-rt",
+      "note": "fluid outlet 42 C minus ambient 32 C"
+    },
+    "power_w": {
+      "value": 10248,
+      "unit": "W",
+      "provenance": "oem_datasheet",
+      "source": "kelvion-select-rt",
+      "note": "6 fans x 1708 W power input at selected speed (870 rpm); nominal 1850 W per fan"
+    },
+    "airflow_m3_s": {
+      "value": 36.12,
+      "unit": "m3/s",
+      "provenance": "oem_datasheet",
+      "source": "kelvion-select-rt",
+      "note": "130,014 m3/h"
+    },
+    "weight_kg": {
+      "value": 1471,
+      "unit": "kg",
+      "provenance": "oem_datasheet",
+      "source": "kelvion-select-rt",
+      "note": "incl. fluid; 1258 kg dry"
+    },
+    "length_mm": {
+      "value": 6303,
+      "unit": "mm",
+      "provenance": "oem_datasheet",
+      "source": "kelvion-select-rt",
+      "note": "dimension A"
+    },
+    "footprint_w_mm": {
+      "value": 2260,
+      "unit": "mm",
+      "provenance": "oem_datasheet",
+      "source": "kelvion-select-rt",
+      "note": "dimension B"
+    },
+    "fluid_pressure_drop_kpa": {
+      "value": 24,
+      "unit": "kPa",
+      "provenance": "oem_datasheet",
+      "source": "kelvion-select-rt"
+    },
+    "noise_dba": {
+      "value": 61,
+      "unit": "1",
+      "provenance": "oem_datasheet",
+      "source": "kelvion-select-rt",
+      "note": "LpA at 10 m"
+    }
+  },
+  "attrs": {
+    "fan_motor": "AC 400V/3ph",
+    "pre_cooling": "none (dry)"
+  },
+  "sources": [
+    {
+      "id": "kelvion-select-rt",
+      "title": "Kelvion Select RT datasheet LF-PD203T4H-080Y06D (2023-03, hosted by reseller resale.de)",
+      "url": "https://www.resale.de/images/161618957_g_rueckkuehler-lf-pd203t4h-080y06d_2023-04-dn100.pdf",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

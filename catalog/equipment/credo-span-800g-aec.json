@@ -1,0 +1,58 @@
+{
+  "kind": "equipment",
+  "id": "credo-span-800g-aec",
+  "name": "800G active electrical cable (Credo HiWire SPAN AEC, OSFP to OSFP-RHS)",
+  "vendor": "Credo",
+  "model": "CAC87X281A1B-C2-HW",
+  "category": "cable",
+  "as_of": "2026-10-18",
+  "description": "Retimed active electrical cable for rack-to-rack links, 4-7 m, 8 x 112G PAM4 lanes. Weights per length from the brief: 4 m 500 g, 5 m 580 g, 6 m 660 g, 7 m 740 g.",
+  "params": {
+    "reach_m": {
+      "value": 7,
+      "unit": "m",
+      "provenance": "vendor_spec",
+      "source": "credo-span-aec",
+      "note": "4.0-7.0 m"
+    },
+    "power_per_end_w": {
+      "value": 10,
+      "unit": "W/end",
+      "provenance": "vendor_spec",
+      "source": "credo-span-aec",
+      "note": "typical"
+    },
+    "weight_kg_per_m": {
+      "value": 0.08,
+      "unit": "kg/m",
+      "provenance": "derived",
+      "source": "credo-span-aec",
+      "note": "slope of vendor weights (740 g at 7 m minus 500 g at 4 m, over 3 m); end hardware ~0.18 kg per assembly extra"
+    },
+    "port_speed_gbps": {
+      "value": 800,
+      "unit": "Gb/s",
+      "provenance": "vendor_spec",
+      "source": "credo-span-aec"
+    }
+  },
+  "attrs": {
+    "media": "copper",
+    "type": "active electrical (AEC)",
+    "connector": "OSFP / OSFP-RHS"
+  },
+  "sources": [
+    {
+      "id": "credo-span-aec",
+      "title": "Credo ZeroFlap HiWire SPAN AEC 800G OSFP to OSFP-RHS product brief (REV 092625)",
+      "url": "https://credosemi.com/wp-content/uploads/Credo_AEC_800G_SPAN_O_O_RHS_Product_Brief_2025Sept26.pdf",
+      "accessed": "2026-10-18"
+    },
+    {
+      "id": "credo-span-page",
+      "title": "Credo 800G SPAN AEC OSFP to OSFP-RHS product page",
+      "url": "https://credosemi.com/products/zeroflapaec/800g-span-osfp-to-osfp-rhs/",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

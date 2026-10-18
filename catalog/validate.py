@@ -95,12 +95,17 @@ def validate_rules(root: Path, validator, entries) -> list[str]:
     wanted = dict(presets["models"])
     wanted["leaf_switch"] = presets["fabric"]["leaf_model"]
     wanted["spine_switch"] = presets["fabric"]["spine_model"]
-    for cat, eid in wanted.items():
+    checks = list(wanted.items()) + [(cat, eid) for cat, eid in presets["dc_models"].items()]
+    for cat, eid in checks:
         e = entries["equipment"].get(eid)
         if e is None:
             problems.append(f"rules.json: default_presets: unknown equipment '{eid}' for {cat}")
         elif e["category"] != cat:
             problems.append(f"rules.json: default_presets: '{eid}' is a {e['category']}, not a {cat}")
+        elif cat in ("busway", "switchgear"):
+            want = "dc_800v" if (cat, eid) in presets["dc_models"].items() else "ac_54v"
+            if e.get("attrs", {}).get("power_input") != want:
+                problems.append(f"rules.json: default_presets: '{eid}' is not a {want} {cat}")
     return problems
 
 
@@ -171,6 +176,11 @@ if __name__ == "__main__":
     probs = validate()
     for p in probs:
         print(p)
+    bundle = ROOT / "dist" / "catalog.json"
+    if not probs and bundle.exists():
+        from build import build
+        if json.loads(bundle.read_text()).get("hash") != build()["hash"]:
+            print("note: catalog/dist/catalog.json is stale; run catalog/build.py")
     counts = {k: len(list((ROOT / k).glob("*.json"))) for k in DIR_KIND}
     print(f"{'FAIL' if probs else 'OK'}: {counts['racks']} racks, {counts['systems']} systems, "
           f"{counts['equipment']} equipment, {len(probs)} problems")

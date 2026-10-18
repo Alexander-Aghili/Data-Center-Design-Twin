@@ -1,0 +1,96 @@
+{
+  "kind": "equipment",
+  "id": "boyd-rol4000-48u65",
+  "name": "Boyd ROL4000-48U65 in-row CDU",
+  "vendor": "Boyd Thermal (now Eaton)",
+  "model": "ROL4000-48U65",
+  "category": "cdu",
+  "as_of": "2026-10-18",
+  "description": "2 MW in-row liquid-to-liquid CDU built to Google's Project Deschutes 5 spec style: 80 psi available pressure, N+1 seal-less pumps, redundant power feeds per pump circuit. Large: 1651 W x 1016 D x 2629 H mm.",
+  "params": {
+    "capacity_w": {
+      "value": 2000000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "boyd-cdu-comparison",
+      "note": "2000 kW at 3 C ATD with N+1 pumps (more with all pumps running); secondary sized with 25% PG, primary water; supply temperatures not stated"
+    },
+    "max_flow_kg_s": {
+      "value": 31.49,
+      "unit": "kg/s",
+      "provenance": "vendor_spec",
+      "source": "boyd-cdu-comparison",
+      "note": "nominal secondary flow 500 GPM (1893 L/min) at 80 psi; 1893 * 0.998 / 60 = 31.49 kg/s"
+    },
+    "approach_k": {
+      "value": 3,
+      "unit": "K",
+      "provenance": "vendor_spec",
+      "source": "boyd-cdu-comparison"
+    },
+    "pump_head_kpa": {
+      "value": 551.6,
+      "unit": "kPa",
+      "provenance": "vendor_spec",
+      "source": "boyd-cdu-comparison",
+      "note": "80 psi (5.5 bar) available at 500 GPM; 80 * 6.895 = 551.6 kPa"
+    },
+    "power_w": {
+      "low": 29000,
+      "high": 100600,
+      "unit": "W",
+      "provenance": "estimated",
+      "note": "not published. Floor: hydraulic power 0.03155 m3/s * (552 + ~100 kPa) = 20.6 kW / 0.7 = 29 kW. Ceiling: listed input ~140 A total at 415 V 3-phase = sqrt(3)*415*140 = 100.6 kVA"
+    },
+    "weight_kg": {
+      "value": 2155,
+      "unit": "kg",
+      "provenance": "vendor_spec",
+      "source": "boyd-cdu-comparison",
+      "note": "~4750 lb DRY; operating weight not published"
+    },
+    "flow_lpm": {
+      "value": 1893,
+      "unit": "L/min",
+      "provenance": "vendor_spec",
+      "source": "boyd-cdu-comparison"
+    },
+    "footprint_w_mm": {
+      "value": 1651,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "boyd-cdu-comparison"
+    },
+    "footprint_d_mm": {
+      "value": 1016,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "boyd-cdu-comparison"
+    },
+    "height_mm": {
+      "value": 2629,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "boyd-cdu-comparison"
+    },
+    "filtration_um": {
+      "value": 25,
+      "unit": "um",
+      "provenance": "vendor_spec",
+      "source": "boyd-cdu-comparison",
+      "note": "25 um secondary/TCS, 500 um primary with bypass"
+    }
+  },
+  "attrs": {
+    "pump_redundancy": "N+1 seal-less pumps",
+    "placement": "in-row"
+  },
+  "sources": [
+    {
+      "id": "boyd-cdu-comparison",
+      "title": "Boyd Coolant Distribution Units performance specifications (CDU comparison)",
+      "url": "https://info.boydcorp.com/hubfs/Thermal/Liquid-Cooling/CDU-Comparison.pdf",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

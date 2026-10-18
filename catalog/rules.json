@@ -1,0 +1,81 @@
+{
+  "kind": "rules",
+  "as_of": "2026-10-18",
+  "description": "Sizing rules and default presets. Every coefficient the solvers use lives here or in a catalog entry. Default models are the largest-capacity entry per category whose required values are all known, preferring products with published specs over announced ones.",
+  "warning_threshold": 0.8,
+  "range_policy": "high",
+  "derate": { "value": 0.8, "unit": "1", "provenance": "estimated", "note": "continuous-load factor for busway, switchgear and transformer ratings (NEC 80% rule style); edit per project" },
+  "spares": {
+    "cdu": 1,
+    "air_handler": 1,
+    "heat_rejection": 1,
+    "ups_module": 1,
+    "rectifier": 1,
+    "transformer": 1,
+    "switchgear": 1
+  },
+  "coolants": {
+    "water": {
+      "description": "treated water",
+      "cp_j_kgk": { "value": 4186, "unit": "J/kgK", "provenance": "estimated", "note": "standard property of water at about 25 C" },
+      "density_kg_m3": { "value": 998, "unit": "kg/m3", "provenance": "estimated", "note": "standard property of water at about 20 C" }
+    },
+    "pg25": {
+      "description": "25% propylene glycol by volume",
+      "cp_j_kgk": { "value": 3930, "unit": "J/kgK", "provenance": "estimated", "note": "typical published value for 25% PG at about 25 C" },
+      "density_kg_m3": { "value": 1020, "unit": "kg/m3", "provenance": "estimated", "note": "typical published value for 25% PG at about 25 C" }
+    },
+    "pg40": {
+      "description": "40% propylene glycol by volume",
+      "cp_j_kgk": { "value": 3680, "unit": "J/kgK", "provenance": "estimated", "note": "typical published value for 40% PG at about 25 C" },
+      "density_kg_m3": { "value": 1035, "unit": "kg/m3", "provenance": "estimated", "note": "typical published value for 40% PG at about 25 C" }
+    }
+  },
+  "facility_delta_t_k": { "value": 8, "unit": "K", "provenance": "estimated", "note": "facility water loop rise across CDUs; typical warm-water design range 6-10 K" },
+  "pipe": {
+    "nominal_diameters_m": [0.05, 0.065, 0.08, 0.1, 0.125, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5],
+    "max_velocity_m_s": { "value": 2.5, "unit": "m/s", "provenance": "estimated", "note": "common upper limit for large chilled/condenser water mains to limit erosion and noise" },
+    "roughness_m": { "value": 4.5e-5, "unit": "m", "provenance": "estimated", "note": "commercial steel pipe absolute roughness" },
+    "fittings_factor": { "value": 1.5, "unit": "1", "provenance": "estimated", "note": "equivalent length multiplier for fittings and valves on straight runs" },
+    "facility_pump_head_kpa": { "value": 300, "unit": "kPa", "provenance": "estimated", "note": "available facility loop pump head; replace with the selected pump" },
+    "rack_manifold_drop_kpa": { "value": 30, "unit": "kPa", "provenance": "estimated", "note": "row manifold, hoses and quick disconnects between CDU and rack" }
+  },
+  "network": {
+    "slack_fraction": { "value": 0.1, "unit": "1", "provenance": "estimated", "note": "cable slack and service loops as a fraction of routed length" },
+    "drop_m": { "value": 3.0, "unit": "m", "provenance": "estimated", "note": "vertical run from tray to port at each end" },
+    "propagation_ns_per_m": { "value": 5.0, "unit": "ns/m", "provenance": "estimated", "note": "light in fiber about 5 ns/m (product spec); copper slightly lower" },
+    "message_bytes": { "value": 4096, "unit": "B", "provenance": "estimated", "note": "message size for the base latency figure (product spec example)" },
+    "nic_overhead_ns": { "value": 1000, "unit": "ns", "provenance": "estimated", "note": "NIC plus software overhead per message, 'typically a microsecond or more' (product spec)" },
+    "max_oversubscription": { "value": 1.5, "unit": "1", "provenance": "estimated", "note": "highest acceptable leaf down:up ratio under N-1; AI training fabrics usually target 1:1" }
+  },
+  "default_presets": {
+    "redundancy": "2N",
+    "power_input": "ac_54v",
+    "facility_supply_c": 30,
+    "rack_delta_t_k": 10,
+    "coolant": "water",
+    "fabric": {
+      "topology": "fat_tree",
+      "oversubscription": 1.0,
+      "leaf_model": "nvidia-q3400-ra-leaf",
+      "spine_model": "nvidia-q3400-ra-spine"
+    },
+    "models": {
+      "cdu": "boyd-rol4000-48u65",
+      "busway": "siemens-sivacon-8ps-ldata-2500a",
+      "ups_module": "vertiv-liebert-trinergy-cube-1600kw",
+      "rectifier": "delta-800vdc-in-row-power-rack-660kw",
+      "transformer": "eaton-envirotran-hdc-3000kva",
+      "switchgear": "abb-mns-6300a",
+      "dry_cooler": "evapco-eaw-dd-1512xl017g7",
+      "chiller": "vertiv-liebert-afc-fiz150",
+      "air_handler": "stulz-cyberair-3pro-asr-cw-2410"
+    },
+    "dc_models": {
+      "busway": "delta-800vdc-dc-busway",
+      "switchgear": "abb-infinitus-800vdc-distribution",
+      "transformer": "sungrow-enerneo-sst-3mw"
+    }
+  },
+  "sources": []
+}

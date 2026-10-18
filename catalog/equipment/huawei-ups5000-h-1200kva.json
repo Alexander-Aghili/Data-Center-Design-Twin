@@ -1,0 +1,76 @@
+{
+  "kind": "equipment",
+  "id": "huawei-ups5000-h-1200kva",
+  "name": "Huawei UPS5000-H 1200 kVA",
+  "vendor": "Huawei Digital Power",
+  "model": "UPS5000-H 1200 kVA",
+  "category": "ups_module",
+  "as_of": "2026-10-18",
+  "description": "Modular UPS with 100 kW/3U hot-swappable power modules; 400-1600 kVA frames at 380/400/415 V, unity output pf. Capacity here is the 1200 kVA frame.",
+  "params": {
+    "capacity_w": {
+      "value": 1200000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "huawei-ups5000-h-page",
+      "note": "1200 kVA frame at output pf 1"
+    },
+    "efficiency": {
+      "value": 0.975,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "huawei-ups5000-h-page",
+      "note": "normal (double-conversion) mode 'up to 97.5%'. S-ECO mode up to 99% (page also says 99.1% link efficiency)"
+    },
+    "efficiency_eco": {
+      "value": 0.99,
+      "unit": "1",
+      "provenance": "vendor_spec",
+      "source": "huawei-ups5000-h-page",
+      "note": "S-ECO mode, up to"
+    },
+    "module_capacity_w": {
+      "value": 100000,
+      "unit": "W",
+      "provenance": "vendor_spec",
+      "source": "huawei-ups5000-h-page",
+      "note": "100 kW / 3U module"
+    },
+    "footprint_w_mm": {
+      "value": 1600,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "huawei-ups5000-h-page",
+      "note": "1200 kVA cabinet 1600 W x 1000 D x 2200 H mm"
+    },
+    "depth_mm": {
+      "value": 1000,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "huawei-ups5000-h-page"
+    },
+    "height_mm": {
+      "value": 2200,
+      "unit": "mm",
+      "provenance": "vendor_spec",
+      "source": "huawei-ups5000-h-page"
+    },
+    "weight_kg": {
+      "unit": "kg",
+      "provenance": "unknown",
+      "note": "not on product page"
+    }
+  },
+  "attrs": {
+    "status": "shipping",
+    "capacity_basis": "frame"
+  },
+  "sources": [
+    {
+      "id": "huawei-ups5000-h-page",
+      "title": "Huawei Digital Power UPS5000-H product page (SG)",
+      "url": "https://digitalpower.huawei.com/sg/data-center-facility/ups5000h.html",
+      "accessed": "2026-10-18"
+    }
+  ]
+}

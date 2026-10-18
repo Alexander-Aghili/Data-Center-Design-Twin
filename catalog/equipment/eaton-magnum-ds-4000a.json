@@ -1,0 +1,59 @@
+{
+  "kind": "equipment",
+  "id": "eaton-magnum-ds-4000a",
+  "name": "Eaton Magnum DS LV switchgear, 4000 A main bus",
+  "vendor": "Eaton",
+  "model": "Magnum DS (4000 A cross bus)",
+  "category": "switchgear",
+  "as_of": "2026-10-18",
+  "description": "UL 1558 / ANSI C37.20.1 metal-enclosed drawout LV switchgear. Bus ratings 2000-10,000 A, breakers 800-6000 A, 100/150/200 kA bus bracing, 600 VAC class. 4000 A is the usual main for a 2.5-3 MVA, 480 V unit substation.",
+  "params": {
+    "capacity_w": {
+      "value": 3325538,
+      "unit": "W",
+      "provenance": "derived",
+      "note": "4000 A x 480 V x sqrt(3) = 3.33 MW at unity pf. Lineup offered 2000-10,000 A (10,000 A = 8.31 MW at 480 V)"
+    },
+    "rating_a": {
+      "value": 4000,
+      "unit": "A",
+      "provenance": "vendor_spec",
+      "source": "eaton-dg019004en-magnum-ds",
+      "note": "one of the available cross bus ratings: 2000, 3200, 4000, 5000, 6000, 8000, 10,000 A"
+    },
+    "max_rating_a": {
+      "value": 10000,
+      "unit": "A",
+      "provenance": "vendor_spec",
+      "source": "eaton-dg019004en-magnum-ds",
+      "note": "maximum continuous cross bus"
+    },
+    "voltage_v": {
+      "value": 480,
+      "unit": "V",
+      "provenance": "vendor_spec",
+      "source": "eaton-dg019004en-magnum-ds",
+      "note": "480 V system (508 V max); 600 V class"
+    },
+    "short_circuit_a": {
+      "value": 100000,
+      "unit": "A",
+      "provenance": "vendor_spec",
+      "source": "eaton-dg019004en-magnum-ds",
+      "note": "standard bus bracing 100 kA; 150 and 200 kA optional"
+    }
+  },
+  "attrs": {
+    "power_input": "ac_54v",
+    "status": "shipping",
+    "standard": "UL 1558 / ANSI C37.20.1"
+  },
+  "sources": [
+    {
+      "id": "eaton-dg019004en-magnum-ds",
+      "title": "Eaton Design Guide DG019004EN, Magnum DS rear-access low-voltage switchgear (Jan 2021)",
+      "url": "https://eatonarabia.com/wp-content/uploads/2022/01/eaton-rear-access-low-voltage-switchgear-design-guide-dg019004en-1.pdf",
+      "accessed": "2026-10-18"
+    }
+  ]
+}
