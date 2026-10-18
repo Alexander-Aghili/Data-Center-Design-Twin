@@ -34,6 +34,23 @@ Six coupled dimensions. Every constant is in [`hill/challenge_spec.json`](hill/c
 | 3,000 fuzzed garbage submissions | 0 crashes |
 | Tracker vs 5 planted faults | 5/5 found: cold-plate fouling (+21% est. vs +22%), pipe scale (539 vs 669 µm; reads low once friction nears its fully-rough limit), recirculation (×3.5 vs ×3.5), laser wear, dirty connector. Faults are planted by role, so the demo follows any new layout. |
 
+## Live 3D demo
+
+```bash
+python3 prototypes/cool-the-cluster/demo/server.py     # then open http://localhost:8000
+```
+
+Standard library only; the page loads three.js from jsDelivr, so open it once on a network before presenting offline. Four buttons drive it, and every number is computed live by the hill's own `twin.py` and `eval.py`:
+
+| Button | What happens |
+|---|---|
+| Random layout | Scores the seeded baseline (1.000) and shows it in 3D: racks by job, fiber/copper links to the spines, coolant pipes to the CDUs, contained hot aisles |
+| Agent's best design | Racks fly to the layout the search found (0.965); hover any rack for power, inlet and GPU temperature and its uplink module |
+| Run agent search | 600-step local search from the baseline in ~12 s, with the score curve drawn live; the 3D hall rearranges to the result |
+| Track the running hall | Generates 120 days of telemetry, runs the tracker, pulses flagged racks red, lists findings with sparklines and the ranked fixes |
+
+"Color: inlet °C" recolors racks by their live inlet temperature at the summer peak, scaled from the coolest rack to the 27 °C limit.
+
 ## Run it
 
 ```bash

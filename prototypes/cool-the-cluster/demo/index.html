@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cool the Cluster · Live Twin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Control-room layout: the 3D hall fills the stage; a right rail carries the numbers the twin just computed. Dark by design (projector). */
+:root {
+  --bg: #0B1116; --panel: #111A21; --panel-2: #16222B; --line: #22313C;
+  --fg: #E3EBF0; --muted: #8B9DAB; --dim: #5D6F7C;
+  --cool: #3DB6C1; --heat: #F07A3E; --warn: #E7B547; --bad: #F06C5E; --good: #5CC283;
+  --job-a: #3DB6C1; --job-b: #8E9CF2; --job-s: #E0AE4C;
+  --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 400 14px/1.45 var(--body); display: grid; grid-template-rows: auto 1fr; }
+header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 12px 18px; border-bottom: 1px solid var(--line); }
+h1 { font: 700 1.6rem/1 var(--display); letter-spacing: .04em; text-transform: uppercase; margin: 0; }
+h1 span { color: var(--muted); font-weight: 500; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+button { font: 500 .85rem/1 var(--body); color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); padding: 9px 13px; cursor: pointer; }
+button:hover { border-color: var(--muted); }
+button.on { border-color: var(--cool); color: var(--cool); }
+button.primary { background: var(--cool); color: #04151A; border-color: var(--cool); font-weight: 600; }
+button:disabled { opacity: .5; cursor: progress; }
+button:focus-visible { outline: 2px solid var(--cool); outline-offset: 2px; }
+main { display: grid; grid-template-columns: 1fr 380px; min-height: 0; }
+#stage { position: relative; min-height: 0; overflow: hidden; }
+#stage canvas { display: block; }
+.overlay { position: absolute; left: 14px; top: 12px; display: flex; flex-wrap: wrap; gap: 6px; max-width: calc(100% - 28px); }
+.overlay button { padding: 6px 10px; font-size: .78rem; background: rgba(17,26,33,.85); }
+.legend { position: absolute; left: 14px; bottom: 12px; max-width: calc(100% - 28px); display: flex; flex-wrap: wrap; gap: 6px 14px; font: 400 .75rem/1 var(--mono); color: var(--muted); background: rgba(11,17,22,.75); padding: 8px 10px; }
+.legend i { display: inline-block; width: 12px; height: 8px; margin-right: 6px; vertical-align: middle; }
+.legend i.ramp { width: 120px; height: 8px; background: linear-gradient(90deg, #3D7FD6, #3DB6C1, #E7B547, #F06C5E); display: inline-block; vertical-align: middle; margin: 0 6px; }
+#tip { position: absolute; pointer-events: none; background: rgba(11,17,22,.95); border: 1px solid var(--line); padding: 8px 10px; font: 400 .78rem/1.5 var(--mono); display: none; white-space: nowrap; }
+#tip b { color: var(--fg); font-weight: 500; }
+.banner { position: absolute; right: 14px; top: 52px; font: 600 1rem/1.2 var(--display); letter-spacing: .05em; text-transform: uppercase; background: rgba(11,17,22,.85); border: 1px solid var(--line); padding: 8px 12px; text-align: right; }
+.banner small { display: block; font: 400 .72rem/1.3 var(--mono); color: var(--muted); letter-spacing: 0; text-transform: none; }
+aside { border-left: 1px solid var(--line); overflow-y: auto; padding: 14px 16px 24px; display: grid; gap: 18px; align-content: start; }
+.eyebrow { font: 500 .7rem/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.big { font: 600 3rem/1 var(--display); font-variant-numeric: tabular-nums; }
+.big small { font: 400 .85rem var(--body); color: var(--muted); margin-left: 6px; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: .84rem; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.bar { height: 6px; background: var(--panel-2); position: relative; margin-top: 3px; }
+.bar > i { position: absolute; inset: 0 auto 0 0; background: var(--cool); }
+.bar.hot > i { background: var(--heat); }
+section { display: grid; gap: 8px; }
+.chart { width: 100%; height: 120px; background: var(--panel); border: 1px solid var(--line); }
+.find { display: grid; grid-template-columns: 1fr 92px; gap: 2px 10px; padding: 8px 0; border-top: 1px solid var(--line); align-items: center; }
+.find .t { font-weight: 500; }
+.find .e { grid-column: 1 / -1; color: var(--muted); font-size: .78rem; }
+.pill { font: 500 .66rem/1 var(--mono); letter-spacing: .05em; text-transform: uppercase; padding: 3px 6px; border: 1px solid currentColor; }
+.pill.high { color: var(--bad); } .pill.medium { color: var(--warn); }
+.act { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); font-size: .82rem; }
+.act b { font-family: var(--mono); font-weight: 500; color: var(--good); }
+.msg { color: var(--muted); font-size: .82rem; }
+.err { color: var(--bad); }
+@media (max-width: 900px) { main { grid-template-columns: 1fr; grid-template-rows: 60vh auto; } aside { border-left: 0; border-top: 1px solid var(--line); } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Cool the Cluster <span>· live data hall twin</span></h1>
+  <div class="actions">
+    <button id="b-base">Random layout</button>
+    <button id="b-best">Agent's best design</button>
+    <button id="b-search" class="primary">Run agent search</button>
+    <button id="b-track">Track the running hall</button>
+  </div>
+</header>
+<main>
+  <div id="stage">
+    <div class="overlay" role="group" aria-label="View options">
+      <button id="v-job" class="on">Color: jobs</button>
+      <button id="v-heat">Color: inlet °C</button>
+      <button id="v-links" class="on">Network links</button>
+      <button id="v-pipes" class="on">Coolant pipes</button>
+      <button id="v-spin">Auto-rotate</button>
+    </div>
+    <div class="banner" id="banner">Loading…<small></small></div>
+    <div class="legend" id="legend"></div>
+    <div id="tip"></div>
+  </div>
+  <aside>
+    <section>
+      <div class="eyebrow">Score · annual kWh per unit of GPU work (random layout = 1.000)</div>
+      <div class="big" id="score">—</div>
+      <dl class="kv" id="kv"></dl>
+    </section>
+    <section id="search-sec" hidden>
+      <div class="eyebrow">Agent search · best score so far</div>
+      <svg class="chart" id="chart" viewBox="0 0 340 120" preserveAspectRatio="none"></svg>
+      <div class="msg" id="search-msg"></div>
+    </section>
+    <section id="track-sec" hidden>
+      <div class="eyebrow">Tracker · findings from telemetry</div>
+      <div id="finds"></div>
+      <div class="eyebrow" style="margin-top:6px">Ranked fixes</div>
+      <div id="acts"></div>
+    </section>
+  </aside>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const C = {
+  floor: 0x0F171D, cold: 0x12303A, hot: 0x3A2419, contain: 0xF07A3E, crah: 0x3DB6C1, cdu: 0x3DB6C1,
+  jobs: { train_a: 0x3DB6C1, train_b: 0x8E9CF2, serve: 0xE0AE4C }, spine: 0xE3EBF0, storage: 0x6D7E8B,
+  link: { copper: 0xF0A04B, multi_mode: 0x3DB6C1, single_mode: 0xB79CFF },
+  pipe: { copper: 0xC9834F, stainless: 0xBFC9D0, pex: 0x4A8FE7 },
+};
+const JOB_NAME = { train_a: "training job A", train_b: "training job B", serve: "serving" };
+const state = { color: "job", links: true, pipes: true, spin: false, scene: null, flagged: new Set() };
+
+// ---------- three.js setup
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+stage.prepend(renderer.domElement);
+const scene3 = new THREE.Scene();
+scene3.background = new THREE.Color(0x0B1116);
+scene3.fog = new THREE.Fog(0x0B1116, 30, 60);
+const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 200);
+const VIEW_DIR = new THREE.Vector3(-0.55, 0.62, 0.56).normalize();
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.target.set(7.8, 0.8, 5.6);
+controls.enableDamping = true;
+controls.maxPolarAngle = Math.PI * 0.48;
+scene3.add(new THREE.HemisphereLight(0xCFE8F0, 0x0B1116, 0.75));
+const sun = new THREE.DirectionalLight(0xffffff, 0.7); sun.position.set(-8, 20, 6); scene3.add(sun);
+
+const groups = { static: new THREE.Group(), links: new THREE.Group(), pipes: new THREE.Group(), contain: new THREE.Group() };
+Object.values(groups).forEach(g => scene3.add(g));
+const rackMeshes = new Map();   // id -> {mesh, edge, target:{x,z}, color}
+const W = { depth: 1.07, width: 0.56, height: 2.3 };
+
+function box(w, h, d, color, opts = {}) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d),
+    new THREE.MeshStandardMaterial({ color, roughness: .6, metalness: .1, transparent: !!opts.opacity, opacity: opts.opacity ?? 1, depthWrite: !opts.opacity }));
+  return m;
+}
+function seg(a, b, r, color, group) {
+  const dir = new THREE.Vector3().subVectors(b, a); const len = dir.length(); if (len < 1e-3) return;
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 6), new THREE.MeshStandardMaterial({ color, roughness: .5 }));
+  m.position.copy(a).addScaledVector(dir, .5);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+  group.add(m);
+}
+function poly(points, r, color, group) { for (let i = 1; i < points.length; i++) seg(points[i - 1], points[i], r, color, group); }
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+
+function buildStatic(sc) {
+  groups.static.clear();
+  const D = sc.hall.depth_m, L = sc.hall.length_m;
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(D + 2, L + 2), new THREE.MeshStandardMaterial({ color: C.floor }));
+  floor.rotation.x = -Math.PI / 2; floor.position.set(D / 2, 0, L / 2); groups.static.add(floor);
+  const grid = new THREE.GridHelper(Math.max(D, L) + 2, Math.round((Math.max(D, L) + 2) / 0.6), 0x1B2830, 0x1B2830);
+  grid.position.set(D / 2, 0.002, L / 2); groups.static.add(grid);
+  [0, 4.8, 9.6, 14.4].forEach(y0 => { const t = new THREE.Mesh(new THREE.PlaneGeometry(1.2, L), new THREE.MeshBasicMaterial({ color: C.cold, transparent: true, opacity: .55 }));
+    t.rotation.x = -Math.PI / 2; t.position.set(y0 + .6, .004, L / 2); groups.static.add(t); });
+  sc.hot_aisles.forEach(h => { const t = new THREE.Mesh(new THREE.PlaneGeometry(1.2, L), new THREE.MeshBasicMaterial({ color: C.hot, transparent: true, opacity: .8 }));
+    t.rotation.x = -Math.PI / 2; t.position.set(h.y0 + .6, .004, L / 2); groups.static.add(t); });
+  [0, L].forEach(z => { const w = box(D, 2.6, 0.12, C.crah, { opacity: .18 }); w.position.set(D / 2, 1.3, z); groups.static.add(w);
+    for (let i = 0; i < 4; i++) { const u = box(1.6, 2.2, 0.5, 0x1E4E57); u.position.set(1.6 + i * 4.1, 1.1, z === 0 ? -0.3 : L + 0.3); groups.static.add(u); } });
+  sc.cdus.forEach(c => { const m = box(0.9, 2.2, 1.2, C.cdu, {}); m.material.emissive = new THREE.Color(0x0C3036); m.position.set(c.y, 1.1, c.x); m.userData = { cdu: c.id }; groups.static.add(m); });
+}
+
+function buildContain(sc) {
+  groups.contain.clear();
+  sc.hot_aisles.forEach(h => { if (!h.contained) return;
+    const m = box(1.2, 2.45, 7.4, C.contain, { opacity: .14 }); m.position.set(h.y0 + .6, 1.23, sc.hall.x0 + 3.6); groups.contain.add(m);
+    const e = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: C.contain, transparent: true, opacity: .7 }));
+    e.position.copy(m.position); groups.contain.add(e); });
+}
+
+function heatRange(sc) { const lo = Math.min(...sc.racks.map(r => r.inlet_c)); return [Math.min(lo, sc.inlet_limit_c - 1), sc.inlet_limit_c]; }
+function heatColor(t, limit, lo) {
+  const span = limit - lo;
+  const stops = [[lo, 0x3D7FD6], [lo + span * .45, 0x3DB6C1], [lo + span * .8, 0xE7B547], [limit, 0xF06C5E]];
+  if (t <= stops[0][0]) return new THREE.Color(stops[0][1]);
+  for (let i = 1; i < stops.length; i++) if (t <= stops[i][0]) {
+    const f = (t - stops[i - 1][0]) / (stops[i][0] - stops[i - 1][0]);
+    return new THREE.Color(stops[i - 1][1]).lerp(new THREE.Color(stops[i][1]), f);
+  }
+  return new THREE.Color(0xFF3B30);
+}
+function rackColor(r, sc) {
+  if (state.color === "heat") return heatColor(r.inlet_c, sc.inlet_limit_c, heatRange(sc)[0]);
+  if (r.kind === "gpu") return new THREE.Color(C.jobs[r.job]);
+  return new THREE.Color(r.kind === "spine" ? C.spine : C.storage);
+}
+
+function applyRacks(sc, animate) {
+  const seen = new Set();
+  sc.racks.forEach(r => {
+    seen.add(r.id);
+    let o = rackMeshes.get(r.id);
+    if (!o) {
+      const mesh = box(W.depth, W.height, W.width, 0xffffff); mesh.position.set(r.y, W.height / 2, r.x);
+      const edge = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), new THREE.LineBasicMaterial({ color: 0x0B1116 }));
+      mesh.add(edge); scene3.add(mesh);
+      o = { mesh }; rackMeshes.set(r.id, o);
+    }
+    o.data = r;
+    o.from = { x: o.mesh.position.x, z: o.mesh.position.z };
+    o.to = { x: r.y, z: r.x };
+    o.mesh.material.color.copy(rackColor(r, sc));
+    o.mesh.material.emissive = new THREE.Color(state.flagged.has(r.id) ? 0x5A1410 : 0x000000);
+    o.mesh.userData = { rack: r.id };
+    if (!animate) o.mesh.position.set(o.to.x, W.height / 2, o.to.z);
+  });
+  anim.t0 = animate ? performance.now() : 0;
+}
+
+function rackPos(id) { const o = rackMeshes.get(id); return o ? o.to : null; }
+function buildLinks(sc) {
+  groups.links.clear();
+  if (!state.links) return;
+  const z = 2.9;
+  sc.links.forEach(l => { const a = rackPos(l.from), b = rackPos(l.to); if (!a || !b) return;
+    const col = C.link[sc.module_groups[l.module]];
+    poly([V(a.x, W.height, a.z), V(a.x, z, a.z), V(a.x, z, b.z), V(b.x, z, b.z), V(b.x, W.height, b.z)], 0.018, col, groups.links); });
+}
+function buildPipes(sc) {
+  groups.pipes.clear();
+  if (!state.pipes) return;
+  const cdu = Object.fromEntries(sc.cdus.map(c => [c.id, c]));
+  const r = { DN25: .03, DN32: .038, DN40: .046 };
+  sc.pipes.forEach(p => { const a = rackPos(p.rack), c = cdu[p.cdu]; if (!a) return;
+    const h = .06;
+    poly([V(c.y, h, c.x), V(a.x, h, c.x), V(a.x, h, a.z)], r[p.dn] || .035, C.pipe[p.material], groups.pipes); });
+}
+
+function legend(sc) {
+  const L = document.getElementById("legend");
+  if (state.color === "heat") {
+    const [lo, hi] = heatRange(sc); L.innerHTML = `<span>rack inlet at summer peak</span><span>${lo.toFixed(1)} °C<i class="ramp"></i>${hi} °C limit</span>`;
+  } else {
+    L.innerHTML = `<span><i style="background:var(--job-a)"></i>training A</span><span><i style="background:var(--job-b)"></i>training B</span>
+      <span><i style="background:var(--job-s)"></i>serving</span><span><i style="background:#E3EBF0"></i>spine</span><span><i style="background:#6D7E8B"></i>storage</span>`;
+  }
+  if (state.links) L.innerHTML += `<span><i style="background:#F0A04B"></i>copper</span><span><i style="background:#3DB6C1"></i>multimode fiber</span><span><i style="background:#B79CFF"></i>single-mode fiber</span>`;
+  if (state.pipes) L.innerHTML += `<span><i style="background:#C9834F"></i>copper pipe</span><span><i style="background:#BFC9D0"></i>stainless</span><span><i style="background:#4A8FE7"></i>PEX</span>`;
+}
+
+function render3D(sc, animate) {
+  const first = !state.scene;
+  state.scene = sc;
+  if (first) buildStatic(sc);
+  buildContain(sc);
+  applyRacks(sc, animate && !first);
+  buildLinks(sc); buildPipes(sc); legend(sc);
+}
+
+const anim = { t0: 0, dur: 1400 };
+function tick(now) {
+  if (anim.t0) {
+    const f = Math.min(1, (now - anim.t0) / anim.dur), e = f < .5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
+    rackMeshes.forEach(o => { if (!o.to) return; const lift = Math.sin(Math.PI * e) * (o.from.x !== o.to.x || o.from.z !== o.to.z ? 1.6 : 0);
+      o.mesh.position.set(o.from.x + (o.to.x - o.from.x) * e, W.height / 2 + lift, o.from.z + (o.to.z - o.from.z) * e); });
+    if (f >= 1) anim.t0 = 0;
+  }
+  const pulse = .5 + .5 * Math.sin(now / 260);
+  state.flagged.forEach(id => { const o = rackMeshes.get(id); if (o) o.mesh.material.emissive.setRGB(.35 * pulse + .05, .04, .03); });
+  controls.autoRotate = state.spin; controls.autoRotateSpeed = .6;
+  controls.update(); renderer.render(scene3, camera); requestAnimationFrame(tick);
+}
+let framed = false;
+function resize() { const w = stage.clientWidth, h = stage.clientHeight; renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix();
+  if (!framed) { const dist = 26 / Math.min(1, camera.aspect); camera.position.copy(controls.target).addScaledVector(VIEW_DIR, dist); framed = true; } }
+new ResizeObserver(resize).observe(stage); resize(); requestAnimationFrame(tick);
+
+// hover tooltip
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2(), tip = document.getElementById("tip");
+renderer.domElement.addEventListener("pointermove", ev => {
+  const r = renderer.domElement.getBoundingClientRect();
+  mouse.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(mouse, camera);
+  const hit = ray.intersectObjects([...rackMeshes.values()].map(o => o.mesh))[0];
+  if (!hit) { tip.style.display = "none"; return; }
+  const d = rackMeshes.get(hit.object.userData.rack).data;
+  const lines = [`<b>${d.id}</b> · ${d.kind === "gpu" ? JOB_NAME[d.job] : d.kind}`];
+  if (d.kw) lines.push(`power ${d.kw.toFixed(1)} kW`);
+  lines.push(`inlet ${d.inlet_c.toFixed(2)} °C`);
+  if (d.junction_c) lines.push(`GPU junction ${d.junction_c.toFixed(1)} °C`);
+  if (d.module) lines.push(`uplinks ${d.module}`);
+  if (state.flagged.has(d.id)) lines.push(`<span class="err">flagged by tracker</span>`);
+  tip.innerHTML = lines.join("<br>"); tip.style.display = "block";
+  tip.style.left = (ev.clientX - r.left + 14) + "px"; tip.style.top = (ev.clientY - r.top + 14) + "px";
+});
+
+// ---------- data + panels
+const $ = id => document.getElementById(id);
+async function api(path, body) {
+  const res = await fetch(path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
+  const j = await res.json(); if (!res.ok || j.error) throw new Error(j.error || res.statusText); return j;
+}
+const fmt = (x, d = 1) => Number(x).toFixed(d);
+function showScore(r, label) {
+  if (!r.passed) { $("score").textContent = "illegal"; $("kv").innerHTML = `<dt class="err">${r.error}</dt><dd></dd>`; return; }
+  $("score").innerHTML = `${fmt(r.score, 3)}<small>${r.score < 1 ? fmt((1 - r.score) * 100, 1) + "% less energy per unit of work" : "reference"}</small>`;
+  const s = r.scenarios.summer_training, kw = r.summer_kw;
+  const cool = kw.chiller_air + kw.chiller_liq + kw.fans + kw.pumps + kw.tower;
+  const mix = Object.entries(r.leaf_mix).sort((a, b) => b[1] - a[1]).map(([m, n]) => `${m}×${n}`).join(" ");
+  const pctLat = Math.min(100, r.serve_latency_us / r.latency_sla_us * 100), pctCap = Math.min(100, r.capex_usd / r.budget_usd * 100);
+  $("kv").innerHTML = `
+    <dt>Summer PUE</dt><dd>${fmt(s.pue, 3)}</dd>
+    <dt>Cooling power (summer avg)</dt><dd>${fmt(cool, 0)} kW</dd>
+    <dt>Network power inside IT</dt><dd>${fmt(r.network_kw, 1)} kW</dd>
+    <dt>Hottest rack inlet</dt><dd>${fmt(Math.max(...Object.values(r.scenarios).map(v => v.worst_inlet_c)), 2)} / 27 °C</dd>
+    <dt>Hottest GPU</dt><dd>${fmt(Math.max(...Object.values(r.scenarios).map(v => v.worst_junction_c)), 1)} °C</dd>
+    <dt>Serving latency</dt><dd>${fmt(r.serve_latency_us, 2)} / ${r.latency_sla_us} µs<div class="bar"><i style="width:${pctLat}%"></i></div></dd>
+    <dt>Capex</dt><dd>$${(r.capex_usd / 1e3).toFixed(0)}k / $${(r.budget_usd / 1e3).toFixed(0)}k<div class="bar"><i style="width:${pctCap}%"></i></div></dd>
+    <dt>Setpoints air / coolant</dt><dd>${fmt(r.setpoints.crah_supply_c)} / ${fmt(r.setpoints.cdu_supply_c)} °C</dd>
+    <dt>Hot aisles contained</dt><dd>${r.containment.filter(Boolean).length} of ${r.containment.length}</dd>
+    <dt>Spine</dt><dd>${r.spine_type}</dd>
+    <dt>Uplinks</dt><dd style="font-size:.76rem">${mix}</dd>`;
+  $("banner").innerHTML = `${label}<small>score ${fmt(r.score, 3)} · summer peak shown · hover a rack</small>`;
+}
+async function load(design, label, animate = true) {
+  const r = await api("/api/score", { design });
+  state.flagged = new Set(); showScore(r, label); if (r.passed) render3D(r.scene, animate);
+}
+
+function drawChart(hist) {
+  const svg = $("chart"); if (!hist.length) return;
+  const ys = hist.map(h => h[1]).filter(v => v != null), lo = Math.min(...ys, .96), hi = 1.002, maxX = Math.max(hist[hist.length - 1][0], 1);
+  const X = x => 8 + (x / maxX) * 324, Y = y => 10 + (hi - y) / (hi - lo) * 100;
+  const pts = hist.filter(h => h[1] != null).map(h => `${X(h[0]).toFixed(1)},${Y(h[1]).toFixed(1)}`).join(" ");
+  const last = hist[hist.length - 1];
+  svg.innerHTML = `<line x1="8" x2="332" y1="${Y(1)}" y2="${Y(1)}" stroke="#22313C" stroke-dasharray="3 3"/>
+    <text x="10" y="${Y(1) - 3}" fill="#8B9DAB" font-size="9" font-family="IBM Plex Mono">random layout 1.000</text>
+    <polyline points="${pts}" fill="none" stroke="#3DB6C1" stroke-width="2" vector-effect="non-scaling-stroke"/>
+    <circle cx="${X(last[0])}" cy="${Y(last[1])}" r="3.5" fill="#3DB6C1"/>
+    <text x="330" y="${Math.min(112, Y(last[1]) + 14)}" text-anchor="end" fill="#E3EBF0" font-size="11" font-family="IBM Plex Mono">${fmt(last[1], 4)}</text>`;
+}
+async function runSearch() {
+  const btns = document.querySelectorAll("header button"); btns.forEach(b => b.disabled = true);
+  $("search-sec").hidden = false; $("search-msg").textContent = "Starting from the random layout…";
+  try {
+    await load("baseline", "Random layout · agent starting point", true);
+    await api("/api/search/start", { steps: 600, seed: 3 });
+    for (;;) {
+      await new Promise(r => setTimeout(r, 250));
+      const s = await api("/api/search/status");
+      drawChart(s.history);
+      $("search-msg").textContent = `${s.step} / ${s.total} designs tried · ${s.rejected} rejected for breaking a limit · ${s.elapsed_s}s`;
+      if (!s.running && s.best) { showScore(s.best, "Agent search result"); render3D(s.best.scene, true);
+        $("search-msg").textContent += ` · racks moved to the new layout`; break; }
+    }
+  } catch (e) { $("search-msg").innerHTML = `<span class="err">${e.message}</span>`; }
+  btns.forEach(b => b.disabled = false);
+}
+function spark(points, limit) {
+  const xs = points.map(p => p[0]), ys = points.map(p => p[1]);
+  const lo = Math.min(...ys, limit ?? Infinity), hi = Math.max(...ys, limit ?? -Infinity), mx = Math.max(...xs) || 1;
+  const X = x => 2 + x / mx * 86, Y = y => 24 - (y - lo) / ((hi - lo) || 1) * 20;
+  const lim = limit != null ? `<line x1="2" x2="88" y1="${Y(limit)}" y2="${Y(limit)}" stroke="#F06C5E" stroke-dasharray="2 2"/>` : "";
+  return `<svg viewBox="0 0 92 28" width="92" height="28">${lim}<polyline points="${points.map(p => X(p[0]).toFixed(1) + "," + Y(p[1]).toFixed(1)).join(" ")}" fill="none" stroke="#3DB6C1" stroke-width="1.2"/></svg>`;
+}
+async function runTrack() {
+  const btns = document.querySelectorAll("header button"); btns.forEach(b => b.disabled = true);
+  $("track-sec").hidden = false; $("finds").innerHTML = `<div class="msg">Ingesting 120 days of cooling, air and optics telemetry…</div>`; $("acts").innerHTML = "";
+  try {
+    await load("best", "Agent's best design · the hall we run", true);
+    const t = await api("/api/track", {});
+    const bySeries = Object.fromEntries(t.series.map(s => [s.asset, s]));
+    $("finds").innerHTML = t.state.findings.map(f => { const s = bySeries[f.asset];
+      return `<div class="find"><span class="t">${f.kind.replace(/_/g, " ")} · <span class="mono">${f.asset}</span> <span class="pill ${f.severity}">${f.severity}</span></span>
+        ${s ? spark(s.points, s.limit) : "<span></span>"}<span class="e">${f.evidence}. ${f.prediction}.</span></div>`; }).join("");
+    $("acts").innerHTML = t.state.actions.map(a => `<div class="act"><span>${a.action}</span><b>${a.saves_mwh_yr > 0 ? fmt(a.saves_mwh_yr, 1) + " MWh/yr" : a.urgency}</b></div>`).join("");
+    state.flagged = new Set(t.scene.racks.filter(r => r.flagged).map(r => r.id));
+    render3D(t.scene, false);
+    const p = t.state.predictions.find(x => x.when.startsWith("+90"));
+    $("banner").innerHTML = `Tracking ${t.racks} racks · ${t.lanes} optical lanes · ${t.days} days<small>flagged racks pulse red · 90-day forecast: GPU speed ${fmt(p.summer_min_job_speed, 2)}</small>`;
+  } catch (e) { $("finds").innerHTML = `<div class="err">${e.message}</div>`; }
+  btns.forEach(b => b.disabled = false);
+}
+
+function toggle(id, key, rebuild) { $(id).addEventListener("click", () => { state[key] = !state[key]; $(id).classList.toggle("on", state[key]); if (state.scene) rebuild(); }); }
+$("v-job").addEventListener("click", () => { state.color = "job"; $("v-job").classList.add("on"); $("v-heat").classList.remove("on"); if (state.scene) { applyRacks(state.scene, false); legend(state.scene); } });
+$("v-heat").addEventListener("click", () => { state.color = "heat"; $("v-heat").classList.add("on"); $("v-job").classList.remove("on"); if (state.scene) { applyRacks(state.scene, false); legend(state.scene); } });
+toggle("v-links", "links", () => { buildLinks(state.scene); legend(state.scene); });
+toggle("v-pipes", "pipes", () => { buildPipes(state.scene); legend(state.scene); });
+toggle("v-spin", "spin", () => {});
+$("b-base").addEventListener("click", () => load("baseline", "Random layout"));
+$("b-best").addEventListener("click", () => load("best", "Agent's best design"));
+$("b-search").addEventListener("click", runSearch);
+$("b-track").addEventListener("click", runTrack);
+load("baseline", "Random layout", false).catch(e => { $("banner").innerHTML = `<span class="err">${e.message}</span>`; });
+</script>
+</body>
+</html>
