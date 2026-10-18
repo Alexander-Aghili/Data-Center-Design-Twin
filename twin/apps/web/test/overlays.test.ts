@@ -8,7 +8,7 @@ import {
   type Plan,
   type SizedEquipment,
 } from '@twin/schema'
-import { BoxGeometry, Mesh, MeshBasicMaterial, PerspectiveCamera } from 'three'
+import { Box3, BoxGeometry, Mesh, MeshBasicMaterial, PerspectiveCamera, Vector3 } from 'three'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import type { Backend } from '../src/state/backend'
 
@@ -104,6 +104,46 @@ describe('ghost diff', () => {
     expect(diff.moved).toEqual([{ from: 'rack:R2-03', to: 'rack:R6-05' }])
     expect(diff.added).toEqual([])
     expect(diff.removed).toEqual([])
+  })
+})
+
+describe('ghost tags', () => {
+  const box = (x: number, z: number) => new Box3(new Vector3(x, 0, z), new Vector3(x + 0.6, 2, z + 1.2))
+  const ghost = (id: string, mode: 'added' | 'removed' | 'changed', tagKey: string, label: (n: number) => string, row: string | null, x: number, z: number) => ({
+    id,
+    mode,
+    box: box(x, z),
+    tagKey,
+    label,
+    row,
+    tagWest: false,
+  })
+
+  it('gives one tag per kind of change, naming its rows and counting its units', () => {
+    const cooling = () => 'Cooling: Direct-to-chip'
+    const cdu = (n: number) => `New row CDU${n === 1 ? '' : `, ${n} units`}`
+    const tags = m.ghost.ghostTags([
+      ghost('rack:R3-00', 'changed', 'changed|cooling', cooling, 'R3', 8, 11.2),
+      ghost('rack:R4-00', 'changed', 'changed|cooling', cooling, 'R4', 8, 14.8),
+      ghost('rack:R5-00', 'changed', 'changed|cooling', cooling, 'R5', 8, 18.4),
+      ghost('eq:cdu:R3:0', 'added', 'added|cdu|m', cdu, null, 23.6, 11.8),
+      ghost('eq:cdu:R4:0', 'added', 'added|cdu|m', cdu, null, 23.6, 15.4),
+      ghost('eq:cdu:R5:0', 'added', 'added|cdu|m', cdu, null, 23.6, 19),
+    ])
+    expect(tags.map((t) => t.lines)).toEqual([['Cooling: Direct-to-chip, rows 3–5'], ['New row CDU, 3 units']])
+    // Each tag sits over the middle of everything it groups.
+    expect(tags[1]!.position[0]).toBeCloseTo(23.9)
+    expect(tags[1]!.position[2]).toBeCloseTo((11.8 + 19 + 1.2) / 2)
+  })
+
+  it('stacks changes at the same place into one tag instead of overlapping callouts', () => {
+    const tags = m.ghost.ghostTags([
+      ghost('eq:crah:W2:0', 'removed', 'removed|crah|a', (n) => `Removed fan wall, ${n} units`, null, 1.5, 13.6),
+      ghost('eq:crah:W2:1', 'removed', 'removed|crah|a', (n) => `Removed fan wall, ${n} units`, null, 1.5, 15.6),
+      ghost('eq:crah:W2:0', 'changed', 'changed|crah|b', () => 'Model: chilled-water CRAH', null, 1.5, 14.2),
+      ghost('rack:R3-00', 'changed', 'changed|cooling', () => 'Cooling: Direct-to-chip', 'R3', 12, 11.2),
+    ])
+    expect(tags.map((t) => t.lines)).toEqual([['Removed fan wall, 2 units', 'Model: chilled-water CRAH'], ['Cooling: Direct-to-chip, row 3']])
   })
 })
 
