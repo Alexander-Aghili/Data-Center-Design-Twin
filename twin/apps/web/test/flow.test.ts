@@ -4,6 +4,7 @@ import type { Evaluation, Plan, RackResult } from '@twin/schema'
 import { describe, expect, it } from 'vitest'
 import {
   airNetwork,
+  heatRuns,
   liquidNetwork,
   particleCount,
   particleSpeed,
@@ -206,6 +207,18 @@ describe('air flow paths', () => {
   })
 })
 
+describe('heat shimmer', () => {
+  it('shimmer sits above adjacent racks with coolingOk false, merged per row', () => {
+    const { plan, evaluation } = fixture()
+    expect(heatRuns(plan, evaluation)).toEqual([{ rowId: 'R3', x0: expect.closeTo(9.8), x1: expect.closeTo(10.4), z: expect.closeTo(11.8), top: expect.any(Number) }])
+    evaluation.racks.find((r) => r.placementId === 'R3-02')!.coolingOk = false
+    const [run] = heatRuns(plan, evaluation)
+    expect(run!.x0).toBeCloseTo(9.2)
+    expect(run!.x1).toBeCloseTo(10.4)
+    expect(heatRuns(plan, emptyEvaluation())).toEqual([])
+  })
+})
+
 describe('flow color', () => {
   it('color lerp supply→return from temperatures', () => {
     const scale = { lo: 20, hi: 40 }
@@ -213,8 +226,11 @@ describe('flow color', () => {
     expect(supplyReturnColor(40, scale)).toBe(PALETTE.return)
     expect(supplyReturnColor(10, scale)).toBe(PALETTE.supply)
     expect(supplyReturnColor(55, scale)).toBe(PALETTE.return)
-    // Halfway: each channel is the mean of supply #2D6CDF and return #E0922A.
-    expect(supplyReturnColor(30, scale)).toBe('#877F85')
+    // Halfway is the neutral hairline gray, not the mauve a straight blue–amber blend would give.
+    expect(supplyReturnColor(30, scale)).toBe(PALETTE.hairline)
+    // A quarter of the way: the mean of supply #2D6CDF and hairline #C6CFD3.
+    expect(supplyReturnColor(25, scale)).toBe('#7A9ED9')
+    expect(supplyReturnColor(35, scale)).toBe('#D3B17F')
     expect(supplyReturnColor(30, { lo: 30, hi: 30 })).toBe(PALETTE.supply)
   })
 

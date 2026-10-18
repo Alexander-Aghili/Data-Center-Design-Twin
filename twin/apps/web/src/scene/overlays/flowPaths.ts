@@ -99,14 +99,26 @@ const rgb = (hex: string): Rgb => {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
 }
 const SUPPLY_RGB = rgb(PALETTE.supply)
+const NEUTRAL_RGB = rgb(PALETTE.hairline)
 const RETURN_RGB = rgb(PALETTE.return)
 
-/** Supply blue at `scale.lo`, return amber at `scale.hi`, linear in between. */
-export function supplyReturnColor(tempC: number, scale: TempScale): string {
+/**
+ * Writes the supply→return color for `tempC` into `out` (sRGB, 0–255) and returns it. Blue and amber are
+ * near-complements, so a straight blend turns mauve halfway; the blend passes through the neutral hairline
+ * gray instead (a diverging scale), so in-between temperatures read as in-between rather than as a third hue.
+ */
+export function supplyReturnRgb(tempC: number, scale: TempScale, out: number[]): number[] {
   const span = scale.hi - scale.lo
   const t = span > 0 ? clamp((tempC - scale.lo) / span, 0, 1) : 0
-  const mixed = SUPPLY_RGB.map((c, i) => Math.round(c + (RETURN_RGB[i]! - c) * t))
-  return `#${mixed.map((c) => c.toString(16).padStart(2, '0')).join('')}`.toUpperCase()
+  const [from, to, f] = t <= 0.5 ? [SUPPLY_RGB, NEUTRAL_RGB, t * 2] : [NEUTRAL_RGB, RETURN_RGB, t * 2 - 1]
+  for (let i = 0; i < 3; i++) out[i] = from[i]! + (to[i]! - from[i]!) * f
+  return out
+}
+
+/** Supply blue at `scale.lo`, return amber at `scale.hi`, through neutral gray halfway. */
+export function supplyReturnColor(tempC: number, scale: TempScale): string {
+  const [r, g, b] = supplyReturnRgb(tempC, scale, [0, 0, 0]).map((c) => Math.round(c))
+  return `#${[r!, g!, b!].map((c) => c.toString(16).padStart(2, '0')).join('')}`.toUpperCase()
 }
 
 /** Cumulative arc length at each point. */
@@ -250,14 +262,17 @@ function rackEntry(plan: Plan, groupId: string): RackEntry | null {
   return entry?.kind === 'rack' ? entry : null
 }
 
-function rackGeometry(plan: Plan, rack: RackResult): { x: number; h: number } {
+/** Center x, width and height of a placed rack; unknown rack types use the slot grid and a 42U height. */
+export function rackGeometry(plan: Plan, rack: RackResult): { x: number; w: number; h: number } {
   const entry = rackEntry(plan, rack.groupId)
-  const { x } = slotWorld(plan, rack.rowId, rack.slot, entry?.slotsWide ?? 1)
-  return { x, h: entry ? rackSize(entry).h : FALLBACK_RACK_H }
+  const slotsWide = entry?.slotsWide ?? 1
+  const { x } = slotWorld(plan, rack.rowId, rack.slot, slotsWide)
+  const size = entry ? rackSize(entry) : null
+  return { x, w: size?.w ?? slotsWide * 0.6, h: size?.h ?? FALLBACK_RACK_H }
 }
 
 /** Rack faces and aisles of a row: `dir` points from the rack rear into its hot aisle. */
-function rowFaces(row: Row): { rearZ: number; frontZ: number; dir: 1 | -1 } {
+export function rowFaces(row: Row): { rearZ: number; frontZ: number; dir: 1 | -1 } {
   return row.hotAisle === 'south'
     ? { rearZ: row.z + row.rackDepthM, frontZ: row.z, dir: 1 }
     : { rearZ: row.z, frontZ: row.z + row.rackDepthM, dir: -1 }
@@ -336,10 +351,10 @@ function splitTrack(t: Track, i: number): [Track, Track] {
 export function liquidNetwork(plan: Plan, evaluation: Evaluation): LiquidNetwork {
   const liquid = evaluation.racks.filter(isLiquid)
   const facilitySupplyC = plan.cooling.facilitySupplyC
-  const scale: TempScale = {
-    lo: Math.min(facilitySupplyC, ...liquid.flatMap((r) => (r.supplyC === null ? [] : [r.supplyC]))),
-    hi: Math.max(facilitySupplyC, ...liquid.flatMap((r) => (r.returnC === null ? [] : [r.returnC]))),
-  }
+  // Rack supply reads as pure supply blue; the colder facility supply clamps to the same blue.
+  const supplies = liquid.flatMap((r) => (r.supplyC === null ? [] : [r.supplyC]))
+  const lo = supplies.length > 0 ? Math.min(...supplies) : facilitySupplyC
+  const scale: TempScale = { lo, hi: Math.max(lo, ...liquid.flatMap((r) => (r.returnC === null ? [] : [r.returnC]))) }
   const loops: RowLoop[] = []
   for (const row of plan.hall.rows) {
     const racks = liquid.filter((r) => r.rowId === row.id)
@@ -362,10 +377,10 @@ export function liquidNetwork(plan: Plan, evaluation: Evaluation): LiquidNetwork
   const pipes: PipeRun[] = []
   const circuits: Circuit[] = []
   const addPipes = (id: string, supply: Track, ret: Track, radius: number, bend: number) => {
-    pipes.push({ id: `${id}:supply`, leg: 'supply', radius, ...pick(rounded(supply, bend)) })
-    pipes.push({ id: `${id}:return`, leg: 'return', radius, ...pick(rounded(ret, bend)) })
+    for (const [leg, t] of [['supply', rounded(supply, bend)], ['return', rounded(ret, bend)]] as const) {
+      pipes.push({ id: `${id}:${leg}`, leg, radius, points: t.points, fills: t.fills })
+    }
   }
-  const pick = (t: Track) => ({ points: t.points, fills: t.fills })
 
   // Facility mains run north–south just east of the CDUs, from the plant past the farthest CDU.
   const plant = servingPosition(plan, evaluation, 'plant', loops[0]!.row.id)
@@ -483,8 +498,9 @@ export function liquidNetwork(plan: Plan, evaluation: Evaluation): LiquidNetwork
           fillNear(header, [x - 0.1, ys, hS]),
           sup,
         ),
-        1,
-        4,
+        // Heat is picked up in the rack: the supply riser stays at supply temperature, the return riser at return.
+        2,
+        3,
         sup,
         ret,
       )
@@ -522,7 +538,7 @@ function rackAirflow(r: RackResult): number | null {
 
 /**
  * Air paths: from the serving CRAH's discharge along the cold aisle, through the rack front to rear,
- * up the hot aisle and back along the ceiling to the CRAH's top return. Density and speed scale with
+ * up out of the hot aisle and back above the racks to the CRAH's top return. Density and speed scale with
  * each rack's computed airflow relative to the hall mean.
  */
 export function airNetwork(plan: Plan, evaluation: Evaluation): AirNetwork {
@@ -533,7 +549,6 @@ export function airNetwork(plan: Plan, evaluation: Evaluation): AirNetwork {
     racks.length > 0
       ? { lo: Math.min(...racks.map((r) => r.airInletC!)), hi: Math.max(...racks.map((r) => r.airOutletC!)) }
       : { lo: 0, hi: 0 }
-  const ceilingY = plan.hall.ceilingM - 0.6
   const circuits: Circuit[] = []
   racks.forEach((r, i) => {
     const row = plan.hall.rows.find((w) => w.id === r.rowId)
@@ -545,15 +560,17 @@ export function airNetwork(plan: Plan, evaluation: Evaluation): AirNetwork {
     const hotZ = rearZ + dir * 0.5
     const side = x >= crah.x ? 1 : -1
     const midY = h * 0.5
+    // Warm air rises out of the hot aisle and returns just above the racks (under the ceiling).
+    const returnY = Math.min(plan.hall.ceilingM - 0.3, h + 0.9)
     const pts: Vec3[] = [
       [crah.x + side * 0.5, 0.3, crah.z],
       [crah.x + side * 1.2, 0.3, coldZ],
       [x, 0.3, coldZ],
       [x, midY, coldZ],
       [x, midY, hotZ],
-      [x, ceilingY, hotZ],
-      [crah.x + side * 1.2, ceilingY, hotZ],
-      [crah.x + side * 0.4, ceilingY, crah.z],
+      [x, returnY, hotZ],
+      [crah.x + side * 1.2, returnY, hotZ],
+      [crah.x + side * 0.4, returnY, crah.z],
       [crah.x, CRAH_RETURN_Y, crah.z],
     ]
     const ratio = flows[i]! / meanFlow
@@ -562,9 +579,45 @@ export function airNetwork(plan: Plan, evaluation: Evaluation): AirNetwork {
       id: `air:${r.placementId}`,
       tier: 'air',
       ...path,
+      // Air is not part of the pipe fill: it is always fully present.
+      fills: path.points.map(() => 0),
       speed: clamp(AIR_DESIGN_MPS * ratio, AIR_MIN_MPS, AIR_MAX_MPS),
       count: Math.max(1, Math.round(AIR_PARTICLES_PER_RACK * ratio)),
     })
   })
   return { circuits, scale }
+}
+
+// ---------- heat shimmer ----------
+
+export interface HeatRun {
+  rowId: string
+  x0: number
+  x1: number
+  /** Center of the rack footprint across the row. */
+  z: number
+  top: number
+}
+
+/** Runs of adjacent racks whose cooling is not OK, merged per row, for the heat shimmer above them. */
+export function heatRuns(plan: Plan, evaluation: Evaluation): HeatRun[] {
+  const runs: HeatRun[] = []
+  for (const row of plan.hall.rows) {
+    const hot = evaluation.racks
+      .filter((r) => r.rowId === row.id && !r.coolingOk)
+      .map((r) => rackGeometry(plan, r))
+      .sort((a, b) => a.x - b.x)
+    let current: HeatRun | null = null
+    for (const g of hot) {
+      const [x0, x1] = [g.x - g.w / 2, g.x + g.w / 2]
+      if (current && x0 - current.x1 < 0.05) {
+        current.x1 = x1
+        current.top = Math.max(current.top, g.h)
+      } else {
+        current = { rowId: row.id, x0, x1, z: row.z + row.rackDepthM / 2, top: g.h }
+        runs.push(current)
+      }
+    }
+  }
+  return runs
 }
