@@ -5,8 +5,10 @@ const HALL_W = 40
 const HALL_D = 36
 const CEILING = 4.5
 const BAY = 3.6
-// ≈150 psf, an older raised floor; chosen so GB300 + DLC overloads it (Task 31 tunes).
-const BAY_RATING_KN_M2 = 7.2
+// An older raised floor rated about 150 psf (7.2 kN/m²; 7.3 is 152 psf). Tuned so six GB300 NVL72 racks in a
+// 3.6 m bay hold on air (6 × 1,595 kg = 7.24 kN/m², 99%) and go over once DLC adds coolant and manifolds
+// (6 × 1,630 kg = 7.40 kN/m², 101%), as in the demo script.
+const BAY_RATING_KN_M2 = 7.3
 const POINT_LIMIT_KN = 4.5
 
 const ROW_COUNT = 8
@@ -25,10 +27,13 @@ const CDU_UNITS_PER_POSITION = 2
 const CRAH_UNITS_PER_POSITION = Math.floor(HALL_D / 4 / 2.2)
 // Plant yard north of the hall: 40 m × 12 m, ~40 m² per 1 MW-class chiller or dry cooler → 12.
 const PLANT_UNITS = Math.floor((HALL_W * 12) / 40)
-// Electrical room: line-ups for UPS modules and transformers.
-const ELECTRICAL_UNITS = 24
-// Leaf position: one network rack at the row end.
-const LEAF_UNITS = 1
+// Electrical room: cabinet line-ups shared by 500 kW UPS modules and 3 MVA transformers. 30 holds a GB300
+// hall (about 8.5 MW IT at peak): 23 UPS modules and 7 transformers with N+1 and sizing headroom.
+const ELECTRICAL_UNITS = 30
+// Leaf position: two network racks (8 × 64-port switches each, rack.network) at the west end of each of the
+// 4 rows it serves → 64 leaf switches. The default hall needs 40 at 1:1 (2,560 ports).
+const SERVED_ROWS_PER_LEAF = 4
+const LEAF_UNITS = SERVED_ROWS_PER_LEAF * 2 * 8
 // Workload target: below the default hall's placed FP8 compute (80 racks × 16 B300 GPUs at roughly
 // 4.5 PFLOPS dense FP8 each ≈ 5,760 PFLOPS), so the default plan meets it. Task 31 tunes it with the catalog.
 const TARGET_PFLOPS = 4000
@@ -95,7 +100,7 @@ function positions(hallRows: Row[]): EquipmentPosition[] {
   )
   const all = hallRows.map((r) => r.id)
   const leaf = [0, 1].map((k): EquipmentPosition => {
-    const served = hallRows.slice(4 * k, 4 * k + 4)
+    const served = hallRows.slice(SERVED_ROWS_PER_LEAF * k, SERVED_ROWS_PER_LEAF * (k + 1))
     return {
       id: `leaf-${k + 1}`,
       kind: 'leaf',
@@ -140,7 +145,9 @@ export function createDefaultPlan(): Plan {
     },
     site: {
       climateId: CLIMATE.DALLAS,
-      gridCapacityW: 10_000_000,
+      // Sized for the demo: a GB300 hall on air peaks at 10.36 MW (fits), with dry coolers at 32 °C it peaks
+      // at 10.59 MW when trim chillers carry the whole load on the hottest hours (over the cap for 231 h).
+      gridCapacityW: 10_400_000,
       waterAllowanceM3PerDay: 120,
       valueOfComputeUsdPerGpuHour: 2.5,
     },

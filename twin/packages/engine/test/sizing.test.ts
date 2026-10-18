@@ -149,8 +149,12 @@ describe('plant, electrical and network sizing', () => {
 
   it('leaves per leaf position: downlinks plus downlinks / oversubscription, capped by the position capacity', () => {
     const result = run(makePlan([airHall]))
-    // leaf-1 serves R1–R4: 64 racks × 16 ports = 1024 downlinks + 1024 uplinks at 1:1 = 32 leaves of 64 ports; it holds 1.
-    expect(item(result, 'leaf:leaf-1')).toMatchObject({ modelId: 'leaf.64x800g', required: 32, count: 1, positionIds: ['leaf-1'] })
+    // leaf-1 serves R1–R4: 64 racks × 16 ports = 1024 downlinks + 1024 uplinks at 1:1 = 32 leaves of 64 ports,
+    // 40 kept at the 80% warning threshold; the position holds 64.
+    expect(item(result, 'leaf:leaf-1')).toMatchObject({ modelId: 'leaf.64x800g', required: 40, count: 40, positionIds: ['leaf-1'] })
+    // GB300 racks on R1–R4: 64 × 72 ports = 4608 downlinks + 4608 uplinks = 144 leaves, capped at the 64 the position holds.
+    const dense = run(makePlan([{ ...dlc, rows: ['R1', 'R2', 'R3', 'R4'] }]))
+    expect(item(dense, 'leaf:leaf-1')).toMatchObject({ required: 144, count: 64 })
   })
 
   it('keys and categories match what the rejection, power and cost modules read', () => {
