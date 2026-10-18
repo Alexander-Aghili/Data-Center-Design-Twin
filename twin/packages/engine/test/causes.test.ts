@@ -100,6 +100,9 @@ describe('attachCauses', () => {
       check('power.gridWorstHour', { kind: 'site', id: 'site', objectIds: [] }),
     ])
     expect(paths(row!)).toContain('rackGroups.g1.rackTypeId')
+    // Busway feeds are counted under redundancy; the design current no longer depends on the purpose.
+    expect(paths(row!)).toContain('power.redundancy')
+    expect(paths(row!)).not.toContain('workload.purpose')
     expect(paths(row!)).not.toContain('rackGroups.g2.rackTypeId')
     expect(paths(group!)).not.toContain('rackGroups.g1.rackTypeId')
     expect(paths(cdu!)).toEqual(expect.arrayContaining(['rackGroups.g2.coolingMethodId', 'power.redundancy']))

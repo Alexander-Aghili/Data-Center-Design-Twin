@@ -103,28 +103,15 @@ function rack(placementId: string, groupId = 'g1'): RackResult {
 }
 const racks = [rack('R1-00'), rack('R1-01')]
 
-function buswayCheck(rowId: string, limitA: number | null): Check {
-  return {
-    id: `power.busway:${rowId}`,
-    kind: 'power.busway',
-    layer: 'power',
-    subject: { kind: 'row', id: rowId, objectIds: [`eq:busway:${rowId}:0`] },
-    title: `Busway ${rowId}`,
-    value: null,
-    limit: limitA,
-    unit: 'A',
-    utilization: null,
-    status: 'pass',
-    explanation: '',
-    causes: [],
-  }
-}
+// 1 A per kW keeps the arithmetic readable: amps = nominal W × factor / 1000.
+const AMPS_PER_W = 1 / 1000
 
-function power(rows: { rowId: string; buswayLoadA: number }[], limits: Record<string, number | null>): PowerResult {
+function power(busways: { rowId: string; nominalW: number; capacityA: number | null; ampsPerW?: number | null }[]): PowerResult {
   return {
     hourly: { itW: [], facilityW: [], pue: [] },
-    rows,
-    checks: Object.entries(limits).map(([rowId, limit]) => buswayCheck(rowId, limit)),
+    rows: busways.map((b) => ({ rowId: b.rowId, buswayLoadA: 0 })),
+    busways: busways.map((b) => ({ ampsPerW: AMPS_PER_W, objectIds: [`eq:busway:${b.rowId}:0`], ...b })),
+    checks: [],
     metrics: [],
     headline: {},
   }
@@ -134,53 +121,65 @@ const swing = (checks: Check[]) => checks.filter((c) => c.kind === 'power.traini
 const target = (checks: Check[]) => checks.find((c) => c.kind === 'workload.targetCompute')
 
 describe('power.trainingSwing', () => {
-  it('warns when the training design current (load × peakToAverageTraining) exceeds 90% of the busway rating', () => {
-    // The power module's buswayLoadA already carries the purpose's peak-to-average factor (1050 A × 1.1 = 1155 A);
-    // it must not be applied twice. 1155 A > 0.9 × 1250 A = 1125 A.
-    const [check] = swing(demandChecks(context(), racks, power([{ rowId: 'R1', buswayLoadA: 1155 }], { R1: 1250 })).checks)
+  it('warns when nominal row power × peakToAverageTraining, as current, exceeds 90% of the busway rating', () => {
+    // 1,050 kW nominal × 1.1 = 1,155 A > 0.9 × 1,250 A = 1,125 A
+    const [check] = swing(demandChecks(context(), racks, power([{ rowId: 'R1', nominalW: 1_050_000, capacityA: 1250 }])).checks)
     expect(check).toMatchObject({ id: 'power.trainingSwing:R1', status: 'warn', unit: 'A', layer: 'power' })
     expect(check!.value).toBeCloseTo(1155, 6)
     expect(check!.limit).toBeCloseTo(1125, 6)
     expect(check!.utilization).toBeCloseTo(1155 / 1125, 6)
     expect(check!.subject.objectIds).toEqual(['eq:busway:R1:0', 'rack:R1-00', 'rack:R1-01'])
+    expect(check!.explanation).toContain('92%')
   })
 
   it('passes below 90% of the rating', () => {
-    // 1100 A < 1125 A, although 1100 A × 1.1 would exceed it
-    const [check] = swing(demandChecks(context(), racks, power([{ rowId: 'R1', buswayLoadA: 1100 }], { R1: 1250 })).checks)
+    // 1,000 kW × 1.1 = 1,100 A < 1,125 A
+    const [check] = swing(demandChecks(context(), racks, power([{ rowId: 'R1', nominalW: 1_000_000, capacityA: 1250 }])).checks)
     expect(check!.status).toBe('pass')
   })
 
-  it('is unknown when the busway rating is unknown', () => {
-    const [check] = swing(demandChecks(context(), racks, power([{ rowId: 'R1', buswayLoadA: 900 }], { R1: null })).checks)
-    expect(check).toMatchObject({ status: 'unknown', utilization: null })
+  it('fails in plain words when no busway capacity is left after redundancy', () => {
+    // One feed under N+1: the power module counts zero serving feeds, so capacity is 0 A.
+    const [check] = swing(demandChecks(context(), racks, power([{ rowId: 'R1', nominalW: 1_000_000, capacityA: 0 }])).checks)
+    expect(check).toMatchObject({ status: 'fail', utilization: null, limit: 0 })
+    expect(check!.explanation).not.toMatch(/Infinity|NaN/)
+    expect(check!.explanation).toContain('no busway capacity')
+  })
+
+  it('is unknown when the busway capacity or its current per watt is unknown', () => {
+    const p = power([
+      { rowId: 'R1', nominalW: 1_000_000, capacityA: null },
+      { rowId: 'R2', nominalW: 1_000_000, capacityA: 1250, ampsPerW: null },
+    ])
+    const checks = swing(demandChecks(context(), racks, p).checks)
+    expect(checks.map((c) => [c.status, c.utilization])).toEqual([['unknown', null], ['unknown', null]])
   })
 
   it('is not raised unless the purpose is training', () => {
     const ctx = context((p) => (p.workload.purpose = 'inference'))
-    expect(swing(demandChecks(ctx, racks, power([{ rowId: 'R1', buswayLoadA: 1200 }], { R1: 1250 })).checks)).toEqual([])
+    expect(swing(demandChecks(ctx, racks, power([{ rowId: 'R1', nominalW: 1_200_000, capacityA: 1250 }])).checks)).toEqual([])
   })
 })
 
 describe('workload.targetCompute', () => {
   it('warns when placed PFLOPS is below the target', () => {
-    const check = target(demandChecks(context((p) => (p.workload.targetPflops = 1000)), racks, power([], {})).checks)
+    const check = target(demandChecks(context((p) => (p.workload.targetPflops = 1000)), racks, power([])).checks)
     expect(check).toMatchObject({ id: 'workload.targetCompute:site', status: 'warn', value: 720, limit: 1000, unit: 'PFLOPS' })
     expect(check!.utilization).toBeCloseTo(1000 / 720, 6)
   })
 
   it('passes when placed PFLOPS meets the target', () => {
-    expect(target(demandChecks(context(), racks, power([], {})).checks)?.status).toBe('pass')
+    expect(target(demandChecks(context(), racks, power([])).checks)?.status).toBe('pass')
   })
 
   it('is unknown when a rack has no FP8 figure', () => {
     const ctx = context((p) => p.rackGroups.push({ id: 'g2', name: 'Mystery', rackTypeId: 'rack.unknown', coolingMethodId: 'x' }))
-    expect(target(demandChecks(ctx, [...racks, rack('R2-00', 'g2')], power([], {})).checks)?.status).toBe('unknown')
+    expect(target(demandChecks(ctx, [...racks, rack('R2-00', 'g2')], power([])).checks)?.status).toBe('unknown')
   })
 
   it('is unknown, not a warning, in an empty hall', () => {
     const ctx = context((p) => (p.placements = []))
-    const check = target(demandChecks(ctx, [], power([], {})).checks)
+    const check = target(demandChecks(ctx, [], power([])).checks)
     expect(check).toMatchObject({ status: 'unknown', value: 0, utilization: null })
   })
 })
