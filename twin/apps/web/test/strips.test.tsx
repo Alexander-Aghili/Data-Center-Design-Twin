@@ -3,7 +3,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import type { HourlyChart as HourlyChartComponent } from '../src/charts/HourlyChart'
 import type { useTwinStore as UseTwinStore } from '../src/state/store'
 import type { Strip as StripComponent } from '../src/strips/Strip'
-import { DALLAS, fixtureEvaluation, fixturePlan } from './fixtures/evaluation'
+import { DALLAS, fixtureEvaluation, fixturePlan } from './fixtures/dallasEvaluation'
 
 let HourlyChart: typeof HourlyChartComponent
 let Strip: typeof StripComponent

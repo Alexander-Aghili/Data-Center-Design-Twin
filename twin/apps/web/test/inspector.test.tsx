@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import type { Inspector as InspectorComponent } from '../src/panels/Inspector'
 import type { useTwinStore as UseTwinStore } from '../src/state/store'
-import { fixtureEvaluation, fixturePlan } from './fixtures/evaluation'
+import { fixtureEvaluation, fixturePlan } from './fixtures/dallasEvaluation'
 
 let Inspector: typeof InspectorComponent
 let useTwinStore: typeof UseTwinStore
