@@ -1,4 +1,3 @@
-import { readFile } from 'node:fs/promises'
 import { expect, test, type Page } from '@playwright/test'
 import type { Evaluation, ServerMsg } from '@twin/schema'
 import {
@@ -119,9 +118,15 @@ test('demo script: GB300 swap, liquid-cooling proposal, ripple effects, floor fi
   await test.step('7. the agent writes the OpenFOAM simulation brief, and it opens', async () => {
     const reply = await chat(page, 'Write the simulation brief for OpenFOAM.')
     const link = reply.getByRole('link', { name: 'OpenFOAM simulation brief' })
-    const download = page.waitForEvent('download')
-    await link.click()
-    const brief = await readFile(await (await download).path(), 'utf8')
+    const href = await link.getAttribute('href')
+    expect(href).toMatch(/^\/api\/brief\/file\/[\w.-]+\.md$/)
+    await expect(link).toHaveAttribute('target', '_blank')
+    await expect(link).not.toHaveAttribute('download')
+    const res = await page.request.get(new URL(href!, page.url()).href)
+    expect(res.status()).toBe(200)
+    expect(res.headers()['content-type']).toMatch(/^text\/plain/)
+    expect(res.headers()['content-disposition']).toMatch(/^inline/)
+    const brief = await res.text()
     expect(brief).toMatch(/OpenFOAM/)
     expect(brief).toMatch(/buoyantSimpleFoam/)
   })
