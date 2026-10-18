@@ -1,7 +1,7 @@
 import { COMMAND_TOOL_PREFIX } from '@twin/schema'
 import type { PlanStore } from '../../contracts.js'
 import type { PlanEngine } from './propose.js'
-import { compactDiff, defineTool, failure, guard, parseInput, success, type AgentTool } from './schema.js'
+import { checkSummary, compactDiff, defineTool, failure, guard, parseInput, success, type AgentTool } from './schema.js'
 
 /**
  * One `cmd_<type>` tool per registry command, with the command's own JSON Schema and description,
@@ -22,8 +22,8 @@ export function commandTools(store: PlanStore, engine: PlanEngine): AgentTool[] 
           const prev = store.state().evaluation
           const result = store.dispatch({ type: info.type, payload: parsed.data }, 'agent')
           if (!result.ok) return failure(result.error)
-          const diff = engine.diff(prev, store.state().evaluation)
-          return success({ applied: result.summary, diff: compactDiff(diff) }, result.summary)
+          const next = store.state().evaluation
+          return success({ applied: result.summary, diff: compactDiff(engine.diff(prev, next)), checksAfter: checkSummary(next) }, result.summary)
         })
       },
     }

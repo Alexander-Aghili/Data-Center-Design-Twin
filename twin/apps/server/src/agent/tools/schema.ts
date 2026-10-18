@@ -1,5 +1,5 @@
 import { formatIssues } from '@twin/commands'
-import type { Check, EvalDiff, Evaluation, Plan, Proposal, ToolInputs, ToolName, ViewAction } from '@twin/schema'
+import type { Check, EvalDiff, Evaluation, Plan, Proposal, Status, ToolInputs, ToolName, ViewAction } from '@twin/schema'
 import { ToolInputSchemas } from '@twin/schema'
 import { z } from 'zod'
 import type { PlanStore } from '../../contracts.js'
@@ -128,6 +128,19 @@ export function compactCheck(c: Check) {
     utilization: c.utilization,
     ...(c.worstFailure && c.worstFailure.status !== c.status ? { worstFailure: c.worstFailure } : {}),
   }
+}
+
+const STATUS_ORDER: Record<Status, number> = { fail: 0, warn: 1, unknown: 2, pass: 3 }
+const MAX_PROBLEMS = 10
+
+/** Check counts and the worst failing or warning checks: what the model needs to know where a plan stands. */
+export function checkSummary(e: Evaluation) {
+  const counts: Record<Status, number> = { fail: 0, warn: 0, unknown: 0, pass: 0 }
+  for (const c of e.checks) counts[c.status]++
+  const problems = e.checks
+    .filter((c) => c.status === 'fail' || c.status === 'warn')
+    .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || (b.utilization ?? 0) - (a.utilization ?? 0))
+  return { counts, problems: problems.slice(0, MAX_PROBLEMS).map(compactCheck), moreProblems: Math.max(0, problems.length - MAX_PROBLEMS) }
 }
 
 /** The diff without check explanations and causes; those come from explain_check. */

@@ -322,6 +322,9 @@ describe('act', () => {
     const content = okJson(outcome)
     expect(content.applied).toBe('Facility supply 18 °C to 32 °C')
     expect(JSON.stringify(content.diff)).toContain('cooling.coolantTemp:g1')
+    // The checks after the change come with the result, so the model need not call get_evaluation to confirm it.
+    const after = okJson(await run('get_evaluation', { detail: 'summary' })).checks as Record<string, unknown>
+    expect(content.checksAfter).toEqual({ counts: after.counts, problems: after.problems, moreProblems: after.moreProblems })
   })
 
   it('undo and redo go through the store and report when there is nothing to undo', async () => {
@@ -348,6 +351,11 @@ describe('what-if and proposals', () => {
     expect(diff.worsened.map((c) => c.id)).toEqual(['cooling.coolantTemp:g1'])
     expect(diff.headline.pueAnnual).toEqual({ from: 1.218, to: 1.234 })
     expect(content.summaries).toEqual(['Facility supply 18 °C to 34 °C'])
+    // The checks the plan would have: the coolant temperature check fails at 34 °C.
+    const now = okJson(await run('get_evaluation', { detail: 'summary' })).checks as { counts: Record<string, number> }
+    const after = content.checksAfter as { counts: Record<string, number>; problems: unknown[]; moreProblems: number }
+    expect(after.counts).toEqual({ ...now.counts, fail: now.counts.fail! + 1, pass: now.counts.pass! - 1 })
+    expect(after.problems.length + after.moreProblems).toBe(after.counts.fail! + after.counts.warn!)
   })
 
   it('what_if reports which command fails and why', async () => {
