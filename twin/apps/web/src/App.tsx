@@ -63,52 +63,52 @@ export function App() {
 
   return (
     <div className="shell" data-card={cardOpen ? 'open' : 'closed'}>
-        <TopBar panelId={PANEL_ID} cardId={CARD_ID} cardOpen={cardOpen} onToggleCard={() => setCardOpen((open) => !open)} />
-        <aside id={CARD_ID} className="layer-card" aria-label="Layer decisions" hidden={!cardOpen}>
-          <div id={PANEL_ID} role="tabpanel" aria-labelledby={tabId(activeLayer)}>
-            <DecisionPanel layer={activeLayer} />
-          </div>
-        </aside>
-        <main className="center" aria-label="Plan view">
-          <div className="scene-stage">
-            <Scene />
-            <RevisionClouds />
-            <div className="scene-overlays">
-              <LayerHeader />
-            </div>
-            <div className="scene-dock">
-              <RackBar />
-              {schematic && (
-                <button
-                  type="button"
-                  className="btn btn--secondary scene-dock__schematic"
-                  aria-expanded={schematicOpen}
-                  aria-controls={SCHEMATIC_ID}
-                  onClick={() => setSchematicOpen((open) => !open)}
-                >
-                  {schematicOpen ? 'Hide' : 'Show'} {schematic}
-                </button>
-              )}
-            </div>
-          </div>
-          {schematic && schematicOpen && (
-            <div id={SCHEMATIC_ID} className="strip-slot">
-              <Strip layer={activeLayer} />
-            </div>
-          )}
-          {allVariablesOpen && <AllVariables onClose={() => setAllVariablesOpen(false)} />}
-        </main>
-        <div className="inspector-dock">
-          <Inspector />
+      <TopBar panelId={PANEL_ID} cardId={CARD_ID} cardOpen={cardOpen} onToggleCard={() => setCardOpen((open) => !open)} />
+      <aside id={CARD_ID} className="layer-card" aria-label="Layer decisions" hidden={!cardOpen}>
+        <div id={PANEL_ID} role="tabpanel" aria-labelledby={tabId(activeLayer)}>
+          <DecisionPanel layer={activeLayer} />
         </div>
-        <div className="side">
-          <section className="summary-region" aria-label="Plan totals">
-            <SummaryPanel allOpen={allVariablesOpen} onToggleAll={() => setAllVariablesOpen((open) => !open)} />
-          </section>
-          <section className="agent-region" aria-label="Design agent">
-            <Thread />
-          </section>
+      </aside>
+      <main className="center" aria-label="Plan view">
+        <div className="scene-stage">
+          <Scene />
+          <RevisionClouds />
+          <div className="scene-overlays">
+            <LayerHeader />
+          </div>
+          <div className="scene-dock">
+            <RackBar />
+            {schematic && (
+              <button
+                type="button"
+                className="btn btn--secondary scene-dock__schematic"
+                aria-expanded={schematicOpen}
+                aria-controls={SCHEMATIC_ID}
+                onClick={() => setSchematicOpen((open) => !open)}
+              >
+                {schematicOpen ? 'Hide' : 'Show'} {schematic}
+              </button>
+            )}
+          </div>
         </div>
+        {schematic && schematicOpen && (
+          <div id={SCHEMATIC_ID} className="strip-slot">
+            <Strip layer={activeLayer} />
+          </div>
+        )}
+        {allVariablesOpen && <AllVariables onClose={() => setAllVariablesOpen(false)} />}
+      </main>
+      <div className="inspector-dock">
+        <Inspector />
+      </div>
+      <div className="side">
+        <section className="summary-region" aria-label="Plan totals">
+          <SummaryPanel allOpen={allVariablesOpen} onToggleAll={() => setAllVariablesOpen((open) => !open)} />
+        </section>
+        <section className="agent-region" aria-label="Design agent">
+          <Thread />
+        </section>
+      </div>
     </div>
   )
 }
