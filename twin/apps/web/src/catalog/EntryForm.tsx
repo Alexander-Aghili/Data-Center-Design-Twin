@@ -127,7 +127,12 @@ export function EntryForm({ intent, existingIds, references, onDone, onCancel }:
         </fieldset>
         {sections(rest).map((s, i) => (
           <fieldset className="ef-section" key={s.group ?? `s${i}`}>
-            <legend>{s.group ?? 'Parameters'}</legend>
+            <legend>{s.group ?? 'Specification'}</legend>
+            {s.fields.some((f) => f.type === 'quantity') && (
+              <div className="ef-cols" aria-hidden="true">
+                <span>Basis</span>
+              </div>
+            )}
             {s.fields.map((f) => (
               <Field key={f.key} spec={f} idBase={idBase} value={values[f.key]} error={errors[f.key]} onChange={set}
                 readOnly={false} references={references} base={base} />
@@ -224,8 +229,11 @@ function Field({ spec, idBase, value, error, readOnly, references, base, onChang
       const picked = Array.isArray(value) ? value : []
       return (
         <div className="ef-field" data-field={spec.key}>
-          <span className="ef-label" id={`${id}-label`}>
-            {spec.label}
+          <span className="ef-name">
+            <span className="ef-label" id={`${id}-label`}>
+              {spec.label}
+            </span>
+            {!spec.required && <span className="ef-optional">optional</span>}
           </span>
           <div className="ef-choices" role="group" aria-labelledby={`${id}-label`}>
             {spec.options.map((o) => (
@@ -249,7 +257,6 @@ function Field({ spec, idBase, value, error, readOnly, references, base, onChang
         <textarea {...common} className="ef-input ef-area" rows={3} value={text} onChange={(e) => onChange(spec.key, e.target.value)} />
       ) : (
         <input {...common} className="ef-input" type="text" value={text} readOnly={readOnly} spellCheck={false}
-          placeholder={spec.key === 'id' ? 'kind.short-name' : undefined}
           onChange={(e) => onChange(spec.key, e.target.value)} />
       )
       break
@@ -275,12 +282,14 @@ function Field({ spec, idBase, value, error, readOnly, references, base, onChang
 
   return (
     <div className="ef-field" data-field={spec.key}>
-      <label className="ef-label" htmlFor={id}>
-        {spec.label}
-      </label>
-      {!spec.required && <span className="ef-optional">optional</span>}
+      <span className="ef-name">
+        <label className="ef-label" htmlFor={id}>
+          {spec.label}
+        </label>
+        {!spec.required && <span className="ef-optional">optional</span>}
+      </span>
       <div className="ef-control">{control}</div>
-      <span className="ef-basis">{spec.type === 'quantity' ? liveBasis(spec, text, base) : ''}</span>
+      <span className="ef-basis">{spec.type === 'quantity' && (spec.required || text.trim()) ? liveBasis(spec, text, base) : ''}</span>
       {error && <FieldError id={errorId} text={error} />}
     </div>
   )
@@ -303,17 +312,21 @@ const CSS = `
 .ef-section { border: 0; margin: 0; padding: var(--space-4) 0 0; min-width: 0; }
 .ef-section + .ef-section { border-top: var(--rule); margin-top: var(--space-4); }
 .ef-section legend { float: left; width: 100%; padding: 0 0 var(--space-2); font-stretch: var(--stretch-label); font-weight: 600; font-size: var(--text-sm); color: var(--graphite); }
-.ef-field {
+.ef-field, .ef-cols {
   clear: both;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(160px, 220px) 64px;
-  grid-template-areas: "label control basis" "opt control basis" "error error error";
-  column-gap: var(--space-3);
+  grid-template-columns: minmax(150px, 240px) minmax(180px, 280px) 72px;
+  grid-template-areas: "name control basis" ". error error";
+  justify-content: start;
+  column-gap: var(--space-4);
   align-items: center;
   padding: 3px 0;
 }
-.ef-label { grid-area: label; font-stretch: var(--stretch-label); font-size: var(--text-md); color: var(--ink); }
-.ef-optional { grid-area: opt; font-size: var(--text-xs); color: var(--graphite); font-stretch: var(--stretch-label); }
+.ef-cols { padding: 0 0 2px; font-stretch: var(--stretch-label); font-size: var(--text-xs); color: var(--graphite); }
+.ef-cols span { grid-area: basis; }
+.ef-name { grid-area: name; display: flex; flex-direction: column; min-width: 0; }
+.ef-label { font-stretch: var(--stretch-label); font-size: var(--text-md); color: var(--ink); }
+.ef-optional { font-size: var(--text-xs); color: var(--graphite); font-stretch: var(--stretch-label); }
 .ef-control, .ef-choices { grid-area: control; min-width: 0; }
 .ef-basis { grid-area: basis; font-size: var(--text-xs); color: var(--graphite); font-stretch: var(--stretch-label); }
 .ef-field:has(.ef-area) .ef-control, .ef-field:has(.ef-choices) .ef-choices { grid-column: 2 / 4; }
@@ -346,7 +359,7 @@ const CSS = `
 .ef-check input, .ef-choice input { width: 15px; height: 15px; margin: 0; accent-color: var(--supply); }
 .ef-choices { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); padding: var(--space-1) 0; }
 .ef-choice { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-sm); }
-.ef-error { grid-area: error; margin: 2px 0 var(--space-1); color: var(--heat); font-size: var(--text-sm); justify-self: end; text-align: right; }
+.ef-error { grid-area: error; margin: 2px 0 var(--space-1); color: var(--heat); font-size: var(--text-sm); }
 .ef-foot { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); padding: var(--space-3) var(--space-5); border-top: var(--rule); background: var(--panel); }
 .ef-form-error { margin: 0 auto 0 0; color: var(--heat); font-size: var(--text-sm); white-space: pre-line; }
 .ef-btn {

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { downloadJson } from '../io/ImportExport'
 import { useTwinStore } from '../state/store'
 import { EntryForm, type EntryIntent } from './EntryForm'
-import { fieldLabel, isFormKind, KIND_NAMES, optionLabel, unitText } from './schemaForm'
+import { fieldLabel, formFields, isFormKind, KIND_NAMES, optionLabel, unitText, type FieldSpec } from './schemaForm'
 
 let builtinsRequest: Promise<CatalogEntry[]> | undefined
 
@@ -142,7 +142,7 @@ function CatalogPanel({ initialKind, onClose }: { initialKind: CatalogKind; onCl
           <input
             className="cb-search"
             type="search"
-            placeholder="Filter by name, ID or vendor"
+            placeholder="Filter"
             aria-label="Filter entries"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -218,12 +218,17 @@ function isQuantity(v: unknown): v is Quantity {
 
 const NUMBER = new Intl.NumberFormat('en-US', { maximumFractionDigits: 4 })
 
+const PERCENT = new Intl.NumberFormat('en-US', { style: 'percent', maximumFractionDigits: 1 })
+
 function QuantityValue({ q }: { q: Quantity }) {
-  const unit = unitText(q.unit)
-  const range = q.low !== undefined && q.high !== undefined ? `${NUMBER.format(q.low)}–${NUMBER.format(q.high)}` : null
+  // Fractions read as percentages; everything else keeps its catalog unit.
+  const percent = q.unit === 'fraction'
+  const fmt = (n: number) => (percent ? PERCENT.format(n) : NUMBER.format(n))
+  const unit = percent ? '' : unitText(q.unit)
+  const range = q.low !== undefined && q.high !== undefined ? `${fmt(q.low)}–${fmt(q.high)}` : null
   return (
     <>
-      <span className="cb-num">{q.value === null ? '—' : NUMBER.format(q.value)}</span>
+      <span className="cb-num">{q.value === null ? '—' : fmt(q.value)}</span>
       {unit && q.value !== null && <span className="cb-unit">{` ${unit}`}</span>}
       {range && <span className="cb-range">{`range ${range}`}</span>}
     </>
@@ -234,6 +239,8 @@ interface Row {
   key: string
   label: string
   value: unknown
+  /** Enum values get written labels; free text (IDs, risk slugs) shows as stored. */
+  enumerated: boolean
 }
 
 const HEADER_KEYS = new Set(['id', 'kind', 'name', 'vendor', 'asOf', 'custom', 'sources', 'summary'])
@@ -241,27 +248,32 @@ const HEADER_KEYS = new Set(['id', 'kind', 'name', 'vendor', 'asOf', 'custom', '
 /** Flattens an entry into labelled rows: nested objects (supply range, trays, params) become one row per leaf. */
 function rows(entry: CatalogEntry): Row[] {
   const out: Row[] = []
+  const types = new Map<string, FieldSpec['type']>(
+    isFormKind(entry.kind) ? formFields(entry.kind, entry.kind === 'equipment' ? entry.category : undefined).map((f) => [f.key, f.type]) : [],
+  )
   const visit = (o: Record<string, unknown>, prefix: string) => {
     for (const [k, v] of Object.entries(o)) {
       const key = prefix ? `${prefix}.${k}` : k
       if (!prefix && HEADER_KEYS.has(k)) continue
       if (v && typeof v === 'object' && !Array.isArray(v) && !isQuantity(v)) visit(v as Record<string, unknown>, key)
-      else out.push({ key, label: fieldLabel(key.replace(/^params\./, '')), value: v })
+      else out.push({ key, label: fieldLabel(key), value: v, enumerated: types.get(key) === 'choice' || types.get(key) === 'choices' })
     }
   }
   visit(entry as unknown as Record<string, unknown>, '')
   return out
 }
 
-function PlainValue({ value, keyName, all }: { value: unknown; keyName: string; all: CatalogEntry[] }) {
+function PlainValue({ row, all }: { row: Row; all: CatalogEntry[] }) {
+  const { value } = row
+  const text = (v: unknown) => (row.enumerated ? optionLabel(String(v)) : String(v))
   if (typeof value === 'boolean') return <>{value ? 'Yes' : 'No'}</>
   if (typeof value === 'number') return <span className="cb-num">{NUMBER.format(value)}</span>
   if (Array.isArray(value)) {
     if (value.length > 0 && value.every((v) => typeof v === 'number')) return <>{`${NUMBER.format(value.length)} hourly values`}</>
-    return <>{value.length === 0 ? 'None' : value.map((v) => optionLabel(String(v))).join(', ')}</>
+    return <>{value.length === 0 ? 'None' : value.map(text).join(', ')}</>
   }
-  if (typeof value === 'string' && keyName.endsWith('Id')) return <>{all.find((e) => e.id === value)?.name ?? value}</>
-  return <>{optionLabel(String(value))}</>
+  if (typeof value === 'string' && row.key.endsWith('Id')) return <>{all.find((e) => e.id === value)?.name ?? value}</>
+  return <>{text(value)}</>
 }
 
 function Basis({ q }: { q: Quantity }) {
@@ -322,7 +334,7 @@ function EntryDetail({ entry, all, onCopy, onEdit }: EntryDetailProps) {
           {rows(entry).map((r) => (
             <tr key={r.key} title={isQuantity(r.value) ? r.value.note : undefined}>
               <th scope="row">{r.label}</th>
-              <td>{isQuantity(r.value) ? <QuantityValue q={r.value} /> : <PlainValue value={r.value} keyName={r.key} all={all} />}</td>
+              <td>{isQuantity(r.value) ? <QuantityValue q={r.value} /> : <PlainValue row={r} all={all} />}</td>
               <td className="cb-basis">{isQuantity(r.value) ? <Basis q={r.value} /> : null}</td>
             </tr>
           ))}
@@ -400,7 +412,7 @@ const CSS = `
 .cb-entry-name { font-weight: 500; }
 .cb-entry-id { display: flex; gap: var(--space-2); align-items: baseline; font-stretch: var(--stretch-label); font-size: var(--text-sm); color: var(--graphite); overflow-wrap: anywhere; }
 .cb-tag {
-  font-stretch: var(--stretch-label); font-size: var(--text-xs); font-weight: 600; color: var(--supply);
+  font-stretch: var(--stretch-label); font-size: var(--text-xs); font-weight: 600; color: var(--ink);
   padding: 0 5px; border: 1px solid currentColor; border-radius: var(--radius); line-height: 16px;
 }
 .cb-note { margin: var(--space-3); color: var(--graphite); font-size: var(--text-sm); }
@@ -423,7 +435,7 @@ const CSS = `
 .cb-unit { color: var(--graphite); }
 .cb-range { margin-left: var(--space-2); font-size: var(--text-sm); color: var(--graphite); }
 .cb-basis { width: 84px; font-stretch: var(--stretch-label); font-size: var(--text-sm); color: var(--graphite); }
-.cb-basis a, .cb-sources a { color: var(--supply); }
+.cb-basis a, .cb-sources a { color: var(--ink); text-underline-offset: 2px; text-decoration-color: var(--graphite); }
 .cb-sources { margin-top: var(--space-5); }
 .cb-sources h4 { margin: 0 0 var(--space-2); font-size: var(--text-sm); font-weight: 600; color: var(--graphite); }
 .cb-sources ol { margin: 0; padding-left: var(--space-5); font-size: var(--text-sm); line-height: 1.6; }

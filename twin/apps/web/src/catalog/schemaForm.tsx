@@ -170,6 +170,7 @@ export function optionLabel(option: string): string {
 export function unitText(unit: string): string {
   if (unit === '1') return ''
   if (unit === 'week') return 'weeks'
+  if (unit === 'fraction') return '0 to 1'
   return unit
 }
 
