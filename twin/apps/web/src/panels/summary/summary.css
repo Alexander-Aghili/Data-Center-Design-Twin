@@ -26,9 +26,14 @@
   margin: 0;
 }
 
+/* Each card spans four rows of the shared grid, so labels, figures and gauges line up across a pair
+   even when one label wraps. */
 .kpi {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-row: span 4;
+  grid-template-rows: subgrid;
+  row-gap: 0;
+  align-content: start;
   min-width: 0;
   padding: 9px 10px 10px;
   border: var(--rule);
@@ -36,12 +41,16 @@
   background: var(--panel-raised);
 }
 
-.kpi dd {
+:where(.kpi) dd {
   margin: 0;
 }
 
+.kpi__label,
+.kpi__label .status-mark > :last-child {
+  text-wrap: balance;
+}
+
 .kpi__label {
-  min-height: calc(2em * var(--leading-tight));
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
   font-stretch: var(--stretch-label);
@@ -54,7 +63,8 @@
 }
 
 .kpi__figure {
-  margin-top: 6px;
+  align-self: end;
+  margin-top: 8px;
   white-space: nowrap;
   line-height: 1;
 }
@@ -84,17 +94,12 @@
 
 /* Thin gauge: the unfilled track is a light step of the fill, so the state reads across the whole bar. */
 .kpi__gauge {
-  position: relative;
+  align-self: end;
   height: 4px;
-  margin-top: auto;
+  margin-top: 8px;
   border-radius: 2px;
   background: var(--floor);
   overflow: hidden;
-}
-
-/* The figure lines stay level across a row even when only one card of the pair has a gauge. */
-.kpi__context:has(+ .kpi__gauge) {
-  margin-bottom: 7px;
 }
 
 .kpi__gauge-fill {
