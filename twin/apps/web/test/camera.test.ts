@@ -11,6 +11,7 @@ import type { createTwinStore as CreateTwinStore } from '../src/state/store'
 class FakeBackend implements Backend {
   connect(_onMsg: (m: ServerMsg) => void, _onStatus?: (s: BackendStatus) => void) {}
   send(_m: ClientMsg) {}
+  sendAll = async () => {}
 }
 
 let createTwinStore: typeof CreateTwinStore

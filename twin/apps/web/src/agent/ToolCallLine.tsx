@@ -12,7 +12,7 @@ const STATE = {
   pending: { mark: '…', label: 'Running: ' },
 } as const
 
-/** One quiet line per tool call: a status shape, what the agent did and, once back, what it found. */
+/** One quiet line per tool call: a status shape and what the agent is doing, then what it found (or why it failed). */
 export function ToolCallLine({ call }: { call: ToolCallPart }) {
   const state = call.result ? (call.result.ok ? 'ok' : 'failed') : 'pending'
   const { mark, label } = STATE[state]
@@ -22,7 +22,7 @@ export function ToolCallLine({ call }: { call: ToolCallPart }) {
         {mark}
       </span>
       <span className="visually-hidden">{label}</span>
-      {call.result ? `${call.summary}: ${call.result.summary}` : call.summary}
+      {!call.result ? call.summary : call.result.ok ? call.result.summary : `${call.summary}: ${call.result.summary}`}
     </div>
   )
 }

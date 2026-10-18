@@ -50,6 +50,13 @@ function GroupName({ group, onResult }: { group: RackGroup; onResult(result: Pro
   )
 }
 
+/** Opens the group's middle rack and pushes in on a GPU, so a new rack type is seen right away. */
+function showRack(plan: Plan, groupId: string) {
+  const racks = plan.placements.filter((p) => p.groupId === groupId)
+  const rack = racks[Math.floor(racks.length / 2)]
+  if (rack) useTwinStore.getState().dispatchView({ type: 'focus', target: { kind: 'rack', id: rack.id }, shot: 'gpu' })
+}
+
 function GroupCompute(props: { plan: Plan; group: RackGroup; catalog: CatalogIndex }) {
   const send = useTwinStore((st) => st.send)
   const { plan, group, catalog } = props
@@ -67,7 +74,7 @@ function GroupCompute(props: { plan: Plan; group: RackGroup; catalog: CatalogInd
           kind="rack"
           value={group.rackTypeId}
           assess={(rack) => assessRack(rack, group, plan, catalog)}
-          onChange={(rackTypeId) => send({ type: 'setRackType', payload: { groupId: group.id, rackTypeId } })}
+          onChange={(rackTypeId) => send({ type: 'setRackType', payload: { groupId: group.id, rackTypeId } }).then(() => showRack(plan, group.id))}
         />
       </Field>
       <div className={s.actions}>

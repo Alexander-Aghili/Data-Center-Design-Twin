@@ -8,7 +8,7 @@ describe('setCoolingMethod', () => {
     const p = run(plan(), 'setRackType', { groupId: 'g2', rackTypeId: RACK.GB300_NVL72 }).plan
     const result = run(p, 'setCoolingMethod', { groupId: 'g2', coolingMethodId: RACK_COOLING.DLC_1P })
     expect(result.plan.rackGroups.find((g) => g.id === 'g2')?.coolingMethodId).toBe(RACK_COOLING.DLC_1P)
-    expect(result.summary).toBe('Training block (rows R3–R5) cooled by rackCooling.dlc-1p')
+    expect(result.summary).toBe('Training block (rows R3–R5) cooled by Single-phase direct-to-chip')
   })
 
   it('setCoolingMethod rejects a method the rack does not support', () => {
@@ -25,7 +25,7 @@ describe('facility cooling decisions', () => {
   it('sets heat rejection from the catalog', () => {
     const result = run(plan(), 'setHeatRejection', { heatRejectionId: HEAT_REJECTION.DRY_COOLER })
     expect(result.plan.cooling.heatRejectionId).toBe(HEAT_REJECTION.DRY_COOLER)
-    expect(result.summary).toBe('Heat rejection set to heatRejection.dry-cooler')
+    expect(result.summary).toBe('Heat rejection set to Dry cooler')
     expectRejected(plan(), 'setHeatRejection', { heatRejectionId: HEAT_REJECTION.COOLING_TOWER }, /^Unknown heat rejection method "heatRejection\.cooling-tower"/)
   })
 

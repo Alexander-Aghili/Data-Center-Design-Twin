@@ -82,7 +82,7 @@ const PROPERTY_DESCRIPTIONS: Partial<Record<ToolName, Record<string, string>>> =
   },
   what_if: { commands: 'Commands to try, each {type, payload} as for the matching cmd_ tool.' },
   focus: { kind: 'What to look at.', id: 'Placement id ("R3-07"), row id ("R3"), bay id ("B3-2"), equipment key or position id.', shot: 'Optional camera shot; defaults by kind.' },
-  annotate: { objectIds: '3D object ids, e.g. a check\'s subject.objectIds.', label: 'Short label next to the tag.' },
+  annotate: { objectIds: '3D object ids such as a check\'s subject.objectIds, or plan ids: a rack placement (R3-07), a row (R3), a floor bay (B3-2) or an equipment key (cdu:R3).', label: 'Short label next to the tag.' },
   generate_simulation_brief: { agentNotes: 'Your narrative for the engineer: what to simulate first, what to compare, what to watch for.' },
 }
 

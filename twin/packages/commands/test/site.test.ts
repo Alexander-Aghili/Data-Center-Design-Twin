@@ -18,7 +18,7 @@ describe('setSiteInput', () => {
   it('sets the climate from the catalog', () => {
     const result = run(plan(), 'setSiteInput', { field: 'climateId', value: CLIMATE.STOCKHOLM })
     expect(result.plan.site.climateId).toBe(CLIMATE.STOCKHOLM)
-    expect(result.summary).toBe('Climate set to climate.stockholm')
+    expect(result.summary).toBe('Climate set to Stockholm')
   })
 
   it('rejects wrong value types, unknown climates and out-of-range numbers', () => {

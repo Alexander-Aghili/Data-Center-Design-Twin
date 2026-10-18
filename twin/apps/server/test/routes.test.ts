@@ -50,6 +50,21 @@ describe('HTTP routes', () => {
     expect(malformed.json()).toMatchObject({ ok: false, error: expect.stringContaining('command') })
   })
 
+  it('POST /api/commands applies all commands as one undo step, or none of them', async () => {
+    const app = await makeApp()
+    const before = (await app.inject({ method: 'GET', url: '/api/state' })).json()
+    const bad = await app.inject({ method: 'POST', url: '/api/commands', payload: { commands: [rename('Hall B'), rename('')] } })
+    expect(bad.statusCode).toBe(400)
+    expect(bad.json()).toMatchObject({ ok: false, error: expect.stringMatching(/name/) })
+    expect((await app.inject({ method: 'GET', url: '/api/state' })).json()).toEqual(before)
+
+    const res = await app.inject({ method: 'POST', url: '/api/commands', payload: { commands: [rename('Hall B'), rename('Hall C')] } })
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toEqual({ ok: true, summaries: ['Plan renamed to Hall B', 'Plan renamed to Hall C'] })
+    await app.inject({ method: 'POST', url: '/api/undo' })
+    expect((await app.inject({ method: 'GET', url: '/api/state' })).json().plan.name).toBe('Default hall')
+  })
+
   it('POST /api/undo and /api/redo move through history', async () => {
     const app = await makeApp()
     expect((await app.inject({ method: 'POST', url: '/api/undo' })).statusCode).toBe(409)

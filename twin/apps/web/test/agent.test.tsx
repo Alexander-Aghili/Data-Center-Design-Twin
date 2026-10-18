@@ -39,6 +39,7 @@ function setup(thread: AgentEvent[], over: Partial<TwinState> = {}) {
     applyProposal: vi.fn(),
     dismissProposal: vi.fn(),
     dispatchView: vi.fn(),
+    resetChat: vi.fn(),
   }
   const proposals: Record<string, Proposal> = {}
   for (const e of thread) if (e.kind === 'proposal') proposals[e.proposal.id] = e.proposal
@@ -87,11 +88,36 @@ describe('agent thread', () => {
     expect(within(msg as HTMLElement).queryByRole('img', { name: /Revision/ })).toBeNull()
   })
 
+  it('offers a new conversation once there is a thread, and only while online', () => {
+    const actions = setup(chatTurn)
+    fireEvent.click(screen.getByRole('button', { name: 'New conversation' }))
+    expect(actions.resetChat).toHaveBeenCalledTimes(1)
+    cleanup()
+    setup([])
+    expect(screen.queryByRole('button', { name: 'New conversation' })).toBeNull()
+    cleanup()
+    setup(chatTurn, { connection: 'local' })
+    expect(screen.queryByRole('button', { name: 'New conversation' })).toBeNull()
+  })
+
+  it('a message the person sends brings the thread back to its end, even after they scrolled up', () => {
+    setup(chatTurn)
+    const log = screen.getByRole('log')
+    Object.defineProperty(log, 'scrollHeight', { configurable: true, value: 1000 })
+    Object.defineProperty(log, 'clientHeight', { configurable: true, value: 200 })
+    log.scrollTop = 0
+    fireEvent.scroll(log)
+    push({ kind: 'messageStart', messageId: 'm9', trigger: 'observation', severity: 'info' })
+    expect(log.scrollTop).toBe(0)
+    push({ kind: 'userMessage', messageId: 'u9', text: 'Fix the floor' })
+    expect(log.scrollTop).toBe(1000)
+  })
+
   it('tool calls render as one quiet line with summary', () => {
     setup(problemTurn)
     const lines = document.querySelectorAll<HTMLElement>('.ag-tool')
     expect(lines).toHaveLength(3)
-    expect(lines[0].textContent).toBe('✓Done: Read the evaluation: 1 check fails')
+    expect(lines[0].textContent).toBe('✓Done: 1 check fails')
     expect(lines[0].title).toBe('get_evaluation')
   })
 

@@ -222,7 +222,7 @@ describe('picking', () => {
   })
 
   function scene() {
-    const backend: Backend = { connect() {}, send() {} }
+    const backend: Backend = { connect() {}, send() {}, sendAll: async () => {} }
     const store = m.store.createTwinStore({ backend })
     const camera = new PerspectiveCamera(50, 1, 0.1, 100)
     camera.position.set(0, 10, 0)

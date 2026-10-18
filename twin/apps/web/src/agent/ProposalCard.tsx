@@ -1,4 +1,6 @@
-import { registry } from '@twin/commands'
+import { loadBuiltins } from '@twin/catalog'
+import { registry, withCatalogNames } from '@twin/commands'
+import { makeCatalogIndex } from '@twin/engine'
 import type { Check, Command, EvalDiff, Plan, Proposal, Severity } from '@twin/schema'
 import { useEffect, useId, useMemo } from 'react'
 import { fmtMoney, fmtNull, fmtNumber, fmtPct, fmtValue, fmtWeeks } from '../format'
@@ -12,14 +14,14 @@ function humanize(type: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1)
 }
 
-/** The registry's change record for a command, read against the plan the proposal was made on. */
+/** The registry's change record for a command, read against the current plan with the built-in catalog behind it. */
 function summarize(cmd: Command, plan: Plan | null): string {
   const def = registry.get(cmd.type)
   if (!def) return humanize(cmd.type)
   const parsed = def.payload.safeParse(cmd.payload)
   if (!plan || !parsed.success) return def.title
   try {
-    return def.summarize(parsed.data, plan)
+    return def.summarize(parsed.data, withCatalogNames(plan, makeCatalogIndex(loadBuiltins().entries)))
   } catch {
     return def.title
   }

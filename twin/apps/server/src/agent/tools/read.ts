@@ -1,5 +1,5 @@
 import { makeCatalogIndex } from '@twin/engine'
-import type { CatalogEntry, Check, Evaluation, Status } from '@twin/schema'
+import type { CatalogEntry, CatalogKind, Check, Evaluation, Status } from '@twin/schema'
 import type { PlanStore } from '../../contracts.js'
 import { KNOWLEDGE_SLUGS, readKnowledge, searchKnowledge } from '../../knowledge/index.js'
 import { compactCheck, defineTool, failure, success, type AgentTool } from './schema.js'
@@ -95,6 +95,17 @@ function resolveSlug(slug: string): string | null {
   return matches.length === 1 ? (matches[0] ?? null) : null
 }
 
+/** Singular and plural nouns for result lines ("Listed 7 rack cooling methods"). */
+const KIND_NOUNS: Record<CatalogKind, [string, string]> = {
+  gpu: ['GPU', 'GPUs'],
+  rack: ['rack type', 'rack types'],
+  rackCooling: ['rack cooling method', 'rack cooling methods'],
+  heatRejection: ['heat rejection option', 'heat rejection options'],
+  coolant: ['coolant', 'coolants'],
+  equipment: ['equipment model', 'equipment models'],
+  climate: ['climate', 'climates'],
+}
+
 export function readTools(store: PlanStore): AgentTool[] {
   const catalog = () => {
     const { plan } = store.state()
@@ -162,7 +173,7 @@ export function readTools(store: PlanStore): AgentTool[] {
           .filter((e) => !query || [e.id, e.name, e.vendor ?? '', e.summary].some((field) => field.toLowerCase().includes(query)))
         return success(
           { entries: rows.slice(0, MAX_CATALOG_ROWS).map(catalogRow), more: Math.max(0, rows.length - MAX_CATALOG_ROWS) },
-          `Listed ${rows.length} catalog ${rows.length === 1 ? 'entry' : 'entries'}`,
+          `Listed ${rows.length} ${input.kind ? KIND_NOUNS[input.kind][rows.length === 1 ? 0 : 1] : rows.length === 1 ? 'catalog entry' : 'catalog entries'}`,
         )
       },
     ),
