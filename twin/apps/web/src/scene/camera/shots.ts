@@ -92,9 +92,24 @@ function worstCheckRack(plan: Plan, evaluation: ShotContext['evaluation']): stri
   return null
 }
 
+/** The placed rack whose slot is nearest the hall center, so close shots never frame empty floor. */
+function centralRack(plan: Plan): string | null {
+  const cx = plan.hall.widthM / 2
+  const cz = plan.hall.depthM / 2
+  let best: { id: string; d: number } | null = null
+  for (const p of plan.placements) {
+    const row = plan.hall.rows.find((r) => r.id === p.rowId)
+    if (!row) continue
+    const d = Math.hypot(row.x + (p.slot + 0.5) * row.slotPitchM - cx, row.z + row.rackDepthM / 2 - cz)
+    if (!best || d < best.d) best = { id: p.id, d }
+  }
+  return best?.id ?? null
+}
+
 /**
  * The rack (or tray or gpu inside it) the close shots center on: the focus when it is a rack of this plan, the
- * middle rack of a focused row, else the rack of the worst failing check. Null means the hall center.
+ * middle rack of a focused row, else the rack of the worst failing check, else the rack nearest the hall center.
+ * Null (an empty hall) means the hall center itself.
  */
 export function resolveFocus(ctx: Pick<ShotContext, 'plan' | 'evaluation' | 'focusId'>): string | null {
   const { plan, focusId } = ctx
@@ -106,8 +121,8 @@ export function resolveFocus(ctx: Pick<ShotContext, 'plan' | 'evaluation' | 'foc
     const middle = inRow[Math.floor(inRow.length / 2)]
     if (middle) return objectIdForPlacement(middle.id)
   }
-  const worst = worstCheckRack(plan, ctx.evaluation)
-  return worst === null ? null : objectIdForPlacement(worst)
+  const rack = worstCheckRack(plan, ctx.evaluation) ?? centralRack(plan)
+  return rack === null ? null : objectIdForPlacement(rack)
 }
 
 interface RackFrame {
@@ -225,18 +240,22 @@ function subject(id: ShotId, ctx: ShotContext, focus: Focus | null, rack: RackFr
   }
 }
 
+// Scratch vectors for `frame`, which runs on every re-resolve during a move.
+const scratch = { center: new Vector3(), half: new Vector3(), back: new Vector3(), right: new Vector3(), up: new Vector3(), corner: new Vector3() }
+const Y_UP = new Vector3(0, 1, 0)
+
 /** Camera on a bearing that keeps every corner of `box` (padded by `margin`) inside the frustum. */
 function frame(box: Box3, elevationDeg: number, azimuthDeg: number, fov: number, aspect: number, margin: number): Shot {
-  const center = box.getCenter(new Vector3())
-  const half = box.getSize(new Vector3()).multiplyScalar(margin / 2)
+  const { center, half, back, right, up, corner } = scratch
+  box.getCenter(center)
+  box.getSize(half).multiplyScalar(margin / 2)
   const el = MathUtils.degToRad(elevationDeg)
   const az = MathUtils.degToRad(azimuthDeg)
-  const back = new Vector3(Math.cos(el) * Math.sin(az), Math.sin(el), Math.cos(el) * Math.cos(az))
-  const right = new Vector3(0, 1, 0).cross(back).normalize()
-  const up = back.clone().cross(right)
+  back.set(Math.cos(el) * Math.sin(az), Math.sin(el), Math.cos(el) * Math.cos(az))
+  right.crossVectors(Y_UP, back).normalize()
+  up.crossVectors(back, right)
   const tanV = Math.tan(MathUtils.degToRad(fov) / 2)
   const tanH = tanV * aspect
-  const corner = new Vector3()
   let distance = 0
   for (const sx of [-1, 1])
     for (const sy of [-1, 1])
@@ -245,8 +264,8 @@ function frame(box: Box3, elevationDeg: number, azimuthDeg: number, fov: number,
         const depth = corner.dot(back)
         distance = Math.max(distance, depth + Math.abs(corner.dot(right)) / tanH, depth + Math.abs(corner.dot(up)) / tanV)
       }
-  const position = center.clone().addScaledVector(back, distance)
-  return { position: position.toArray(), target: center.toArray(), fov }
+  const target = center.toArray()
+  return { position: center.addScaledVector(back, distance).toArray(), target, fov }
 }
 
 /** Camera position, target and field of view for a shot of the current plan. */

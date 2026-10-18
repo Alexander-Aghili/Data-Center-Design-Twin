@@ -27,6 +27,10 @@ const SECONDS_PER_UNIT = 0.15
 const CROSS_FADE_S = 0.2
 // A resting shot that shifts because the scene changed eases over a short half second rather than jumping.
 const REFRAME_S = 0.4
+// After the scene changes, shots are re-resolved for this long (models ease toward their state a few frames late,
+// e.g. a rack's doors and trays) and at most this often: resolving probes every tray box of the open rack.
+const SETTLE_S = 0.5
+const RESOLVE_INTERVAL_S = 1 / 15
 // The rack is shut down to the rack shot and fully open (doors swung, trays out) at tray and gpu.
 const OPENNESS: Record<ShotId, number> = { site: 0, hall: 0, row: 0, rack: 0, tray: 1, gpu: 1 }
 
@@ -103,10 +107,11 @@ interface Leg {
 const easeOut = (t: number) => 1 - (1 - t) ** 3
 const easeIn = (t: number) => t ** 3
 
+const close = (x: number, y: number) => Math.abs(x - y) < 1e-4
+
 function samePose(a: Shot, b: Shot): boolean {
-  const xs = [...a.position, ...a.target, a.fov]
-  const ys = [...b.position, ...b.target, b.fov]
-  return xs.every((x, i) => Math.abs(x - ys[i]!) < 1e-4)
+  for (let i = 0; i < 3; i++) if (!close(a.position[i]!, b.position[i]!) || !close(a.target[i]!, b.target[i]!)) return false
+  return close(a.fov, b.fov)
 }
 
 /**
@@ -125,6 +130,8 @@ export class Choreography {
   private openTo = 0
   private commanded: Shot | null = null
   private released = false
+  private staleForS = 0
+  private sinceResolveS = 0
   private readonly driver: CameraDriver
   private readonly resolve: (w: Waypoint) => Shot
 
@@ -164,41 +171,44 @@ export class Choreography {
     })
   }
 
-  /** Stops scheduling legs (the user took the camera); the camera settles wherever the controls leave it. */
+  /**
+   * Stops scheduling legs (the user took the camera); the camera settles wherever the controls leave it and the
+   * rack finishes opening or closing as the interrupted leg intended.
+   */
   cancel(): void {
+    if (this.legIndex >= 0) this.setOpen(this.open.placementId, this.openTo)
     this.legs = []
     this.legIndex = -1
     this.released = true
   }
 
   /**
-   * Re-frames the resting shot after the scene changed under it (models mounted, plan edited), unless a move is
-   * under way or the user has taken the camera since the last move.
+   * The scene changed under the camera (models mounted or moved, the rack opened, the plan was edited). Shots are
+   * re-resolved, throttled, for a short while: the current leg follows a sliding tray, and a resting shot re-frames
+   * unless the user has taken the camera since the last move.
    */
-  refresh(): void {
-    if (this.busy || this.released) return
-    const pose = this.resolve(this.target)
-    if (this.commanded && samePose(pose, this.commanded)) return
-    this.driver.moveTo(pose, REFRAME_S)
-    this.commanded = pose
+  invalidate(): void {
+    this.staleForS = SETTLE_S
   }
 
   tick(dt: number): void {
+    const due = this.staleForS > 0 && this.sinceResolveS >= RESOLVE_INTERVAL_S
+    this.staleForS = Math.max(0, this.staleForS - dt)
+    this.sinceResolveS += dt
     if (this.fadeS !== null) return this.tickFade(dt)
-    if (this.legs.length === 0) return
+    if (this.legs.length === 0) {
+      if (due && !this.released) this.command(this.target, REFRAME_S)
+      return
+    }
     this.elapsedS += dt
     let i = this.legIndex
     while (i + 1 < this.legs.length && this.legs[i + 1]!.startS <= this.elapsedS) i++
     const leg = this.legs[i]!
-    if (i !== this.legIndex) this.beginLeg(i, leg)
+    const started = i !== this.legIndex
+    if (started) this.beginLeg(i, leg)
     const last = i === this.legs.length - 1
-    // Re-resolved every frame: trays slide while the rack opens, and the plan may change mid-move.
-    const pose = this.resolve(leg.to)
-    if (!this.commanded || !samePose(pose, this.commanded)) {
-      // Each leg hands over at about 90 % of its way (smooth time half its duration); the last one settles fully.
-      this.driver.moveTo(pose, leg.durationS / (last ? 3 : 2))
-      this.commanded = pose
-    }
+    // Each leg hands over at about 90 % of its way (smooth time half its duration); the last one settles fully.
+    if (started || due) this.command(leg.to, leg.durationS / (last ? 3 : 2))
     const p = MathUtils.clamp((this.elapsedS - leg.startS) / leg.durationS, 0, 1)
     const eased = this.openTo > this.openFrom ? easeOut(p) : easeIn(p)
     this.setOpen(this.open.placementId, this.openFrom + (this.openTo - this.openFrom) * eased)
@@ -219,6 +229,15 @@ export class Choreography {
     const ahead = [leg.to, ...route(leg.to, target)]
     const back = [leg.from, ...route(leg.from, target)]
     return p + back.length < 1 - p + ahead.length ? { from: leg.to, waypoints: back } : { from: leg.from, waypoints: ahead }
+  }
+
+  /** Resolves the waypoint's shot and heads there, unless the camera is already headed to that exact pose. */
+  private command(w: Waypoint, smoothTimeS: number): void {
+    this.sinceResolveS = 0
+    const pose = this.resolve(w)
+    if (this.commanded && samePose(pose, this.commanded)) return
+    this.driver.moveTo(pose, smoothTimeS)
+    this.commanded = pose
   }
 
   private beginLeg(i: number, leg: Leg): void {
