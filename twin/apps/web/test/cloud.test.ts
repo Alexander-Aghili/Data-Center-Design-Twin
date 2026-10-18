@@ -1,6 +1,8 @@
 import type { Annotation } from '@twin/schema'
+import { act, render } from '@testing-library/react'
+import { createElement } from 'react'
 import { Box3, PerspectiveCamera, Vector3 } from 'three'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import {
   CLOUD_OFFSET_PX,
   cloudPath,
@@ -211,6 +213,56 @@ describe('revision clouds', () => {
     it('clouds entirely off screen are skipped', () => {
       const offscreen = (id: string) => (id === 'far' ? ([[-400, -300], [-350, -260]] as Pt[]) : project(id))
       expect(layoutClouds([note(1, ['far'])], offscreen, VIEW)).toEqual([])
+    })
+  })
+
+  describe('<RevisionClouds />', () => {
+    let RevisionClouds: typeof import('../src/scene/annotations/RevisionClouds').RevisionClouds
+    let useTwinStore: typeof import('../src/state/store').useTwinStore
+    let useSceneRegistry: typeof import('../src/scene/registry').useSceneRegistry
+
+    beforeAll(async () => {
+      // The store module creates the app's store on import; keep it from opening a real socket.
+      vi.stubGlobal('WebSocket', class { readyState = 0 })
+      ;({ RevisionClouds } = await import('../src/scene/annotations/RevisionClouds'))
+      ;({ useTwinStore } = await import('../src/state/store'))
+      ;({ useSceneRegistry } = await import('../src/scene/registry'))
+    })
+
+    afterEach(() => vi.useRealTimers())
+
+    it('draws a cloud and tag for a registered object and drops it once the object is removed', () => {
+      vi.useFakeTimers({ toFake: ['requestAnimationFrame', 'cancelAnimationFrame', 'performance'] })
+      const cam = camera()
+      const boxes = new Map([['rack:R3-00', rackBox(12, 10)], ['rack:R5-00', rackBox(12, 17.2)]])
+      const real = useSceneRegistry.getState().worldBox
+      useSceneRegistry.setState({ worldBox: (id: string) => boxes.get(id)?.clone() ?? null })
+      const view = () => ({ camera: cam, ...VIEW, left: 0, top: 0 })
+      const { container, unmount } = render(createElement(RevisionClouds, { view }))
+      act(() => {
+        useTwinStore.getState().dispatchView({
+          type: 'annotate',
+          annotation: { tag: 1, objectIds: ['rack:R3-00'], label: 'Air can’t carry 132 kW per rack', severity: 'problem' },
+        })
+        useTwinStore.getState().dispatchView({
+          type: 'annotate',
+          annotation: { tag: 2, objectIds: ['rack:R5-00'], label: 'CDU at 96%', severity: 'warning' },
+        })
+      })
+      act(() => vi.advanceTimersByTime(100))
+      const notes = () => [...container.querySelectorAll('[role="note"]')].map((n) => n.getAttribute('aria-label'))
+      expect(notes()).toEqual(['Revision 1: Air can’t carry 132 kW per rack', 'Revision 2: CDU at 96%'])
+      expect(container.querySelector('.rc-line')?.getAttribute('d')).toMatch(/^M.* Z$/)
+      expect(container.querySelector('.rc-num')?.textContent).toBe('1')
+
+      boxes.delete('rack:R3-00')
+      act(() => vi.advanceTimersByTime(100))
+      expect(notes()).toEqual(['Revision 2: CDU at 96%'])
+
+      act(() => useTwinStore.getState().dispatchView({ type: 'clearAnnotations' }))
+      expect(notes()).toEqual([])
+      unmount()
+      useSceneRegistry.setState({ worldBox: real })
     })
   })
 })
