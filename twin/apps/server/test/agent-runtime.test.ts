@@ -6,9 +6,10 @@ import type {
   BetaRawMessageStreamEvent,
   BetaRefusalStopDetails,
 } from '@anthropic-ai/sdk/resources/beta/messages/messages'
-import { createDefaultPlan } from '@twin/catalog'
-import { emptyEvaluation } from '@twin/engine'
-import type { AgentEvent, Check, EvalDiff, Evaluation, Plan, Proposal, Status } from '@twin/schema'
+import { createDefaultPlan, loadBuiltins, snapshotCatalog } from '@twin/catalog'
+import { applyCommand, applyCommands } from '@twin/commands'
+import { emptyEvaluation, evaluate, makeCatalogIndex } from '@twin/engine'
+import type { AgentEvent, Check, Command, EvalDiff, Evaluation, Plan, Proposal, Status } from '@twin/schema'
 import { existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -16,6 +17,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createAnthropicClient, type AnthropicLike, type FinalMessage } from '../src/agent/client'
 import type { AgentTool, ToolOutcome } from '../src/agent/tools/index'
 import { createAgentRuntime } from '../src/agent/runtime'
+import { buildTools, ProposalBook } from '../src/agent/tools/index'
 import type { AgentRuntime, PlanStore, StoreChange } from '../src/contracts'
 
 // ---------- scripted fake client ----------
@@ -588,5 +590,114 @@ describe('agent runtime', () => {
     ])
     rt.dismissProposal('p2')
     expect(rec.events.at(-1)).toEqual({ kind: 'proposalStatus', proposalId: 'p2', status: 'dismissed' })
+  })
+})
+
+// ---------- with the real tools, registry and engine (scripted model) ----------
+
+/** A minimal store over the real registry and engine (the server's store is Task 12). */
+function createStore(): PlanStore {
+  const builtins = loadBuiltins()
+  let plan: Plan = snapshotCatalog(createDefaultPlan(), builtins.entries)
+  let evaluation = evaluate(plan, builtins)
+  const listeners = new Set<(c: StoreChange) => void>()
+  const catalog = () => makeCatalogIndex([...builtins.entries, ...Object.values(plan.catalog)])
+  const commit = (next: Plan, author: 'user' | 'agent', summary: string) => {
+    const prev = evaluation
+    plan = next
+    evaluation = evaluate(plan, builtins)
+    for (const cb of listeners) cb({ prev, next: evaluation, author, summary, kind: 'command' })
+  }
+  return {
+    state: () => ({ plan, evaluation, history: { canUndo: false, canRedo: false } }),
+    dispatch(cmd: Command, author) {
+      try {
+        const r = applyCommand(plan, cmd, catalog())
+        commit(r.plan, author, r.summary)
+        return { ok: true, summary: r.summary }
+      } catch (err) {
+        return { ok: false, error: (err as Error).message }
+      }
+    },
+    dispatchAll(cmds: Command[], author) {
+      try {
+        const r = applyCommands(plan, cmds, catalog())
+        commit(r.plan, author, r.summaries.join('; '))
+        return { ok: true, summaries: r.summaries }
+      } catch (err) {
+        return { ok: false, error: (err as Error).message }
+      }
+    },
+    undo: () => false,
+    redo: () => false,
+    replace: () => undefined,
+    onChange(cb) {
+      listeners.add(cb)
+      return () => {
+        listeners.delete(cb)
+      }
+    },
+    builtins: () => builtins,
+  }
+}
+
+const swap: Command = { type: 'setRackType', payload: { groupId: 'g2', rackTypeId: 'rack.gb300-nvl72' } }
+
+function setup(script: Step[]) {
+  const store = createStore()
+  const proposals = new ProposalBook(store)
+  const tools = buildTools({ store, emitView: () => undefined, proposals, brief: () => '# Brief', dataDir })
+  const { client, requests } = fakeClient(script)
+  const runtime = createAgentRuntime({ store, tools, client, dataDir, proposals })
+  store.onChange((c) => runtime.handleChange(c))
+  const events: AgentEvent[] = []
+  runtime.onEvent((e) => events.push(e))
+  const turnsDone = (n: number) =>
+    new Promise<void>((resolve) => {
+      const check = () => events.filter((e) => e.kind === 'messageEnd').length >= n && resolve()
+      check()
+      runtime.onEvent(check)
+    })
+  return { store, tools, runtime, requests, events, turnsDone }
+}
+
+describe('agent runtime with the real tools, registry and engine', () => {
+  it('sends every tool without $schema, returns invalid input as is_error, and does not observe its own edits', async () => {
+    const { store, tools, runtime, requests, events, turnsDone } = setup([
+      { content: [toolUse('t1', 'get_evaluation', { detail: 'summary' }), toolUse('t2', 'cmd_setRackType', { groupId: 5 })], stop_reason: 'tool_use' },
+      { content: [toolUse('t3', 'cmd_setRackType', swap.payload)], stop_reason: 'tool_use' },
+      reply('Swapped g2 to GB300.'),
+    ])
+    runtime.handleChat('Swap group g2 to GB300 racks.')
+    await turnsDone(1)
+
+    const sent = requests[0]!.tools ?? []
+    expect(sent).toHaveLength(tools.length)
+    for (const t of sent) {
+      expect(t).toMatchObject({ input_schema: { type: 'object' }, eager_input_streaming: true })
+      expect('input_schema' in t && '$schema' in t.input_schema).toBe(false)
+    }
+
+    const results = requests[1]!.messages.at(-1)?.content
+    expect(Array.isArray(results) && results.map((r) => r.type === 'tool_result' && r.is_error === true)).toEqual([false, true])
+    const evalResult = events.find((e) => e.kind === 'toolResult' && e.callId === 't1')
+    expect(evalResult).toMatchObject({ ok: true })
+    expect(evalResult?.kind === 'toolResult' && evalResult.numbers.length).toBeGreaterThan(0)
+    expect(store.state().plan.rackGroups.find((g) => g.id === 'g2')?.rackTypeId).toBe('rack.gb300-nvl72')
+
+    await new Promise((r) => setTimeout(r, 1700))
+    expect(requests).toHaveLength(3)
+    expect(events.filter((e) => e.kind === 'messageStart')).toHaveLength(1)
+  })
+
+  it('the same swap made by the person starts one problem observation turn from the real engine diff', async () => {
+    const { store, requests, events, turnsDone } = setup([reply('The GB300 swap overloads the floor bays under rows 3 to 5.')])
+    expect(store.dispatch(swap, 'user')).toMatchObject({ ok: true })
+    await new Promise((r) => setTimeout(r, 1600))
+    await turnsDone(1)
+    expect(requests).toHaveLength(1)
+    const event = requests[0]!.messages.at(-1)?.content
+    expect(typeof event === 'string' && event).toMatch(/^<app_event>\nThe person changed the plan: .*gb300[\s\S]*Worsened checks:[\s\S]*is now fail[\s\S]*<\/app_event>$/i)
+    expect(events.find((e) => e.kind === 'messageStart')).toMatchObject({ trigger: 'observation', severity: 'problem' })
   })
 })
