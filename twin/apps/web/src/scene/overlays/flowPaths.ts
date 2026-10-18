@@ -529,52 +529,85 @@ function normalizeFills(pipes: PipeRun[], circuits: Circuit[]): Circuit[] {
 
 // ---------- air ----------
 
-/** Airflow through a rack in m³/s: Q_air / (ρ·cp·ΔT); null when the air temperatures are unknown. */
-function rackAirflow(r: RackResult): number | null {
-  if (r.airInletC === null || r.airOutletC === null) return null
-  const dT = r.airOutletC - r.airInletC
-  return dT > 0 ? r.airW / (AIR_RHO_CP * dT) : null
+// Room-air rise across a rack, the textbook values the engine's rules use (airDeltaTK, airDeltaTKContained). Used for
+// the server exhaust ahead of a rear door, where the evaluation reports only the door's outlet.
+const SERVER_DELTA_T = { none: 11, contained: 15 }
+
+/** Heat the server fans carry through a rack as air: room-air heat plus what a rear door then takes into facility water. */
+const throughAirW = (r: RackResult) => r.airW + r.facilityWaterW
+
+/**
+ * Server exhaust temperature, before any rear door. Without a door it is the computed outlet; behind a door the
+ * outlet is what the door lets back into the room, so the exhaust is the inlet plus the design room-air rise.
+ */
+export function rackExhaustC(plan: Plan, r: RackResult): number | null {
+  if (r.airInletC === null) return null
+  if (r.facilityWaterW <= 0 && r.airOutletC !== null && r.airOutletC > r.airInletC) return r.airOutletC
+  return r.airInletC + (plan.cooling.containment === 'none' ? SERVER_DELTA_T.none : SERVER_DELTA_T.contained)
+}
+
+/** Airflow through a rack in m³/s: through-rack heat / (ρ·cp·ΔT); null when the air temperatures are unknown. */
+function rackAirflow(plan: Plan, r: RackResult): number | null {
+  const exhaust = rackExhaustC(plan, r)
+  if (exhaust === null || r.airInletC === null) return null
+  const dT = exhaust - r.airInletC
+  return dT > 0 && throughAirW(r) > 0 ? throughAirW(r) / (AIR_RHO_CP * dT) : null
 }
 
 /**
- * Air paths: from the serving CRAH's discharge along the cold aisle, through the rack front to rear,
- * up out of the hot aisle and back above the racks to the CRAH's top return. Density and speed scale with
- * each rack's computed airflow relative to the hall mean.
+ * Air paths through every rack that moves air (air, rear-door, and the air share of liquid racks): along the
+ * cold aisle, through the rack front to rear, and up out of the hot aisle. With a CRAH serving the row the path
+ * starts at its discharge and returns above the racks to its top return; without one (rear doors take all the
+ * heat) it starts in the cold aisle in front of the rack and ends rising in the hot aisle. Behind a rear door the
+ * exhaust drops back to the door's outlet temperature. Density and speed scale with each rack's airflow relative
+ * to the hall mean.
  */
 export function airNetwork(plan: Plan, evaluation: Evaluation): AirNetwork {
-  const racks = evaluation.racks.filter((r) => r.airW > 0 && rackAirflow(r) !== null)
-  const flows = racks.map((r) => rackAirflow(r)!)
+  const racks = evaluation.racks.filter((r) => rackAirflow(plan, r) !== null)
+  const flows = racks.map((r) => rackAirflow(plan, r)!)
   const meanFlow = flows.reduce((s, f) => s + f, 0) / Math.max(1, flows.length)
   const scale: TempScale =
     racks.length > 0
-      ? { lo: Math.min(...racks.map((r) => r.airInletC!)), hi: Math.max(...racks.map((r) => r.airOutletC!)) }
+      ? { lo: Math.min(...racks.map((r) => r.airInletC!)), hi: Math.max(...racks.map((r) => rackExhaustC(plan, r)!)) }
       : { lo: 0, hi: 0 }
   const circuits: Circuit[] = []
   racks.forEach((r, i) => {
     const row = plan.hall.rows.find((w) => w.id === r.rowId)
-    const crah = row ? servingPosition(plan, evaluation, 'crah', r.rowId) : null
-    if (!row || !crah) return
+    if (!row) return
+    const crah = servingPosition(plan, evaluation, 'crah', r.rowId)
     const { x, h } = rackGeometry(plan, r)
     const { rearZ, frontZ, dir } = rowFaces(row)
     const coldZ = frontZ - dir * 0.6
     const hotZ = rearZ + dir * 0.5
-    const side = x >= crah.x ? 1 : -1
     const midY = h * 0.5
+    const inlet = r.airInletC!
+    const exhaust = rackExhaustC(plan, r)!
+    const outlet = r.facilityWaterW > 0 ? (r.airOutletC ?? inlet) : exhaust
     // Warm air rises out of the hot aisle and returns just above the racks (under the ceiling).
     const returnY = Math.min(plan.hall.ceilingM - 0.3, h + 0.9)
-    const pts: Vec3[] = [
-      [crah.x + side * 0.5, 0.3, crah.z],
-      [crah.x + side * 1.2, 0.3, coldZ],
+    const side = crah && x >= crah.x ? 1 : -1
+    const through: Vec3[] = [
       [x, 0.3, coldZ],
       [x, midY, coldZ],
+      [x, midY, rearZ],
       [x, midY, hotZ],
       [x, returnY, hotZ],
-      [crah.x + side * 1.2, returnY, hotZ],
-      [crah.x + side * 0.4, returnY, crah.z],
-      [crah.x, CRAH_RETURN_Y, crah.z],
     ]
+    const pts: Vec3[] = crah
+      ? [
+          [crah.x + side * 0.5, 0.3, crah.z],
+          [crah.x + side * 1.2, 0.3, coldZ],
+          ...through,
+          [crah.x + side * 1.2, returnY, hotZ],
+          [crah.x + side * 0.4, returnY, crah.z],
+          [crah.x, CRAH_RETURN_Y, crah.z],
+        ]
+      : [[x, 0.3, coldZ - dir * 0.6], ...through]
+    // Air warms from the cold aisle to the rack's rear face, then a rear door (if any) cools it to its outlet.
+    const front = crah ? 3 : 2
+    const temps = pts.map((_, k) => (k <= front ? inlet : k === front + 1 ? exhaust : outlet))
+    const path = rounded({ points: pts, temps, fills: cumulativeLengths(pts) }, BEND.header)
     const ratio = flows[i]! / meanFlow
-    const path = rounded(rampTemps(track(pts, 0, r.airInletC!), 3, 4, r.airInletC!, r.airOutletC!), BEND.header)
     circuits.push({
       id: `air:${r.placementId}`,
       tier: 'air',

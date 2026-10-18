@@ -205,6 +205,35 @@ describe('air flow paths', () => {
     expect(high.count).toBeGreaterThan(low.count)
     expect(high.speed).toBeGreaterThan(low.speed)
   })
+
+  it('rear-door racks with no CRAH still get air paths: cold aisle in, hot aisle out, cooled at the door', () => {
+    const { plan, evaluation } = fixture()
+    plan.hall.positions = plan.hall.positions.filter((p) => p.kind !== 'crah')
+    evaluation.equipment = evaluation.equipment.filter((e) => !e.key.startsWith('crah'))
+    // Active rear door: all rack heat to facility water, so no air heat reaches the room and outlet equals inlet.
+    for (const r of evaluation.racks.filter((r) => r.rowId === 'R1')) {
+      r.facilityWaterW = r.heatW
+      r.airW = 0
+      r.airOutletC = r.airInletC
+    }
+    const air = airNetwork(plan, evaluation)
+    const doors = air.circuits.filter((c) => c.id.startsWith('air:R1-'))
+    expect(doors).toHaveLength(2)
+    expect(doors.reduce((s, c) => s + c.count, 0)).toBeGreaterThan(0)
+    const row = plan.hall.rows.find((w) => w.id === 'R1')!
+    for (const path of doors) {
+      expect(path.speed).toBeGreaterThan(0)
+      // Enters on the cold-aisle side, leaves on the hot-aisle side, rising.
+      const side = (p: Vec3) => (p[2] - (row.z + row.rackDepthM / 2)) * (row.hotAisle === 'south' ? 1 : -1)
+      expect(side(path.points[0]!)).toBeLessThan(0)
+      expect(side(path.points.at(-1)!)).toBeGreaterThan(0)
+      // Inlet air, heated by the servers, back to inlet temperature after the door.
+      expect(path.temps[0]).toBe(24)
+      expect(Math.max(...path.temps)).toBeGreaterThan(30)
+      expect(path.temps.at(-1)).toBe(24)
+    }
+    expect(air.scale.hi).toBeGreaterThan(air.scale.lo)
+  })
 })
 
 describe('heat shimmer', () => {
