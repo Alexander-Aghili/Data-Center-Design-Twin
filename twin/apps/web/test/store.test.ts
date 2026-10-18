@@ -130,6 +130,18 @@ describe('twin store', () => {
     expect(store.getState()).toMatchObject({ previewProposalId: null, shot: 'gpu' })
   })
 
+  it('a settled proposal takes its revision cloud with it', () => {
+    const backend = new FakeBackend()
+    const store = createTwinStore({ backend })
+    const marked = { ...proposal, annotationTag: 1 }
+    backend.onMsg({ t: 'agent', event: { kind: 'proposal', messageId: 'm1', proposal: marked } })
+    const cloud = (tag: number) => ({ tag, objectIds: ['rack:R3-00'], label: 'Air limit', severity: 'problem' as const })
+    backend.onMsg({ t: 'view', action: { type: 'annotate', annotation: cloud(1) } })
+    backend.onMsg({ t: 'view', action: { type: 'annotate', annotation: cloud(2) } })
+    backend.onMsg({ t: 'agent', event: { kind: 'proposalStatus', proposalId: 'p1', status: 'applied' } })
+    expect(store.getState().annotations.map((a) => a.tag)).toEqual([2])
+  })
+
   it('resetChat asks the server for a new conversation', () => {
     const backend = new FakeBackend()
     const store = createTwinStore({ backend })

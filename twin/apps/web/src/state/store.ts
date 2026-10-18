@@ -88,12 +88,16 @@ function withProposalEvent(proposals: Record<string, Proposal>, e: AgentEvent): 
 const changesCooling = (p: Proposal | undefined) => p?.commands.some((c) => registry.get(c.type)?.layer === 'cooling') === true
 
 /**
- * A settled proposal is no longer previewed. An applied one sends the camera back to the hall to show the result;
+ * A settled proposal is no longer previewed, and its revision cloud goes. An applied one sends the camera back to the hall to show the result;
  * a cooling change also opens the cooling layer and fills the pipes from the plant outward.
  */
 function settleView(s: TwinState, proposalId: string, status: Proposal['status']): Partial<TwinState> {
   if (status === 'open') return {}
-  const preview = s.previewProposalId === proposalId ? { previewProposalId: null } : {}
+  const tag = s.proposals[proposalId]?.annotationTag
+  const preview = {
+    ...(s.previewProposalId === proposalId ? { previewProposalId: null } : {}),
+    ...(tag === undefined ? {} : { annotations: s.annotations.filter((a) => a.tag !== tag) }),
+  }
   if (status !== 'applied') return preview
   if (!changesCooling(s.proposals[proposalId])) return { ...preview, shot: 'hall' }
   return { ...preview, activeLayer: 'cooling', ...LAYER_DEFAULTS.cooling, shot: 'hall', pipeFill: s.pipeFill + 1 }

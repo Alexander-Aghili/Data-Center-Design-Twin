@@ -40,6 +40,19 @@ describe('decision panels', () => {
     expect(send).toHaveBeenCalledWith({ type: 'setHeatRejection', payload: { heatRejectionId: 'heatRejection.dry-cooler' } })
   })
 
+  it('Compute panel: a new rack type opens a rack of that group and pushes in on a GPU', async () => {
+    const dispatchView = vi.fn()
+    useTwinStore.setState({ dispatchView })
+    render(<DecisionPanel layer="compute" />)
+    const rackType = field('decision:rackGroups.g2.rackTypeId')
+    fireEvent.click(await within(rackType).findByRole('button', { name: /change/i }))
+    await act(async () => fireEvent.click(within(rackType).getByRole('radio', { name: /GB300 NVL72/ })))
+    expect(send).toHaveBeenCalledWith({ type: 'setRackType', payload: { groupId: 'g2', rackTypeId: 'rack.gb300-nvl72' } })
+    const group = createDefaultPlan().placements.filter((p) => p.groupId === 'g2')
+    const middle = group[Math.floor(group.length / 2)]!
+    expect(dispatchView).toHaveBeenCalledWith({ type: 'focus', target: { kind: 'rack', id: middle.id }, shot: 'gpu' })
+  })
+
   it('CatalogPicker shows basis and key numbers per option (e.g., "Max 40 kW per rack")', async () => {
     render(<CatalogPicker kind="rackCooling" value="rackCooling.dlc-1p" onChange={() => {}} />)
     fireEvent.click(await screen.findByRole('button', { name: /change/i }))
