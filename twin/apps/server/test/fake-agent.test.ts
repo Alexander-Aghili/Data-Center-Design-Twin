@@ -79,7 +79,7 @@ describe('scripted fake client', () => {
     expect(errors()).toEqual([])
   })
 
-  it('reinforces every floor bay over the warning threshold and focuses the worst one', { timeout: 15_000 }, async () => {
+  it('rates the floor so every bay is under the warning threshold, in one undo step, and focuses the worst bay', { timeout: 15_000 }, async () => {
     store.dispatchAll(
       [
         { type: 'setRackType', payload: { groupId: 'g2', rackTypeId: RACK.GB300_NVL72 } },
@@ -97,6 +97,8 @@ describe('scripted fake client', () => {
     expect(floorIssues()).toEqual([])
     expect(views).toContainEqual({ type: 'focus', target: { kind: 'bay', id: 'B4-4' }, shot: 'row' })
     expect(textOf(id)).toMatch(/B4-4/)
+    expect(store.undo()).toBe(true)
+    expect(floorIssues().length).toBeGreaterThan(0)
     expect(errors()).toEqual([])
   })
 

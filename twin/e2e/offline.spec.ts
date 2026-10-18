@@ -32,7 +32,7 @@ test('with the server stopped the UI says so, local edits keep evaluating, and c
   await expect.poll(() => totalsText(page)).not.toBe(before)
   await expect(page.getByRole('button', { name: 'Undo' })).toBeEnabled()
 
-  await expect(agent(page).getByRole('alert')).toHaveText(AGENT_NEEDS_SERVER)
+  await expect(agent(page).getByRole('log', { name: 'Agent messages' }).getByText(AGENT_NEEDS_SERVER)).toBeVisible()
   await expect(chatBox).toBeDisabled()
   await expect(chatBox).toHaveAttribute('placeholder', /agent needs the local server/i)
 

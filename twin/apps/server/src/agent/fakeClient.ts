@@ -69,22 +69,22 @@ function airLimitReply(store: PlanStore): Reply {
 }
 
 /**
- * Raises each floor bay over the warning threshold to the smallest whole rating that brings it back under,
- * then points the camera at the worst bay.
+ * Rates the floor for its most loaded bay: the smallest whole rating that brings that bay back under the
+ * warning threshold, in one command (one undo step), then points the camera at that bay.
  */
 function floorReply(store: PlanStore): Reply {
   const warnAt = store.builtins().rules.warnThreshold.value
-  const bays = store
-    .state()
-    .evaluation.checks.filter((c): c is Check & { value: number } => c.kind === 'layout.floorBay' && c.status !== 'pass' && c.value !== null)
-    .sort((a, b) => (b.utilization ?? 0) - (a.utilization ?? 0))
+  const { plan, evaluation } = store.state()
+  const bays = evaluation.checks
+    .filter((c): c is Check & { value: number } => c.kind === 'layout.floorBay' && c.status !== 'pass' && c.value !== null)
+    .sort((a, b) => b.value - a.value)
   const worst = bays[0]
   if (!worst || warnAt === null) return { text: 'Every floor bay carries its load within the warning threshold already.' }
-  const ids = bays.map((b) => b.subject.id)
+  const ratingKnM2 = Math.ceil(worst.value / warnAt)
   return {
-    text: `Reinforcing ${ids.length === 1 ? 'bay' : 'bays'} ${ids.join(', ')}. ${worst.subject.id} is the most loaded.`,
+    text: `${bays.length} floor ${bays.length === 1 ? 'bay is' : 'bays are'} over the warning threshold, ${worst.subject.id} most of all. Rating the floor ${ratingKnM2} kN/m² covers them.`,
     tools: [
-      ...bays.map((b) => cmd('setBayRating', { bayId: b.subject.id, ratingKnM2: Math.ceil(b.value / warnAt) })),
+      cmd('setFloor', { type: plan.hall.floor.type, ratingKnM2 }),
       { name: 'focus', input: { kind: 'bay', id: worst.subject.id, shot: 'row' } satisfies ToolInputs['focus'] },
     ],
   }
@@ -102,7 +102,7 @@ function briefReply(): Reply {
 function closingReply(store: PlanStore, tools: string[]): Reply {
   if (tools.includes('propose_change')) return { text: 'Preview it to see the CDUs and piping, then apply it if it fits.' }
   if (tools.includes('generate_simulation_brief')) return { text: 'The brief is ready to download.' }
-  if (tools.includes('cmd_setBayRating')) return { text: 'Every floor bay is back under the warning threshold.' }
+  if (tools.includes('cmd_setFloor')) return { text: 'Every floor bay is back under the warning threshold.' }
   if (tools.includes('get_evaluation')) {
     const { pueWorst } = store.state().evaluation.headline
     return { text: pueWorst === null ? 'The plan has no PUE yet: nothing draws power.' : `PUE at the worst hour is ${pueWorst.toFixed(2)}.` }

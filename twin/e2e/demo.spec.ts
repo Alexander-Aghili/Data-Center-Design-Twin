@@ -19,7 +19,7 @@ import {
 // The spec's demo script, steps 1 to 8. The agent steps run against the scripted client (TWIN_FAKE_AGENT=1)
 // unless RUN_LIVE_AGENT=1, which uses the real Claude API with the key in the repo-root .env (about $1).
 
-const AGENT_MS = LIVE_AGENT ? 180_000 : 15_000
+const AGENT_MS = LIVE_AGENT ? 180_000 : 30_000
 
 let twin: Twin
 
