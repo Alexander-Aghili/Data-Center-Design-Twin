@@ -43,8 +43,9 @@ const overlay: CSSProperties = {
 }
 
 // One orchestrated moment: the pen draws the cloud, then the leader and tag land.
+// The dash runs 10% past the normalized length because browsers approximate arc length, which would leave a gap.
 const css = `
-.rc-halo, .rc-line { fill: none; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 1; animation: rc-draw 720ms var(--ease) both; }
+.rc-halo, .rc-line { fill: none; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 1.1; animation: rc-draw 720ms var(--ease) both; }
 .rc-halo { stroke: var(--canvas); stroke-width: 4.5; opacity: 0.8; }
 .rc-line { stroke: var(--rc); stroke-width: 1.4; }
 .rc-leader { stroke: var(--rc); stroke-width: 1; }
@@ -53,7 +54,7 @@ const css = `
 .rc-num, .rc-label { font-family: var(--font); fill: var(--rc); font-variant-numeric: tabular-nums; }
 .rc-num { font-size: 10px; font-weight: 700; text-anchor: middle; }
 .rc-label { font-size: 12px; font-weight: 600; font-stretch: var(--stretch-label); paint-order: stroke; stroke: var(--canvas); stroke-width: 3px; stroke-linejoin: round; }
-@keyframes rc-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes rc-draw { from { stroke-dashoffset: 1.1; } to { stroke-dashoffset: 0; } }
 @keyframes rc-land { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .rc-halo, .rc-line, .rc-mark { animation: none; } }
 `

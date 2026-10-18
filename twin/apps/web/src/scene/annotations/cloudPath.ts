@@ -34,8 +34,8 @@ const TAG_UP = 10
 const TAG_DOWN = 9
 const LABEL_GAP = 17
 const LABEL_LINE_PX = 14
-/** Average advance of the 12 px semi-bold label at the condensed label width (measured in Chromium ≈ 5.6 px). */
-const LABEL_CHAR_PX = 6
+/** Average advance of the 12 px semi-bold label at the condensed label width (measured in Chromium: 4.4 px), with margin. */
+const LABEL_CHAR_PX = 5
 const LABEL_MAX_CHARS = 32
 const LABEL_MAX_LINES = 3
 /** From the cloud's edge to the tag's center. */
@@ -225,7 +225,7 @@ export function placeTags(clouds: CloudShape[], view: Viewport, previous?: Reado
       cloud.hull.reduce((s, p) => s + p[1], 0) / cloud.hull.length,
     ]
     let best: { score: number; placement: TagPlacement } | null = null
-    DIRECTIONS.forEach((u, choice) => {
+    for (const [choice, u] of DIRECTIONS.entries()) {
       const edge = exitPoint(cloud.hull, center, u)
       const at: Pt = [edge[0] + u[0] * LEADER_PX, edge[1] + u[1] * LEADER_PX]
       const align = u[0] < -1e-6 ? 'end' : 'start'
@@ -243,7 +243,7 @@ export function placeTags(clouds: CloudShape[], view: Viewport, previous?: Reado
       for (const other of placed) if (overlapArea(bounds, other.bounds) > 0) score += 1e5
       for (const box of cloudBoxes) score += overlapArea(bounds, box)
       if (previous?.get(cloud.tag) === choice) score -= 25
-      if (best && best.score <= score) return
+      if (best && best.score <= score) continue
       const rise = BUMP_RISE_PX + 2
       best = {
         score,
@@ -261,8 +261,8 @@ export function placeTags(clouds: CloudShape[], view: Viewport, previous?: Reado
           choice,
         },
       }
-    })
-    if (best) placed.push((best as { placement: TagPlacement }).placement)
+    }
+    if (best) placed.push(best.placement)
   }
   return placed
 }
@@ -287,20 +287,19 @@ export function layoutClouds(
   view: Viewport,
   previous?: ReadonlyMap<number, number>,
 ): CloudLayout[] {
-  const shapes: (CloudShape & { annotation: Annotation; d: string; arcs: number })[] = []
-  for (const annotation of annotations) {
+  const shapes: (CloudShape & { severity: Annotation['severity']; d: string; arcs: number })[] = []
+  for (const annotation of [...annotations].sort((a, b) => a.tag - b.tag)) {
     const corners = annotation.objectIds.flatMap((id) => project(id) ?? [])
     if (corners.length === 0) continue
     const hull = offsetHull(convexHull(corners), CLOUD_OFFSET_PX)
     const box = bbox(hull)
     if (box.x > view.width || box.y > view.height || box.x + box.w < 0 || box.y + box.h < 0) continue
-    shapes.push({ tag: annotation.tag, label: annotation.label, hull, annotation, ...cloudPath(hull, CLOUD_ARC_PX) })
+    const { tag, label, severity } = annotation
+    shapes.push({ tag, label, severity, hull, ...cloudPath(hull, CLOUD_ARC_PX) })
   }
   const markers = new Map(placeTags(shapes, view, previous).map((m) => [m.tag, m]))
-  return shapes
-    .sort((a, b) => a.tag - b.tag)
-    .flatMap((s) => {
-      const marker = markers.get(s.tag)
-      return marker ? [{ tag: s.tag, label: s.label, severity: s.annotation.severity, d: s.d, arcs: s.arcs, marker }] : []
-    })
+  return shapes.flatMap(({ tag, label, severity, d, arcs }) => {
+    const marker = markers.get(tag)
+    return marker ? [{ tag, label, severity, d, arcs, marker }] : []
+  })
 }
