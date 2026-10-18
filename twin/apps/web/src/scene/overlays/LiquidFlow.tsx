@@ -180,9 +180,9 @@ function PipeTubes({ pipes, leg }: { pipes: PipeRun[]; leg: Leg }) {
   return <mesh geometry={geometry} material={material.m} receiveShadow />
 }
 
-// Water beads are a little wider than their pipe, so they read as moving water on every tube size;
-// air particles are small and translucent so the racks stay the subject.
-const PARTICLE_RADIUS: Record<Circuit['tier'], number> = { facility: 0.1, cdu: 0.065, header: 0.065, rack: 0.032, air: 0.045 }
+// Water beads are a little wider than their pipe, so they read as moving water on every tube size; air streaks
+// are translucent and sparse so the racks stay the subject, but wide enough (7 cm) to read from the hall shot.
+const PARTICLE_RADIUS: Record<Circuit['tier'], number> = { facility: 0.1, cdu: 0.065, header: 0.065, rack: 0.032, air: 0.07 }
 export const particleRadius = (c: Circuit) => PARTICLE_RADIUS[c.tier]
 
 /** Supply and return pipes from the plant to every liquid-cooled rack, with beads moving at the computed flow. */

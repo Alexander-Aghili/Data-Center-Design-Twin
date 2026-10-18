@@ -50,6 +50,8 @@ const DOOR_MAX_RAD = (110 * Math.PI) / 180
 const EASE_S = 0.12
 /** With a focus tray, the other compute trays ease out only this fraction of the slide. */
 const NUDGE = 0.06
+/** Gap between the rack front and the rear of a fully pulled focus tray, so its quick disconnects show (m). */
+const FOCUS_TRAY_CLEARANCE = 0.06
 
 export interface TraySlot {
   kind: 'compute' | 'switch' | 'power'
@@ -118,6 +120,14 @@ export function rackModel(plan: Plan, rackTypeId: string, coolingMethodId: strin
 const smoothstep = (x: number) => {
   const t = Math.min(1, Math.max(0, x))
   return t * t * (3 - 2 * t)
+}
+
+/**
+ * How far the focus tray slides out: clear of the cabinet, so the trays above never cover its GPUs and the hoses
+ * and quick disconnects at its rear are in view (as when a tray is pulled for service).
+ */
+function focusTraySlide(model: Pick<RackModel, 'size' | 'trayDepth'>): number {
+  return model.size.d / 2 + model.trayDepth / 2 + FOCUS_TRAY_CLEARANCE
 }
 
 /** Door angle in radians for an openness: the door swings over the first 45%. */
@@ -290,11 +300,12 @@ function RackBody({ plan, placement, openness, tray, interior }: RackBodyProps) 
 
   const computeTrays = model.trays.filter((t) => t.kind === 'compute')
   const slideDepth = SLIDE_FRACTION * model.trayDepth
+  const focusSlideDepth = focusTraySlide(model)
 
   const apply = (o: number) => {
     if (door.current) door.current.rotation.y = -doorAngle(o)
     slides.current.forEach((g, k) => {
-      if (g) g.position.z = -traySlide(o, k, computeTrays.length, tray) * slideDepth
+      if (g) g.position.z = -traySlide(o, k, computeTrays.length, tray) * (k === tray ? focusSlideDepth : slideDepth)
     })
   }
 

@@ -15,6 +15,9 @@ import { DOOR_MATERIALS, Rack, SHELL_MATERIALS, catalogEntry, panelGeometry, rac
 /** Above this many placements the closed racks draw as instanced meshes, one per rack type. */
 export const INSTANCE_THRESHOLD = 40
 
+/** Parallel busway ducts on one row sit side by side as one overhead run: a 150 mm duct plus a 50 mm gap. */
+const BUSWAY_PITCH_M = 0.2
+
 export const UNIT_KINDS = ['cdu', 'crah', 'plant', 'busway', 'ups', 'transformer', 'leaf', 'bufferTank'] as const
 export type UnitKind = (typeof UNIT_KINDS)[number]
 
@@ -103,7 +106,7 @@ export function equipmentUnits(plan: Plan, evaluation: Evaluation | null): Equip
       const centered = (pitch: number) => (j - (m - 1) / 2) * pitch
       if (head === 'busway') {
         const row = plan.hall.rows.find((r) => r.id === rest)
-        if (row) units.push({ ...base, x: row.x, z: row.z + row.rackDepthM / 2 + centered(0.3), rotY: 0, rowId: row.id })
+        if (row) units.push({ ...base, x: row.x, z: row.z + row.rackDepthM / 2 + centered(BUSWAY_PITCH_M), rotY: 0, rowId: row.id })
         continue
       }
       if (head === 'bufferTank') {

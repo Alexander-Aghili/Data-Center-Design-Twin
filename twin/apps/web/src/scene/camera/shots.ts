@@ -42,12 +42,12 @@ const GPUS_PER_TRAY = 4
 const STYLE: Record<ShotId, { elevationDeg: number; offsetDeg: number; fov: number; margin: number }> = {
   // The site keeps a ring of yard and feeds around the building, so it reads wider than the hall.
   site: { elevationDeg: 32, offsetDeg: 50, fov: 34, margin: 1.6 },
-  hall: { elevationDeg: 50, offsetDeg: 50, fov: 38, margin: 1.05 },
+  hall: { elevationDeg: 56, offsetDeg: 58, fov: 36, margin: 1.12 },
   row: { elevationDeg: 32, offsetDeg: 60, fov: 38, margin: 1.1 },
   rack: { elevationDeg: 26, offsetDeg: 22, fov: 34, margin: 1.25 },
   tray: { elevationDeg: 40, offsetDeg: 14, fov: 32, margin: 1.3 },
-  // Three times the GPU's own size keeps its cold plate hoses, quick disconnects and neighbours in frame.
-  gpu: { elevationDeg: 62, offsetDeg: 8, fov: 30, margin: 3 },
+  // Looks down onto the slid-out tray: board, GPU packages, cold plates, hoses and the quick disconnects at its rear.
+  gpu: { elevationDeg: 56, offsetDeg: 10, fov: 30, margin: 1.12 },
 }
 
 interface Focus {
@@ -209,6 +209,19 @@ function gpuBox(ctx: ShotContext, focus: Focus | null, rack: Box3): Box3 {
   return new Box3().setFromCenterAndSize(base.getCenter(new Vector3()), new Vector3(size.x / GPUS_PER_TRAY, size.y, size.z / GPUS_PER_TRAY))
 }
 
+/**
+ * What the gpu shot frames: the focused GPU with its neighbours, cold-plate hoses and the quick disconnects at the
+ * tray's rear. That is the tray's full width, from the GPU's front edge back to the tray's rear, and from the tray
+ * floor up to the GPU's top; the drive cage and bezel at the tray front stay out of frame.
+ */
+function gpuSubject(ctx: ShotContext, focus: Focus | null, rack: RackFrame): Box3 {
+  const gpu = gpuBox(ctx, focus, rack.box)
+  const tray = focusedTray(ctx, focus)?.box
+  if (!tray) return gpu
+  const [z0, z1] = rack.front > 0 ? [tray.min.z, gpu.max.z] : [gpu.min.z, tray.max.z]
+  return new Box3(new Vector3(tray.min.x, tray.min.y, z0), new Vector3(tray.max.x, Math.max(gpu.max.y, tray.min.y), z1))
+}
+
 function siteBox(ctx: ShotContext): Box3 {
   const model = registered(ctx.worldBox, 'site')
   if (model) return model.clone()
@@ -218,11 +231,33 @@ function siteBox(ctx: ShotContext): Box3 {
   return box
 }
 
+// Hall positions that stand beside the rows they serve; the plant yard and electrical room are framed by the site shot.
+const ROW_SIDE_POSITIONS = new Set(['crah', 'cdu', 'leaf'])
+
+/**
+ * The populated part of the hall, rack-high: every row with racks placed, widened in x to the CRAH, CDU and leaf
+ * positions serving those rows (their z stays within the rows). Flows and loads live there, so the hall shot frames
+ * it rather than the whole floor. Null for an empty hall.
+ */
+function populatedBox(plan: Plan): Box3 | null {
+  const filled = new Set(plan.placements.map((p) => p.rowId))
+  const rows = plan.hall.rows.filter((r) => filled.has(r.id))
+  if (rows.length === 0) return null
+  const beside = plan.hall.positions.filter((p) => ROW_SIDE_POSITIONS.has(p.kind) && p.servesRows.some((id) => filled.has(id)))
+  const xs = [...rows.flatMap((r) => [r.x, r.x + r.slotCount * r.slotPitchM]), ...beside.map((p) => p.x)]
+  return new Box3(
+    new Vector3(Math.min(...xs), 0, Math.min(...rows.map((r) => r.z))),
+    new Vector3(Math.max(...xs), FALLBACK_RACK_HEIGHT_M, Math.max(...rows.map((r) => r.z + r.rackDepthM))),
+  )
+}
+
 function subject(id: ShotId, ctx: ShotContext, focus: Focus | null, rack: RackFrame): Box3 {
   switch (id) {
     case 'site':
       return siteBox(ctx)
     case 'hall': {
+      const populated = populatedBox(ctx.plan)
+      if (populated) return populated
       const { min, max } = hallBounds(ctx.plan)
       return new Box3(new Vector3(...min), new Vector3(...max))
     }
@@ -236,7 +271,7 @@ function subject(id: ShotId, ctx: ShotContext, focus: Focus | null, rack: RackFr
     case 'tray':
       return trayBox(ctx, focus, rack.box)
     case 'gpu':
-      return gpuBox(ctx, focus, rack.box)
+      return gpuSubject(ctx, focus, rack)
   }
 }
 

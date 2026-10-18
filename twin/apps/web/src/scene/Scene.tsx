@@ -4,6 +4,7 @@ import { EffectComposer, SMAA, SSAO, ToneMapping } from '@react-three/postproces
 import { ToneMappingMode } from 'postprocessing'
 import { useMemo, type ReactNode } from 'react'
 import { NoToneMapping, PCFShadowMap } from 'three'
+import type { Overlay } from '@twin/schema'
 import { useTwinStore } from '../state/store'
 import { CameraBridge } from './annotations/cameraBridge'
 import { CameraRig } from './camera/CameraRig'
@@ -19,6 +20,8 @@ import { PipeFillTransition } from './overlays/pipeFill'
 import { PALETTE } from './palette'
 import { Picking } from './Picking'
 
+const FLOW_OVERLAYS = new Set<Overlay>(['air', 'liquid', 'temperature'])
+
 function World() {
   const plan = useTwinStore((s) => s.plan)
   const evaluation = useTwinStore((s) => s.evaluation)
@@ -29,13 +32,17 @@ function World() {
   // Stable while unchanged, so a re-evaluation does not rebuild pipe and deck geometry.
   const units = useStable(useMemo(() => (plan ? equipmentUnits(plan, evaluation) : []), [plan, evaluation]))
   const runs = useStable(useMemo(() => (plan ? pipeRuns(plan, units) : []), [plan, units]))
+  // Overhead busways hide under the air, liquid and temperature overlays: several ducts per row would bar the view
+  // down into the aisles where those flows run.
+  const flowOverlay = FLOW_OVERLAYS.has(overlay)
+  const hallUnits = useMemo(() => (flowOverlay ? units.filter((u) => u.kind !== 'busway') : units), [units, flowOverlay])
 
   if (!plan) return null
   return (
     <>
       <Ground plan={plan} runs={runs} />
       <Site plan={plan} units={units} roof={shot === 'site'} />
-      <Hall plan={plan} units={units} openRack={openRack} />
+      <Hall plan={plan} units={hallUnits} openRack={openRack} />
       {/* The liquid overlay draws its own colored pipes; the neutral ones would double them. */}
       {overlay === 'liquid' ? null : <Pipes runs={runs} />}
     </>

@@ -27,7 +27,8 @@ export function Busway({ unit, plan }: { unit: EquipmentUnit; plan: Plan }) {
   const y = tallest + CLEARANCE
   return (
     <group ref={ref} position={[unit.x, 0, unit.z]}>
-      <mesh position={[length / 2, y + DUCT.h / 2, 0]} material={FINISH.clayMid} castShadow receiveShadow>
+      {/* No cast shadows: several ducts per row would stripe the racks and aisles below. */}
+      <mesh position={[length / 2, y + DUCT.h / 2, 0]} material={FINISH.clayMid} receiveShadow>
         <boxGeometry args={[length, DUCT.h, DUCT.w]} />
       </mesh>
       {placed.map((p) => {
@@ -37,7 +38,6 @@ export function Busway({ unit, plan }: { unit: EquipmentUnit; plan: Plan }) {
             key={p.id}
             position={[(p.slot + wide / 2) * row.slotPitchM, y - TAP.h / 2, 0]}
             material={FINISH.clayMid}
-            castShadow
           >
             <boxGeometry args={[TAP.w, TAP.h, TAP.d]} />
           </mesh>

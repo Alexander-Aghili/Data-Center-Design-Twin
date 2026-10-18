@@ -3,7 +3,7 @@ import { CatmullRomCurve3, TubeGeometry, Vector3, type BufferGeometry, type Grou
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { FINISH, PERF_TILE_M } from '../Lighting'
 import { useRegistered } from '../hooks'
-import { Gpu, gpuFootprint, gpuPorts } from './Gpu'
+import { GPU_FRONT_CLEAR_M, Gpu, gpuFootprint, gpuPorts } from './Gpu'
 import { box, panelGeometry } from './Rack'
 
 export type TrayCooling = 'coldPlate' | 'air'
@@ -24,7 +24,7 @@ export function gpuSlots(n: number, w: number, d: number): GpuSlot[] {
   const cols = Math.min(n, 4)
   const rows = Math.ceil(n / cols)
   const cellW = (w - 0.06) / cols
-  const zFront = -d / 2 + 0.24
+  const zFront = -d / 2 + GPU_FRONT_CLEAR_M
   const zBack = d / 2 - 0.1
   const cellD = (zBack - zFront) / rows
   return Array.from({ length: n }, (_, j) => ({

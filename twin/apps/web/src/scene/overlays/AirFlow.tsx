@@ -11,7 +11,7 @@ export function AirFlow() {
   if (!network) return null
   return (
     <group name="air-flow">
-      <FlowParticles circuits={network.circuits} scale={network.scale} radiusFor={particleRadius} opacity={0.4} stretch={4} spread={0.3} />
+      <FlowParticles circuits={network.circuits} scale={network.scale} radiusFor={particleRadius} opacity={0.55} stretch={4} spread={0.3} />
     </group>
   )
 }
