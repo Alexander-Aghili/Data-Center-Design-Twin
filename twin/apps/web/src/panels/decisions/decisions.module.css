@@ -1,0 +1,279 @@
+.panel {
+  padding: var(--space-5) var(--space-4) var(--space-5);
+}
+
+.heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  font-stretch: var(--stretch-label);
+  letter-spacing: 0.01em;
+  color: var(--graphite);
+}
+
+.owner {
+  font-weight: 400;
+}
+
+.layerNotes {
+  margin-top: var(--space-4);
+  border-top: 1px solid var(--ink);
+}
+
+.aside {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--graphite);
+  line-height: 1.4;
+}
+
+.error {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--heat);
+  line-height: 1.4;
+}
+
+/* Group name edits in place: it reads as a heading until focused. */
+.titleInput {
+  width: 100%;
+  padding: 1px 0;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+}
+
+.titleInput:hover {
+  border-bottom-color: var(--hairline);
+}
+
+.titleInput:focus-visible {
+  outline: none;
+  border-bottom-color: var(--ink);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.primary,
+.quiet {
+  padding: 4px 10px;
+  border-radius: var(--radius);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.primary {
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--clay-light);
+  font-weight: 500;
+}
+
+.primary:disabled {
+  border-color: var(--hairline);
+  background: var(--clay-mid);
+  color: var(--graphite);
+  cursor: not-allowed;
+}
+
+.quiet {
+  border: var(--rule);
+  background: var(--clay-light);
+  color: var(--ink);
+}
+
+.quiet:hover:not(:disabled) {
+  border-color: var(--graphite);
+}
+
+.quiet:disabled {
+  color: var(--graphite);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.form {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border: var(--rule);
+  border-radius: var(--radius);
+  background: var(--clay-light);
+}
+
+.formTitle {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 6px var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--graphite);
+}
+
+.inline {
+  display: grid;
+  gap: 3px;
+  font-size: var(--text-sm);
+  color: var(--graphite);
+}
+
+.text,
+.select {
+  width: 100%;
+  min-width: 0;
+  padding: 4px 6px;
+  border: var(--rule);
+  border-radius: var(--radius);
+  background: #fff;
+  font: inherit;
+  font-size: var(--text-md);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.text:focus-visible,
+.select:focus-visible {
+  outline: 2px solid var(--supply);
+  outline-offset: -1px;
+}
+
+.rows {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.row:has(select) {
+  grid-template-columns: 24px minmax(0, 1fr);
+}
+
+.rowId {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.rowCount {
+  font-size: var(--text-sm);
+  color: var(--graphite);
+  text-align: right;
+  min-width: 34px;
+}
+
+.row .quiet {
+  padding: 1px 6px;
+}
+
+/* Slots of a row, as a plan-view strip: clay where a rack stands, open where the floor is free. */
+.strip {
+  display: flex;
+  gap: 1px;
+  height: 12px;
+}
+
+.slot {
+  flex: 1;
+  border: 1px solid var(--clay-dark);
+  background: var(--clay-light);
+}
+
+.slot[data-state='taken'] {
+  background: var(--clay-dark);
+}
+
+.slot[data-state='selected'] {
+  border-color: var(--ink);
+  background: var(--ink);
+}
+
+.zones {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.chips {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.chip {
+  position: relative;
+}
+
+.chip input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.chip span {
+  display: block;
+  padding: 3px 0;
+  border: var(--rule);
+  border-radius: var(--radius);
+  background: var(--clay-light);
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--graphite);
+}
+
+.chip input:checked + span {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--clay-light);
+  font-weight: 500;
+}
+
+.chip input:focus-visible + span {
+  outline: 2px solid var(--supply);
+  outline-offset: 1px;
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
