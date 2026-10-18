@@ -373,9 +373,43 @@
   margin-top: 10px;
 }
 
-.ag-card .btn[aria-pressed='true'] {
-  border-color: var(--ink);
-  background: var(--hover);
+/*
+ * Agent actions: primary (Send, Apply) in king blue, secondary (Preview) in baby blue, Dismiss quiet.
+ * The action tokens fall back to their hex until the shell defines them on :root.
+ */
+.ag-card .btn--primary,
+.ag-input .btn--primary {
+  background: var(--action, #1f4ed8);
+  border-color: var(--action, #1f4ed8);
+  color: var(--ink-inverse);
+}
+
+.ag-card .btn--primary:hover:enabled,
+.ag-input .btn--primary:hover:enabled {
+  background: var(--action-hover, #183fb0);
+  border-color: var(--action-hover, #183fb0);
+}
+
+.ag-card .btn--primary:disabled,
+.ag-input .btn--primary:disabled,
+.ag-card .btn--secondary:disabled {
+  background: transparent;
+  border-color: var(--hairline);
+  color: var(--graphite);
+}
+
+.ag-card .btn--secondary {
+  background: var(--action-soft, #e3eeff);
+  border-color: var(--action-soft, #e3eeff);
+  color: var(--action-soft-ink, #1a3e9e);
+}
+
+.ag-card .btn--secondary:hover:enabled {
+  border-color: var(--action-ring, #8db4ff);
+}
+
+.ag-card .btn--secondary[aria-pressed='true'] {
+  border-color: var(--action, #1f4ed8);
 }
 
 /* Chat input: the global .input and .btn, with a textarea that grows by rows. */

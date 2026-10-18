@@ -156,7 +156,7 @@ export function ProposalCard({ proposal: initial }: { proposal: Proposal }) {
         <div className="ag-card__actions">
           <button
             type="button"
-            className="btn"
+            className="btn btn--secondary"
             aria-pressed={previewing}
             disabled={status === 'stale'}
             onClick={() => dispatchView({ type: 'previewProposal', proposalId: previewing ? null : id })}
