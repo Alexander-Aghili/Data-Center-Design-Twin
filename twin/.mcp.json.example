@@ -1,0 +1,10 @@
+{
+  "//": "Register the twin-dc MCP server with Claude Code by running this from twin/: claude mcp add twin-dc -s project -e TWIN_URL=http://localhost:4317 -- npx tsx apps/mcp/src/main.ts (or copy this file to twin/.mcp.json). Start the app with npm run dev before using its tools.",
+  "mcpServers": {
+    "twin-dc": {
+      "command": "npx",
+      "args": ["tsx", "apps/mcp/src/main.ts"],
+      "env": { "TWIN_URL": "http://localhost:4317" }
+    }
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "id": "gpu.b300",
+  "kind": "gpu",
+  "name": "NVIDIA B300 (HGX, SXM)",
+  "vendor": "NVIDIA",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "nv-hgx",
+      "url": "https://www.nvidia.com/en-us/data-center/hgx/",
+      "title": "NVIDIA HGX platform page (HGX B300 specs)"
+    },
+    {
+      "id": "smc-nvidia",
+      "url": "https://www.supermicro.com/en/accelerators/nvidia",
+      "title": "Supermicro NVIDIA accelerated systems page"
+    },
+    {
+      "id": "smc-822gs",
+      "url": "https://www.supermicro.com/en/products/system/gpu/8u/sys-822gs-nb3rt",
+      "title": "Supermicro SYS-822GS-NB3RT (HGX B300, 8U air) product page"
+    },
+    {
+      "id": "nv-bwu-blog",
+      "url": "https://developer.nvidia.com/blog/inside-nvidia-blackwell-ultra-the-chip-powering-the-ai-factory-era/",
+      "title": "NVIDIA Developer Blog: Inside NVIDIA Blackwell Ultra"
+    }
+  ],
+  "summary": "Blackwell Ultra SXM GPU as used on the 8-GPU HGX B300 baseboard. Runs at up to 1,100 W in OEM HGX systems, air or liquid cooled. Compute figures are dense.",
+  "tdpW": {
+    "value": 1100,
+    "unit": "W",
+    "basis": "oem",
+    "source": "https://www.supermicro.com/en/accelerators/nvidia",
+    "note": "Supermicro: eight 1100W HGX B300 GPUs in the 8U air-cooled system; the GB300 superchip variant runs higher (up to 1,400 W)."
+  },
+  "fp8Pflops": {
+    "value": 4.5,
+    "unit": "PFLOPS",
+    "basis": "calculated",
+    "source": "https://www.nvidia.com/en-us/data-center/hgx/",
+    "note": "Dense. NVIDIA lists 72 PFLOPS FP8 sparse per HGX B300 (8 GPUs); dense is half: 72 / 2 / 8 = 4.5."
+  },
+  "fp4Pflops": {
+    "value": 13.5,
+    "unit": "PFLOPS",
+    "basis": "calculated",
+    "source": "https://www.nvidia.com/en-us/data-center/hgx/",
+    "note": "Dense. NVIDIA lists 108 PFLOPS FP4 dense per HGX B300 (8 GPUs): 108 / 8 = 13.5."
+  },
+  "hbmGb": {
+    "value": 288,
+    "unit": "GB",
+    "basis": "oem",
+    "source": "https://www.supermicro.com/en/accelerators/nvidia",
+    "note": "Supermicro: 288 GB HBM3e per GPU. NVIDIA's HGX page lists 2.1 TB per 8 GPUs (about 262 GB usable per GPU)."
+  },
+  "cooling": "either"
+}

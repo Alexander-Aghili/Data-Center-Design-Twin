@@ -1,0 +1,149 @@
+{
+  "id": "rack.gb300-nvl72",
+  "kind": "rack",
+  "name": "NVIDIA GB300 NVL72",
+  "vendor": "NVIDIA",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "nv-gb300",
+      "url": "https://www.nvidia.com/en-us/data-center/gb300-nvl72/",
+      "title": "NVIDIA GB300 NVL72 product page"
+    },
+    {
+      "id": "lenovo-mech",
+      "url": "https://pubs.lenovo.com/gb300-nvl72/server_specifications_mechanical",
+      "title": "Lenovo GB300 NVL72 mechanical specifications"
+    },
+    {
+      "id": "lenovo-env",
+      "url": "https://pubs.lenovo.com/gb300-nvl72/server_specifications_environmental",
+      "title": "Lenovo GB300 NVL72 environmental specifications"
+    },
+    {
+      "id": "lenovo-tech",
+      "url": "https://pubs.lenovo.com/gb300-nvl72/server_specifications_technical",
+      "title": "Lenovo GB300 NVL72 technical specifications"
+    },
+    {
+      "id": "moduledge-gb300",
+      "url": "https://moduledge.com/blog/gb300-nvl72",
+      "title": "ModulEdge: GB300 NVL72, what one rack demands"
+    },
+    {
+      "id": "datagravity-nvl72",
+      "url": "https://www.datagravity.dev/p/how-much-does-an-nvidia-nvl72-cost",
+      "title": "Data Gravity: How much does an NVIDIA NVL72 cost?"
+    },
+    {
+      "id": "pcgh-vr-price",
+      "url": "https://www.pcgameshardware.de/Kuenstliche-Intelligenz-Hardware-279517/News/Nvidia-Vera-Rubin-NVL72-Preis-pro-Server-Rack-1536205/",
+      "title": "PC Games Hardware: Vera Rubin NVL72 rack price (Morgan Stanley estimate)"
+    }
+  ],
+  "summary": "72 Blackwell Ultra GPUs and 36 Grace CPUs in one 48U MGX rack: 18 compute trays, 9 NVLink switch trays, 8 power shelves feeding a 50 to 54 V DC busbar. About 85 to 90% of the heat goes to liquid; the rest needs air.",
+  "role": "compute",
+  "gpuId": "gpu.gb300",
+  "gpuCount": 72,
+  "nominalPowerW": {
+    "value": 132000,
+    "low": 132000,
+    "high": 142000,
+    "unit": "W",
+    "basis": "press",
+    "source": "https://moduledge.com/blog/gb300-nvl72",
+    "note": "HPE QuickSpecs (a50009244enw) give 132 kW nominal TDP; the hpe.com page timed out, so ModulEdge's restatement is cited. ModulEdge's own planning figure is up to 142 kW."
+  },
+  "peakPowerW": {
+    "value": 155000,
+    "low": 140000,
+    "high": 155000,
+    "unit": "W",
+    "basis": "press",
+    "source": "https://moduledge.com/blog/gb300-nvl72",
+    "note": "EDPp about 155 kW per HPE QuickSpecs, as restated by ModulEdge. HPE advises provisioning busway for 192 kW."
+  },
+  "weightKg": {
+    "value": 1580,
+    "unit": "kg",
+    "basis": "oem",
+    "source": "https://pubs.lenovo.com/gb300-nvl72/server_specifications_mechanical",
+    "note": "Approximately 1,580 kg, depending on the configuration."
+  },
+  "widthMm": {
+    "value": 600,
+    "unit": "mm",
+    "basis": "oem",
+    "source": "https://pubs.lenovo.com/gb300-nvl72/server_specifications_mechanical"
+  },
+  "depthMm": {
+    "value": 1200,
+    "low": 1068,
+    "high": 1200,
+    "unit": "mm",
+    "basis": "oem",
+    "source": "https://pubs.lenovo.com/gb300-nvl72/server_specifications_mechanical",
+    "note": "1,068 mm rack, expanding to 1,200 mm with the extension frame. The footprint uses 1,200 mm."
+  },
+  "heightMm": {
+    "value": 2236,
+    "unit": "mm",
+    "basis": "oem",
+    "source": "https://pubs.lenovo.com/gb300-nvl72/server_specifications_mechanical"
+  },
+  "slotsWide": 1,
+  "feet": 4,
+  "maxLiquidFraction": {
+    "value": 0.85,
+    "low": 0.85,
+    "high": 0.9,
+    "unit": "fraction",
+    "basis": "press",
+    "source": "https://moduledge.com/blog/gb300-nvl72",
+    "note": "ModulEdge reports Lenovo's split as roughly 90% liquid, 10% air. Integrators commonly quote 85 to 90%; the low end is used so the air side is not undersized."
+  },
+  "maxCoolantSupplyC": {
+    "value": 45,
+    "unit": "°C",
+    "basis": "oem",
+    "source": "https://pubs.lenovo.com/gb300-nvl72/server_specifications_environmental",
+    "note": "ASHRAE W45. Lenovo lists operating water at 2 to 50 °C but publishes flow and pressure drop only up to 45 °C supply (177 L/min, 18.4 psi)."
+  },
+  "supportedCooling": [
+    "dlc-1p"
+  ],
+  "supportedPower": [
+    "ac54"
+  ],
+  "scaleOutPorts": 72,
+  "portGbps": 800,
+  "fp8Pflops": {
+    "value": 360,
+    "unit": "PFLOPS",
+    "basis": "calculated",
+    "source": "https://www.nvidia.com/en-us/data-center/gb300-nvl72/",
+    "note": "Dense. NVIDIA lists 720 PFLOPS FP8 with sparsity per rack; dense is half."
+  },
+  "trays": {
+    "compute": 18,
+    "switch": 9,
+    "power": 8
+  },
+  "capexUsd": {
+    "value": 4500000,
+    "low": 4000000,
+    "high": 5000000,
+    "unit": "USD",
+    "basis": "estimate",
+    "source": "https://www.datagravity.dev/p/how-much-does-an-nvidia-nvl72-cost",
+    "note": "No list price. Data Gravity reports small-order POs just under $5.0M without an in-rack CDU; Morgan Stanley's bill-of-materials estimate (via PC Games Hardware) is about $4M for hyperscalers. Midpoint used."
+  },
+  "leadTimeWeeks": {
+    "value": 16,
+    "low": 12,
+    "high": 26,
+    "unit": "week",
+    "basis": "estimate",
+    "note": "Shipping product, but allocation-constrained. Assumed 12 to 26 weeks from PO to delivery, depending on buyer volume and ODM."
+  }
+}

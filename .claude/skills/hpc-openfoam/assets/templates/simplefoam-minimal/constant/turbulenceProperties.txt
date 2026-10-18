@@ -1,0 +1,31 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  11                                    |
+|   \\  /    A nd           | Website:  https://openfoam.org                  |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      turbulenceProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// For laminar flow:
+simulationType  laminar;
+
+// For RANS turbulence, replace the above with:
+// simulationType  RAS;
+// RAS
+// {
+//     RASModel    kOmegaSST;    // recommended default RANS model
+//     turbulence  on;
+//     printCoeffs on;
+// }
+// Then add 0/k, 0/omega, 0/nut field files (see turbulence-bc-recipes.md)
+
+// ************************************************************************* //
