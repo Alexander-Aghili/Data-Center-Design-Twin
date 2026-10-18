@@ -1,0 +1,49 @@
+{
+  "id": "gpu.mi355x",
+  "kind": "gpu",
+  "name": "AMD Instinct MI355X",
+  "vendor": "AMD",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "klockwood-mi355x",
+      "url": "https://glennklockwood.com/garden/processors/MI355X",
+      "title": "Glenn Lockwood: MI355X notes (quotes the AMD MI355X brochure)"
+    },
+    {
+      "id": "smc-a126gs",
+      "url": "https://www.supermicro.com/en/products/system/gpu/10u/as-a126gs-tnmr",
+      "title": "Supermicro AS-A126GS-TNMR (MI355X, 10U air) product page"
+    }
+  ],
+  "summary": "CDNA 4 OAM accelerator with 288 GB HBM3E. Ships in liquid-cooled racks and in air-cooled 8-GPU servers such as Supermicro's 10U AS-A126GS-TNMR. Compute figures are dense matrix peaks.",
+  "tdpW": {
+    "value": 1400,
+    "unit": "W",
+    "basis": "press",
+    "source": "https://glennklockwood.com/garden/processors/MI355X",
+    "note": "1,400 W maximum total board power, as quoted from AMD's MI355X brochure. amd.com timed out when fetched, so the secondary source is cited."
+  },
+  "fp8Pflops": {
+    "value": 5.03,
+    "unit": "PFLOPS",
+    "basis": "press",
+    "source": "https://glennklockwood.com/garden/processors/MI355X",
+    "note": "Dense matrix FP8 (5,033 TFLOPS), from AMD's brochure via the cited notes."
+  },
+  "fp4Pflops": {
+    "value": 10.07,
+    "unit": "PFLOPS",
+    "basis": "press",
+    "source": "https://glennklockwood.com/garden/processors/MI355X",
+    "note": "Dense matrix MXFP4 (10,066 TFLOPS), from AMD's brochure via the cited notes."
+  },
+  "hbmGb": {
+    "value": 288,
+    "unit": "GB",
+    "basis": "press",
+    "source": "https://glennklockwood.com/garden/processors/MI355X",
+    "note": "288 GB HBM3E, from AMD's brochure via the cited notes."
+  },
+  "cooling": "either"
+}

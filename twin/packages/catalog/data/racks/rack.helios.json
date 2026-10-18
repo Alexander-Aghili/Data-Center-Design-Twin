@@ -1,0 +1,141 @@
+{
+  "id": "rack.helios",
+  "kind": "rack",
+  "name": "AMD Helios",
+  "vendor": "AMD",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "smc-helios",
+      "url": "https://www.supermicro.com/datasheet/datasheet_AMD_Helios.pdf",
+      "title": "Supermicro AMD Helios platform datasheet"
+    },
+    {
+      "id": "remio-helios",
+      "url": "https://www.remio.ai/post/amd-helios-unites-72-gpus-but-nvidia-sets-the-test",
+      "title": "remio: AMD Helios unites 72 GPUs (power load)"
+    },
+    {
+      "id": "techcrunch-helios",
+      "url": "https://techcrunch.com/?p=3080157",
+      "title": "TechCrunch: AMD's Helios rack weighs the same as two compact cars"
+    },
+    {
+      "id": "abi-helios",
+      "url": "https://www.abiresearch.com/market-research/insight/7788238-advancing-ai-2026-amd-and-schneider-electr",
+      "title": "ABI Research: AMD and Schneider Electric Helios reference design"
+    },
+    {
+      "id": "ocp-rittal-orw",
+      "url": "https://www.opencompute.org/marketplace/facilities-physical-infrastructure/rittal-open-rack-wide-orw-7844683/",
+      "title": "OCP Marketplace: Rittal Open Rack Wide (ORW)"
+    },
+    {
+      "id": "ai2-helios-price",
+      "url": "https://ai2.work/blog/inside-amd-s-5-25m-helios-rack-and-its-12-gigawatts-of-demand",
+      "title": "ai2.work: Inside AMD's $5.25M Helios rack"
+    }
+  ],
+  "summary": "72 MI455X GPUs and 18 EPYC Venice CPUs in a double-wide OCP Open Rack Wide (1,200 mm) frame with UALink over Ethernet scale-up. Weight reports conflict (about 5,000 vs about 7,000 lb); the heavier figure is used. Switch and power tray counts are estimates.",
+  "role": "compute",
+  "gpuId": "gpu.mi455x",
+  "gpuCount": 72,
+  "nominalPowerW": {
+    "value": 225000,
+    "low": 225000,
+    "high": 245000,
+    "unit": "W",
+    "basis": "press",
+    "source": "https://www.remio.ai/post/amd-helios-unites-72-gpus-but-nvidia-sets-the-test",
+    "note": "Reporting from AMD's Advancing AI event puts the rack load at 225 to 245 kW. One outlet (ai2.work) gives about 140 kW, which conflicts with every other source and is ignored."
+  },
+  "peakPowerW": {
+    "value": 246000,
+    "unit": "W",
+    "basis": "press",
+    "source": "https://www.abiresearch.com/market-research/insight/7788238-advancing-ai-2026-amd-and-schneider-electr",
+    "note": "AMD and Schneider Electric reference design supports racks up to 246 kW. This is a planning envelope, not a per-SKU rating."
+  },
+  "weightKg": {
+    "value": 3175,
+    "low": 2268,
+    "high": 3175,
+    "unit": "kg",
+    "basis": "press",
+    "source": "https://techcrunch.com/?p=3080157",
+    "note": "Reports conflict. Lisa Su: nearly 7,000 lb (3,175 kg). remio cites published platform details at about 5,000 lb (2,268 kg). The heavier figure is used so floor checks stay conservative."
+  },
+  "widthMm": {
+    "value": 1200,
+    "unit": "mm",
+    "basis": "oem",
+    "source": "https://www.opencompute.org/marketplace/facilities-physical-infrastructure/rittal-open-rack-wide-orw-7844683/",
+    "note": "Open Rack Wide enclosure dimensions (Rittal ORW listing, 4,700 kg tested payload). A Helios-specific drawing is not public."
+  },
+  "depthMm": {
+    "value": 1219,
+    "unit": "mm",
+    "basis": "oem",
+    "source": "https://www.opencompute.org/marketplace/facilities-physical-infrastructure/rittal-open-rack-wide-orw-7844683/",
+    "note": "Open Rack Wide enclosure depth."
+  },
+  "heightMm": {
+    "value": 2386,
+    "unit": "mm",
+    "basis": "oem",
+    "source": "https://www.opencompute.org/marketplace/facilities-physical-infrastructure/rittal-open-rack-wide-orw-7844683/",
+    "note": "Open Rack Wide enclosure height (Meta's ORW design spec lists 2,390 mm)."
+  },
+  "slotsWide": 2,
+  "feet": 4,
+  "maxLiquidFraction": {
+    "value": 0.84,
+    "unit": "fraction",
+    "basis": "press",
+    "source": "https://www.abiresearch.com/market-research/insight/7788238-advancing-ai-2026-amd-and-schneider-electr",
+    "note": "AMD and Schneider reference design removes up to 84% of heat through liquid cooling."
+  },
+  "maxCoolantSupplyC": {
+    "value": 40,
+    "unit": "°C",
+    "basis": "estimate",
+    "note": "Not published; AMD only says high allowable coolant temperature. ASHRAE W40 assumed, 5 K below NVIDIA's 45 °C Vera Rubin inlet."
+  },
+  "supportedCooling": [
+    "dlc-1p"
+  ],
+  "supportedPower": [
+    "ac54"
+  ],
+  "scaleOutPorts": 216,
+  "portGbps": 800,
+  "fp8Pflops": {
+    "value": 1400,
+    "unit": "PFLOPS",
+    "basis": "oem",
+    "source": "https://www.supermicro.com/datasheet/datasheet_AMD_Helios.pdf",
+    "note": "FP8 1.4 exaFLOPS per rack. Sparsity is not stated."
+  },
+  "trays": {
+    "compute": 18,
+    "switch": 6,
+    "power": 6
+  },
+  "capexUsd": {
+    "value": 5250000,
+    "low": 5000000,
+    "high": 5500000,
+    "unit": "USD",
+    "basis": "estimate",
+    "source": "https://ai2.work/blog/inside-amd-s-5-25m-helios-rack-and-its-12-gigawatts-of-demand",
+    "note": "No list price. Analysts (Futurum's Daniel Newman) put it at $5M to $5.5M per rack; midpoint used."
+  },
+  "leadTimeWeeks": {
+    "value": 26,
+    "low": 20,
+    "high": 36,
+    "unit": "week",
+    "basis": "estimate",
+    "note": "In production since July 2026, initial shipments at the end of Q3 and a broader ramp through Q4 2026. Assumed 20 to 36 weeks for orders placed now."
+  }
+}
