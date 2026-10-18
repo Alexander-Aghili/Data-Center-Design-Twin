@@ -1,0 +1,45 @@
+{
+  "id": "gpu.mi455x",
+  "kind": "gpu",
+  "name": "AMD Instinct MI455X",
+  "vendor": "AMD",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "smc-helios",
+      "url": "https://www.supermicro.com/datasheet/datasheet_AMD_Helios.pdf",
+      "title": "Supermicro AMD Helios platform datasheet"
+    }
+  ],
+  "summary": "CDNA 5 accelerator with up to 432 GB HBM4, used in the AMD Helios rack. Compute is the per-GPU share of Supermicro's published Helios rack totals. Power is not published; the value is an estimate.",
+  "tdpW": {
+    "value": 2300,
+    "low": 2000,
+    "high": 2500,
+    "unit": "W",
+    "basis": "estimate",
+    "note": "Not published by AMD. Spec aggregators list 2,300 W and 2,500 W. Cross-check: Helios at about 225 to 245 kW, minus about 70 kW for 18 EPYC CPUs, 216 NICs, 18 DPUs, scale-up switches and conversion losses, leaves about 155 to 175 kW for 72 GPUs, or 2.2 to 2.4 kW each."
+  },
+  "fp8Pflops": {
+    "value": 19.4,
+    "unit": "PFLOPS",
+    "basis": "calculated",
+    "source": "https://www.supermicro.com/datasheet/datasheet_AMD_Helios.pdf",
+    "note": "Supermicro lists 1.4 exaFLOPS FP8 per 72-GPU Helios rack: 1,400 / 72 = 19.4. AMD's per-GPU claim is 20 PFLOPS. Sparsity is not stated; AMD's matrix peaks are usually dense."
+  },
+  "fp4Pflops": {
+    "value": 40.3,
+    "unit": "PFLOPS",
+    "basis": "calculated",
+    "source": "https://www.supermicro.com/datasheet/datasheet_AMD_Helios.pdf",
+    "note": "Supermicro lists 2.9 exaFLOPS FP4 per 72-GPU Helios rack: 2,900 / 72 = 40.3. Sparsity is not stated."
+  },
+  "hbmGb": {
+    "value": 432,
+    "unit": "GB",
+    "basis": "oem",
+    "source": "https://www.supermicro.com/datasheet/datasheet_AMD_Helios.pdf",
+    "note": "Up to 432 GB of HBM4 per GPU."
+  },
+  "cooling": "liquid"
+}

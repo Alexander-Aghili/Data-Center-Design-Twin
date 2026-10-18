@@ -1,0 +1,49 @@
+{
+  "id": "gpu.gb300",
+  "kind": "gpu",
+  "name": "NVIDIA B300 (GB300 superchip)",
+  "vendor": "NVIDIA",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "nv-bwu-blog",
+      "url": "https://developer.nvidia.com/blog/inside-nvidia-blackwell-ultra-the-chip-powering-the-ai-factory-era/",
+      "title": "NVIDIA Developer Blog: Inside NVIDIA Blackwell Ultra"
+    },
+    {
+      "id": "nv-gb300",
+      "url": "https://www.nvidia.com/en-us/data-center/gb300-nvl72/",
+      "title": "NVIDIA GB300 NVL72 product page"
+    }
+  ],
+  "summary": "Blackwell Ultra GPU in the GB300 Grace Blackwell superchip, the building block of the GB300 NVL72 rack. Liquid cooled only. Compute figures are dense.",
+  "tdpW": {
+    "value": 1400,
+    "unit": "W",
+    "basis": "vendor",
+    "source": "https://developer.nvidia.com/blog/inside-nvidia-blackwell-ultra-the-chip-powering-the-ai-factory-era/",
+    "note": "NVIDIA lists maximum TGP as up to 1,400 W for Blackwell Ultra."
+  },
+  "fp8Pflops": {
+    "value": 5,
+    "unit": "PFLOPS",
+    "basis": "vendor",
+    "source": "https://developer.nvidia.com/blog/inside-nvidia-blackwell-ultra-the-chip-powering-the-ai-factory-era/",
+    "note": "Dense (10 PFLOPS sparse)."
+  },
+  "fp4Pflops": {
+    "value": 15,
+    "unit": "PFLOPS",
+    "basis": "vendor",
+    "source": "https://developer.nvidia.com/blog/inside-nvidia-blackwell-ultra-the-chip-powering-the-ai-factory-era/",
+    "note": "Dense NVFP4 (20 PFLOPS sparse)."
+  },
+  "hbmGb": {
+    "value": 288,
+    "unit": "GB",
+    "basis": "vendor",
+    "source": "https://developer.nvidia.com/blog/inside-nvidia-blackwell-ultra-the-chip-powering-the-ai-factory-era/",
+    "note": "288 GB HBM3e per GPU; NVIDIA notes capacity varies by SKU."
+  },
+  "cooling": "liquid"
+}

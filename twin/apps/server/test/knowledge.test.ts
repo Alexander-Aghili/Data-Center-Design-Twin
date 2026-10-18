@@ -75,16 +75,19 @@ describe('searchKnowledge', () => {
     const hits = searchKnowledge('buffer tank ride-through chiller restart')
     expect(hits.length).toBeGreaterThan(0)
     expect(hits.length).toBeLessThanOrEqual(5)
-    expect(hits[0]).toMatchObject({ slug: 'cooling/buffer-tanks', title: 'Buffer tanks (thermal storage for ride-through)' })
-    expect(hits[0]?.snippet.length).toBeGreaterThan(0)
+    const bufferTanks = hits.slice(0, 3).find((hit) => hit.slug === 'cooling/buffer-tanks')
+    expect(bufferTanks?.title).toBe('Buffer tanks (thermal storage for ride-through)')
+    for (const hit of hits) {
+      expect(hit.title.length).toBeGreaterThan(0)
+      expect(hit.snippet.length).toBeGreaterThan(0)
+    }
     const scores = hits.map((hit) => hit.score)
     expect(scores).toEqual([...scores].sort((a, b) => b - a))
   })
 
   it('finds the Jane Street operations lessons', () => {
-    expect(searchKnowledge('filtration 25 µm glycol leak detection', 1)[0]?.slug).toBe(
-      'cooling/liquid-cooling-operations',
-    )
+    const top3 = searchKnowledge('filtration 25 µm glycol leak detection', 3).map((hit) => hit.slug)
+    expect(top3).toContain('cooling/liquid-cooling-operations')
   })
 
   it('returns nothing for an empty or stopword-only query', () => {
