@@ -1,6 +1,6 @@
 import type { Check, Evaluation, Status } from '@twin/schema'
 import { describe, expect, it } from 'vitest'
-import { diffEvaluations } from '../src/diff'
+import { diffEvaluations, sameHourly } from '../src/diff'
 import { emptyEvaluation } from '../src/empty'
 
 function check(id: string, status: Status, utilization: number | null = null): Check {
@@ -104,5 +104,16 @@ describe('diffEvaluations', () => {
       buildWeeksDelta: 0,
       waterDeltaM3PerDay: 0,
     })
+  })
+})
+
+describe('sameHourly', () => {
+  const series = () => ({ ...emptyEvaluation().hourly, itW: [1, 2, 3], pue: [1.2, null, 1.3] })
+
+  it('is true for equal series in different arrays, false when one value, a null or a length differs', () => {
+    expect(sameHourly(series(), series())).toBe(true)
+    expect(sameHourly(series(), { ...series(), itW: [1, 2, 4] })).toBe(false)
+    expect(sameHourly(series(), { ...series(), pue: [1.2, 0, 1.3] })).toBe(false)
+    expect(sameHourly(series(), { ...series(), itW: [1, 2] })).toBe(false)
   })
 })

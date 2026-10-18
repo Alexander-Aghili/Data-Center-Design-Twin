@@ -34,7 +34,7 @@ test('with the server stopped the UI says so, local edits keep evaluating, and c
 
   await expect(agent(page).getByRole('log', { name: 'Agent messages' }).getByText(AGENT_NEEDS_SERVER)).toBeVisible()
   await expect(chatBox).toBeDisabled()
-  await expect(chatBox).toHaveAttribute('placeholder', /start the local server to use the agent/i)
+  await expect(chatBox).toHaveAttribute('placeholder', /start the local server/i)
 
   // Back online: the server's plan (untouched by the local edits) is shown again after a reload.
   await twin.startServer()

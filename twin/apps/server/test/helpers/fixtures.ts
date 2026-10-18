@@ -17,7 +17,7 @@ export function testBuiltins(): Builtins {
   return builtins
 }
 
-/** A registry with one real-shaped command, so server tests do not depend on the full command set. */
+/** A registry with two real-shaped commands, so server tests do not depend on the full command set. */
 export function testRegistry() {
   return createRegistry([
     defineCommand({
@@ -32,7 +32,21 @@ export function testRegistry() {
         return `Plan renamed to ${payload.name}`
       },
     }),
+    // Changes the hourly series (renamePlan leaves them alone).
+    defineCommand({
+      type: 'setSiteInput',
+      layer: 'site',
+      title: 'Set site input',
+      description: 'Sets the climate. Test registry used by the server tests only.',
+      apply(draft, payload) {
+        if (payload.field === 'climateId' && typeof payload.value === 'string') draft.site.climateId = payload.value
+      },
+      summarize(payload) {
+        return `Climate set to ${String(payload.value)}`
+      },
+    }),
   ])
 }
 
 export const rename = (name: string) => ({ type: 'renamePlan', payload: { name } })
+export const setClimate = (climateId: string) => ({ type: 'setSiteInput', payload: { field: 'climateId', value: climateId } })

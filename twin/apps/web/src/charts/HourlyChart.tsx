@@ -1,5 +1,5 @@
 import { HOURS_PER_YEAR, type HourlySeries, type HourlySeriesKey } from '@twin/schema'
-import { useMemo, useState, type KeyboardEvent } from 'react'
+import { memo, useMemo, useState, type KeyboardEvent } from 'react'
 import { useTwinStore } from '../state/store'
 import { fmtNumber, fmtPower, fmtValue } from '../format'
 import { useWidth } from '../strips/parts'
@@ -188,8 +188,15 @@ function rowGeometry(hourly: HourlySeries, key: HourlySeriesKey, layout: Layout,
   }
 }
 
-/** Hourly series over the typical year with the worst week beside it, from the current evaluation. */
-export function HourlyChart({ series }: { series: HourlySeriesKey[] }) {
+const sameSeries = (a: { series: HourlySeriesKey[] }, b: { series: HourlySeriesKey[] }) =>
+  a.series.length === b.series.length && a.series.every((k, i) => k === b.series[i])
+
+/**
+ * Hourly series over the typical year with the worst week beside it, from the current evaluation. Memoized on the
+ * series names (callers may pass a fresh array literal): a parent re-rendering for other numbers does not redraw it,
+ * and the store keeps the hourly object when a state push leaves the series out.
+ */
+export const HourlyChart = memo(function HourlyChart({ series }: { series: HourlySeriesKey[] }) {
   const hourly = useTwinStore((s) => s.evaluation?.hourly)
   const worstHour = useTwinStore((s) => s.evaluation?.headline.worstHour ?? 0)
   const capW = useTwinStore((s) => s.plan?.site.gridCapacityW ?? null)
@@ -246,7 +253,7 @@ export function HourlyChart({ series }: { series: HourlySeriesKey[] }) {
       )}
     </section>
   )
-}
+}, sameSeries)
 
 interface PlotsProps {
   hourly: HourlySeries
@@ -482,7 +489,8 @@ function CapLine({ x1, x2, y, label }: { x1: number; x2: number; y: number; labe
   )
 }
 
-function MonthlyTable({ hourly, series, capW }: { hourly: HourlySeries; series: HourlySeriesKey[]; capW: number | null }) {
+/** Memoized so a resize of the chart does not recompute the monthly statistics. */
+const MonthlyTable = memo(function MonthlyTable({ hourly, series, capW }: { hourly: HourlySeries; series: HourlySeriesKey[]; capW: number | null }) {
   return (
     <div className="dt-table">
       <table className="data-table">
@@ -518,4 +526,4 @@ function MonthlyTable({ hourly, series, capW }: { hourly: HourlySeries; series: 
       </table>
     </div>
   )
-}
+})

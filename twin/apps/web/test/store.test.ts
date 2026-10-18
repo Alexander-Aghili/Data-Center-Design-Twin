@@ -2,6 +2,7 @@ import type { ClientMsg, Command, Proposal, ServerMsg } from '@twin/schema'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import type { Backend, BackendStatus } from '../src/state/backend'
 import type { createTwinStore as CreateTwinStore } from '../src/state/store'
+import { demoEvaluation, demoPlan } from './fixtures/evaluation'
 
 class FakeBackend implements Backend {
   sent: ClientMsg[] = []
@@ -163,6 +164,35 @@ describe('twin store', () => {
     expect(backend.sent).toEqual([{ t: 'resetChat' }])
   })
 
+  it('a state push without the hourly series keeps the series the store has, as the same object', () => {
+    const backend = new FakeBackend()
+    const store = createTwinStore({ backend })
+    const plan = demoPlan()
+    const evaluation = demoEvaluation(plan)
+    const history = { canUndo: false, canRedo: false }
+    backend.onMsg({ t: 'state', plan, evaluation, history, hourlyVersion: 3 })
+    const { hourly, ...lean } = evaluation
+    backend.onMsg({ t: 'state', plan: { ...plan, name: 'B' }, evaluation: { ...lean, headline: { ...lean.headline, gpuCount: 1 } }, history, hourlyVersion: 3 })
+    const after = store.getState()
+    expect(after.plan?.name).toBe('B')
+    expect(after.evaluation?.headline.gpuCount).toBe(1)
+    expect(after.evaluation?.hourly).toBe(hourly)
+    expect(backend.sent).toEqual([])
+  })
+
+  it('asks for a fresh state when a push leaves out an hourly version the store does not have', () => {
+    const backend = new FakeBackend()
+    const store = createTwinStore({ backend })
+    const plan = demoPlan()
+    const evaluation = demoEvaluation(plan)
+    const history = { canUndo: false, canRedo: false }
+    backend.onMsg({ t: 'state', plan, evaluation, history, hourlyVersion: 3 })
+    const { hourly: _old, ...lean } = evaluation
+    backend.onMsg({ t: 'state', plan: { ...plan, name: 'B' }, evaluation: lean, history, hourlyVersion: 4 })
+    expect(store.getState().plan?.name).toBe(plan.name)
+    expect(backend.sent).toEqual([{ t: 'hello' }])
+  })
+
   it('switches to the fallback backend when the first never connects', () => {
     const primary = new FakeBackend()
     const local = new FakeBackend()
@@ -202,5 +232,23 @@ describe('LocalBackend', () => {
     local.send({ t: 'undo' })
     const last = msgs.at(-1)
     expect(last?.t === 'state' && last.plan.name).toBe('Default hall')
+  })
+
+  it('sends the hourly series first, then only when it changes, and again after hello', async () => {
+    const { LocalBackend } = await import('../src/state/localBackend')
+    const states: Extract<ServerMsg, { t: 'state' }>[] = []
+    const local = new LocalBackend()
+    const statuses: BackendStatus[] = []
+    local.connect((m) => m.t === 'state' && states.push(m), (s) => statuses.push(s))
+    await vi.waitFor(() => expect(statuses.at(-1)).toBe('local'))
+    await local.sendAll([{ type: 'renamePlan', payload: { name: 'Same weather' } }])
+    await local.sendAll([{ type: 'setSiteInput', payload: { field: 'climateId', value: 'climate.phoenix' } }])
+    local.send({ t: 'hello' })
+    expect(states.map((m) => [m.hourlyVersion, m.evaluation.hourly !== undefined])).toEqual([
+      [1, true],
+      [1, false],
+      [2, true],
+      [2, true],
+    ])
   })
 })

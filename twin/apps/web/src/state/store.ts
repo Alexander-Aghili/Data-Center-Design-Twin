@@ -120,14 +120,15 @@ export function createTwinStore({ backend, fallback }: TwinStoreOptions): UseBou
   let active = backend
   let everOnline = false
 
-  const store = create<TwinState>()((set, get) => {
-    const post = (m: Parameters<Backend['send']>[0]) => {
-      try {
-        active.send(m)
-      } catch (error) {
-        set({ lastError: error instanceof Error ? error.message : String(error) })
-      }
+  const post = (m: Parameters<Backend['send']>[0]) => {
+    try {
+      active.send(m)
+    } catch (error) {
+      store.setState({ lastError: error instanceof Error ? error.message : String(error) })
     }
+  }
+
+  const store = create<TwinState>()((set, get) => {
     return {
       connection: 'connecting',
       plan: null,
@@ -176,12 +177,23 @@ export function createTwinStore({ backend, fallback }: TwinStoreOptions): UseBou
     }
   })
 
+  /** The hourly version `evaluation.hourly` holds; a state push leaves the series out when it has not changed. */
+  let hourlyVersion: number | null = null
+
   const onMsg = (m: ServerMsg) => {
     const s = store.getState()
     switch (m.t) {
-      case 'state':
-        store.setState({ plan: m.plan, evaluation: m.evaluation, history: m.history })
+      case 'state': {
+        // Keeping the same series object lets the hourly charts skip rendering when only other numbers changed.
+        const hourly = m.evaluation.hourly ?? (m.hourlyVersion === hourlyVersion ? s.evaluation?.hourly : undefined)
+        if (!hourly) {
+          post({ t: 'hello' })
+          return
+        }
+        hourlyVersion = m.hourlyVersion
+        store.setState({ plan: m.plan, evaluation: { ...m.evaluation, hourly }, history: m.history })
         return
+      }
       case 'commandResult': {
         const waiter = pending.get(m.id)
         pending.delete(m.id)

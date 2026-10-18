@@ -1,4 +1,4 @@
-import type { Check, EvalDiff, Evaluation, Headline, Status } from '@twin/schema'
+import type { Check, EvalDiff, Evaluation, Headline, HourlySeries, HourlySeriesKey, Status } from '@twin/schema'
 
 export const STATUS_ORDER: Record<Status, number> = { pass: 0, unknown: 1, warn: 2, fail: 3 }
 /** Utilization change inside warn/fail that counts as worse or better. */
@@ -69,4 +69,13 @@ export function diffEvaluations(prev: Evaluation, next: Evaluation): EvalDiff {
     buildWeeksDelta: next.cost.buildWeeks - prev.cost.buildWeeks,
     waterDeltaM3PerDay: next.headline.waterM3PerDayPeak - prev.headline.waterM3PerDayPeak,
   }
+}
+
+/** True when two hourly series hold the same values; lets the server and the local backend skip resending 8760-hour arrays. */
+export function sameHourly(a: HourlySeries, b: HourlySeries): boolean {
+  return (Object.keys(a) as HourlySeriesKey[]).every((key) => {
+    const x = a[key]
+    const y = b[key]
+    return x.length === y.length && x.every((v, i) => v === y[i])
+  })
 }
