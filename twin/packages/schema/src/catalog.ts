@@ -207,7 +207,7 @@ export interface CatalogIndex {
 }
 
 export const RULE_KEYS = [
-  'airDensity', 'airCp', 'airDeltaTK', 'airDeltaTKContained',
+  'airDensity', 'airCp', 'airDeltaTK', 'airDeltaTKContained', 'crahCoilApproachK',
   'distributionEfficiency', 'upsEfficiency', 'transformerEfficiency',
   'miscFacilityFraction', 'crahFanFractionFallback',
   'facilityLoopDeltaTK', 'manifoldHeaderLossFraction', 'balancingValvePumpPenalty',

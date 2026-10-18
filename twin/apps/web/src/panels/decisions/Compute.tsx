@@ -2,7 +2,7 @@ import { useId, useState } from 'react'
 import type { CatalogIndex, Plan, RackEntry, RackGroup } from '@twin/schema'
 import { useTwinStore } from '../../state/store'
 import { CatalogPicker, useCatalog, type Assessment } from '../fields/CatalogPicker'
-import { Field, FieldGroup } from '../fields/Field'
+import { errorMessage, Field, FieldGroup } from '../fields/Field'
 import { coolingAccepted } from './Cooling'
 import s from './decisions.module.css'
 
@@ -58,7 +58,7 @@ function GroupCompute(props: { plan: Plan; group: RackGroup; catalog: CatalogInd
   const track = (result: Promise<void>) =>
     result.then(
       () => setError(null),
-      (e: unknown) => setError(e instanceof Error ? e.message : String(e)),
+      (e: unknown) => setError(errorMessage(e)),
     )
   return (
     <FieldGroup title={<GroupName group={group} onResult={track} />} subject={group.name} target={`group:${group.id}`} meta={placedSummary(plan, group.id)}>
@@ -124,7 +124,7 @@ function NewGroup({ catalog }: { catalog: CatalogIndex }) {
             setName('')
             setError(null)
           },
-          (err: unknown) => setError(err instanceof Error ? err.message : String(err)),
+          (err: unknown) => setError(errorMessage(err)),
         )
       }}
     >

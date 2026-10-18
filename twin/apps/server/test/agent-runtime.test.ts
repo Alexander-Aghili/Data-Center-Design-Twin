@@ -25,6 +25,8 @@ import type { AgentRuntime, PlanStore, StoreChange } from '../src/contracts'
 type Step =
   | { content: BetaContentBlock[]; stop_reason: FinalMessage['stop_reason']; stop_details?: BetaRefusalStopDetails; gate?: Promise<void> }
   | { error: Error }
+  /** Streams some text, then fails mid-stream. */
+  | { partial: string; error: Error }
 
 const text = (t: string): BetaContentBlock => ({ type: 'text', text: t, citations: null })
 const toolUse = (id: string, name: string, input: unknown): BetaContentBlock => ({ type: 'tool_use', id, name, input })
@@ -49,6 +51,17 @@ function fakeClient(script: Step[]) {
           requests.push({ ...params, messages: [...params.messages] })
           const step = script.shift()
           if (!step) throw new Error('fake client: script exhausted')
+          if ('partial' in step) {
+            const fail = Promise.reject(step.error)
+            fail.catch(() => undefined)
+            return {
+              async *[Symbol.asyncIterator](): AsyncGenerator<BetaRawMessageStreamEvent> {
+                yield { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: step.partial } }
+                throw step.error
+              },
+              finalMessage: () => fail,
+            }
+          }
           const run = async (): Promise<FinalMessage> => {
             if ('error' in step) throw step.error
             await step.gate
@@ -235,7 +248,8 @@ describe('agent runtime', () => {
       { type: 'object', properties: {} },
       { type: 'object', properties: {} },
     ])
-    expect(params.tools?.every((t) => 'eager_input_streaming' in t && t.eager_input_streaming)).toBe(true)
+    // tool input is small JSON; the API buffers and validates it, so the SDK never meets unparseable input
+    expect(params.tools?.some((t) => 'eager_input_streaming' in t)).toBe(false)
     expect(params.messages).toEqual([{ role: 'user', content: 'hi' }])
   })
 
@@ -388,6 +402,28 @@ describe('agent runtime', () => {
       expect(rec.events.find((e) => e.kind === 'messageStart')).toMatchObject({ trigger: 'observation', severity: 'info' })
     })
 
+    it('a burst of user edits is diffed without the agent edits made inside the window', async () => {
+      vi.useFakeTimers()
+      const { client, requests } = fakeClient([reply('Rack heat got worse.'), reply('UPS got worse.')])
+      const rt = createAgentRuntime({ store: fakeStore(), tools: [], client, dataDir, diff: testDiff })
+      const rec = recorder(rt)
+      const a = evaluation([check('cooling.rackHeatLimit:g2', 'warn'), check('power.ups:site', 'pass'), check('layout.floorBay:B4-4', 'pass')])
+      const b = evaluation([check('cooling.rackHeatLimit:g2', 'warn'), check('power.ups:site', 'pass'), check('layout.floorBay:B4-4', 'fail')])
+      const c = evaluation([check('cooling.rackHeatLimit:g2', 'warn'), check('power.ups:site', 'fail'), check('layout.floorBay:B4-4', 'fail')])
+      rt.handleChange(change(base, a, 'user edit 1'))
+      await vi.advanceTimersByTimeAsync(300)
+      rt.handleChange(change(a, b, 'agent edit', 'agent'))
+      await vi.advanceTimersByTimeAsync(300)
+      rt.handleChange(change(b, c, 'user edit 2'))
+      await vi.advanceTimersByTimeAsync(1600)
+      await rec.turnsDone(2)
+      const sent = requests.map(lastUserText).join('\n')
+      expect(sent).toContain('cooling.rackHeatLimit:g2')
+      expect(sent).toContain('power.ups:site')
+      expect(sent).not.toContain('layout.floorBay:B4-4')
+      expect(sent).not.toContain('agent edit')
+    })
+
     it('severity problem when any worsened check is fail', async () => {
       vi.useFakeTimers()
       const { client } = fakeClient([reply('UPS is close to its limit.'), reply('Rack heat now fails.')])
@@ -432,7 +468,51 @@ describe('agent runtime', () => {
       await vi.advanceTimersByTimeAsync(2000)
       await rec.turnsDone(1)
       expect(requests).toHaveLength(2)
-      expect(rec.events.some((e) => e.kind === 'textDelta')).toBe(true)
+      expect(rec.events.flatMap((e) => (e.kind === 'textDelta' ? [e.text] : [])).join('')).toBe('Done.')
+    })
+
+    it('text streamed before a mid-stream failure is never repeated by a retry', async () => {
+      const limited = new Anthropic.RateLimitError(429, { type: 'error' }, 'rate limited', new Headers({ 'retry-after': '1' }))
+      const { client, requests } = fakeClient([{ partial: 'The worst-hour PUE ', error: limited }, reply('Back.')])
+      const rt = createAgentRuntime({ store: fakeStore(), tools: [], client, dataDir })
+      const rec = recorder(rt)
+      rt.handleChat('pue?')
+      await rec.turnsDone(1)
+      expect(requests).toHaveLength(1)
+      const messageId = rec.events.find((e) => e.kind === 'messageStart')?.messageId
+      const shown = rec.events.flatMap((e) => (e.kind === 'textDelta' && e.messageId === messageId ? [e.text] : [])).join('')
+      expect(shown).toBe('The worst-hour PUE ')
+      expect(rec.events).toContainEqual({ kind: 'error', messageId, message: 'Rate limited by the Claude API. Try again in a minute.' })
+      expect(rt.threadEvents()).toContainEqual({ kind: 'textDelta', messageId, text: 'The worst-hour PUE ' })
+      rt.handleChat('again')
+      await rec.turnsDone(2)
+      expect(requests).toHaveLength(2)
+    })
+
+    it('a missing API key surfaces at once, without calling the API', async () => {
+      vi.stubEnv('ANTHROPIC_API_KEY', undefined)
+      vi.stubEnv('ANTHROPIC_AUTH_TOKEN', undefined)
+      try {
+        const rt = createAgentRuntime({ store: fakeStore(), tools: [], dataDir })
+        const rec = recorder(rt)
+        rt.handleChat('hi')
+        await rec.waitFor((e) => e.kind === 'error')
+        expect(rec.events.map((e) => e.kind)).toEqual(['userMessage', 'error'])
+        expect(rec.events[1]).toEqual({ kind: 'error', message: 'The agent needs an API key in .env' })
+      } finally {
+        vi.unstubAllEnvs()
+      }
+    })
+
+    it('an SDK error that is not an API error is reported once, not re-issued', async () => {
+      const { client, requests } = fakeClient([{ error: new Anthropic.AnthropicError('Could not resolve authentication method.') }])
+      const rt = createAgentRuntime({ store: fakeStore(), tools: [], client, dataDir })
+      const rec = recorder(rt)
+      rt.handleChat('hi')
+      await rec.waitFor((e) => e.kind === 'error')
+      await new Promise((r) => setTimeout(r, 20))
+      expect(requests).toHaveLength(1)
+      expect(rec.events.filter((e) => e.kind === 'error')).toHaveLength(1)
     })
 
     it('the real client lets the SDK retry 429s with backoff', () => {
@@ -710,7 +790,7 @@ describe('agent runtime with the real tools, registry and engine', () => {
     const sent = requests[0]!.tools ?? []
     expect(sent).toHaveLength(tools.length)
     for (const t of sent) {
-      expect(t).toMatchObject({ input_schema: { type: 'object' }, eager_input_streaming: true })
+      expect(t).toMatchObject({ input_schema: { type: 'object' } })
       expect('input_schema' in t && '$schema' in t.input_schema).toBe(false)
     }
 

@@ -5,18 +5,11 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { createAgentRuntime } from '../src/agent/runtime'
 import { buildTools, ProposalBook } from '../src/agent/tools/index'
-import type { PlanStore } from '../src/contracts'
+import { createPlanStore } from '../src/store'
 
 // Live Claude API test (~$0.20). Runs only with RUN_LIVE_AGENT=1 and a key in the repo-root .env.
 const ENV_FILE = '/Users/linushabetha/Data-Center-Design-Twin/.env'
 const LIVE = process.env.RUN_LIVE_AGENT === '1' && existsSync(ENV_FILE)
-
-// The plan store (Task 12) is built on a parallel branch. It is loaded by path at run time so this file
-// type-checks before it is merged; the shape below is its contract.
-interface StoreModule {
-  createPlanStore(opts: { dataDir: string }): PlanStore
-}
-const load = <T,>(specifier: string) => import(/* @vite-ignore */ specifier) as Promise<T>
 
 function messageText(events: AgentEvent[], messageId: string): string {
   return events.flatMap((e) => (e.kind === 'textDelta' && e.messageId === messageId ? [e.text] : [])).join('')
@@ -27,7 +20,6 @@ describe.skipIf(!LIVE)('agent live', () => {
     process.loadEnvFile(ENV_FILE)
     const dataDir = mkdtempSync(join(tmpdir(), 'agent-live-'))
     try {
-      const { createPlanStore } = await load<StoreModule>('../src/store')
       const store = createPlanStore({ dataDir })
       const viewListeners = new Set<(a: ViewAction) => void>()
       const proposals = new ProposalBook(store)

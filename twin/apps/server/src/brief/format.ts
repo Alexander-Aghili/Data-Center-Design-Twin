@@ -11,6 +11,12 @@ export function watts(value: number | null | undefined): string {
   return fixed(value, 0)
 }
 
+/** Four significant figures without trailing zeros (0.9 stays "0.9", 946400 stays "946400"). */
+export function significant(value: number | null | undefined, digits = 4): string {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return DASH
+  return Math.abs(value) >= 10 ** digits ? value.toFixed(0) : String(Number(value.toPrecision(digits)))
+}
+
 export function range(from: number, to: number, decimals = 2): string {
   return `${fixed(from, decimals)}–${fixed(to, decimals)}`
 }

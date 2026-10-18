@@ -90,6 +90,11 @@ export class ChangeCoalescer {
     this.#timer = setTimeout(() => this.#flush(), OBSERVATION_DEBOUNCE_MS)
   }
 
+  /** Closes the current burst now, so a change that is not the person's never lands inside its diff. */
+  cut(): void {
+    this.#flush()
+  }
+
   clear(): void {
     if (this.#timer) clearTimeout(this.#timer)
     this.#timer = null

@@ -8,6 +8,35 @@ export interface AirSideResult {
   metrics: Metric[]
   /** Air heat per CRAH position id, in W. */
   crahLoads: Record<string, number>
+  /** The input racks with `airInletC` and `airOutletC` filled in. */
+  racks: RackResult[]
+}
+
+/** CRAH supply air is not run below the ASHRAE recommended inlet envelope's 18 °C lower bound. */
+const MIN_AIR_INLET_C = 18
+
+/**
+ * Room air at each rack. Inlet: the CRAH coils cool air to the facility supply plus the coil approach,
+ * never below 18 °C. Outlet: inlet plus the room-air ΔT, scaled up by how far the rack's air heat exceeds
+ * its cooling method's per-rack rating, so overloaded air racks run visibly hot. A rack with no air heat
+ * passes no air, so its outlet equals its inlet. Unknown inputs leave the temperature null.
+ */
+function withAirTemperatures(ctx: EvalContext, racks: RackResult[]): RackResult[] {
+  const approach = rule(ctx, 'crahCoilApproachK')
+  const deltaT = airDeltaTK(ctx)
+  const inlet = approach === null ? null : Math.max(MIN_AIR_INLET_C, ctx.plan.cooling.facilitySupplyC + approach)
+  const limits = new Map(
+    ctx.plan.rackGroups.map((g) => {
+      const { method } = groupEntries(ctx, g.id)
+      return [g.id, method ? num(method.maxRackW) : null]
+    }),
+  )
+  return racks.map((r) => {
+    if (inlet === null || r.airW === 0) return { ...r, airInletC: inlet, airOutletC: inlet }
+    const overload = ratio(r.airW, limits.get(r.groupId) ?? null)
+    const outlet = deltaT === null || overload === null ? null : inlet + deltaT * Math.max(1, overload)
+    return { ...r, airInletC: inlet, airOutletC: outlet }
+  })
 }
 
 /** Per rack group: the hottest rack's heat against the cooling method's per-rack limit. */
@@ -43,7 +72,7 @@ function rackHeatLimitChecks(ctx: EvalContext, racks: RackResult[]): Check[] {
   })
 }
 
-/** Airflow, CRAH zone loads and rack air limits (Task 8). */
+/** Airflow, CRAH zone loads, rack air limits and rack air temperatures (Task 8). */
 export function airSide(ctx: EvalContext, racks: RackResult[]): AirSideResult {
   const { hall } = ctx.plan
   const rows = hall.rows.map((row) => ({ rowId: row.id, airW: sumBy(racks.filter((r) => r.rowId === row.id), (r) => r.airW) }))
@@ -70,6 +99,7 @@ export function airSide(ctx: EvalContext, racks: RackResult[]): AirSideResult {
   return {
     rows,
     crahLoads,
+    racks: withAirTemperatures(ctx, racks),
     checks: rackHeatLimitChecks(ctx, racks),
     metrics: [
       metric('cooling.airW', 'Heat to room air', airW, 'W', inputs, 'air'),

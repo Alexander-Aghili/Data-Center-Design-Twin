@@ -15,10 +15,10 @@ export function Select<T extends string>(props: {
   /** Label element id when used outside a `Field`. */
   labelledBy?: string
 }) {
-  const { labelId, run } = useField()
+  const { a11y, run } = useField()
   const name = useId()
   return (
-    <div role="radiogroup" aria-labelledby={props.labelledBy ?? labelId} className={s.segments}>
+    <div role="radiogroup" {...a11y} aria-labelledby={props.labelledBy ?? a11y['aria-labelledby']} className={s.segments}>
       {props.options.map((o) => (
         <label key={o.value} className={s.segment}>
           <input

@@ -15,9 +15,8 @@ const MIN_NEAR_M = 0.01
 const MAX_NEAR_M = 1
 // The user may zoom in to 10 cm, close enough to read a quick disconnect.
 const MIN_DISTANCE_M = 0.1
-// Models move a frame or two after the state that moves them (React commits, then the tray slides), so a resting
-// shot keeps re-framing for a few frames after the scene or the open rack changes.
-const REFRAME_FRAMES = 10
+// camera-controls' own default damping, restored for the user once a choreographed move settles or is grabbed.
+const USER_SMOOTH_TIME_S = 0.25
 
 function waypointOf(s: TwinState): Waypoint | null {
   if (!s.plan) return null
@@ -33,7 +32,8 @@ export function CameraRig() {
   const controls = useRef<CameraControlsImpl>(null)
   const choreography = useRef<Choreography | null>(null)
   const fovGoal = useRef({ fov: 0, smoothTimeS: 0 })
-  const reframeFrames = useRef(0)
+  // Set by registry and openness changes; handled once per frame so a burst of registrations costs one re-resolve.
+  const sceneChanged = useRef(true)
   const onSceneChange = useRef<() => void>(() => {})
   const camera = useThree((s) => s.camera)
   const canvas = useThree((s) => s.gl.domElement)
@@ -93,9 +93,12 @@ export function CameraRig() {
     }
 
     follow(useTwinStore.getState())
-    const unsubscribe = useTwinStore.subscribe(follow)
+    // Only what the shot depends on; hover, chat and the like never reach resolveFocus.
+    const unsubscribe = useTwinStore.subscribe((s, prev) => {
+      if (s.shot !== prev.shot || s.selection !== prev.selection || s.plan !== prev.plan || s.evaluation !== prev.evaluation) follow(s)
+    })
     const markChanged = () => {
-      reframeFrames.current = REFRAME_FRAMES
+      sceneChanged.current = true
     }
     markChanged()
     const unsubscribeScene = useSceneRegistry.subscribe(markChanged)
@@ -107,27 +110,36 @@ export function CameraRig() {
         const tray = trayOf(open.placementId)
         if (tray !== null) useRackOpenness.setState({ tray })
       }
-      choreography.current?.refresh()
+      choreography.current?.invalidate()
     }
-    const release = () => choreography.current?.cancel()
+    const restoreUserDamping = () => {
+      cc.smoothTime = USER_SMOOTH_TIME_S
+    }
+    const release = () => {
+      choreography.current?.cancel()
+      restoreUserDamping()
+    }
     cc.addEventListener('controlstart', release)
+    cc.addEventListener('rest', restoreUserDamping)
     return () => {
       unsubscribe()
       unsubscribeScene()
       unsubscribeOpenness()
       onSceneChange.current = () => {}
       cc.removeEventListener('controlstart', release)
+      cc.removeEventListener('rest', restoreUserDamping)
       choreography.current = null
       canvas.style.opacity = ''
+      useRackOpenness.setState({ placementId: null, tray: null, value: 0 })
     }
   }, [camera, canvas])
 
   useFrame((_, dt) => {
-    choreography.current?.tick(dt)
-    if (reframeFrames.current > 0) {
-      reframeFrames.current -= 1
+    if (sceneChanged.current) {
+      sceneChanged.current = false
       onSceneChange.current()
     }
+    choreography.current?.tick(dt)
     const cc = controls.current
     if (!cc || !(camera instanceof PerspectiveCamera)) return
     const { fov, smoothTimeS } = fovGoal.current

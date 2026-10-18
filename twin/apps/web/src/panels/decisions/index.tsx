@@ -31,7 +31,7 @@ export function DecisionPanel(props: { layer: LayerId }) {
     <section className={s.panel} aria-labelledby={headingId}>
       <h2 id={headingId} className={`section-title ${s.heading}`}>
         <span>{title} decisions</span>
-        {owner && owner.initials !== '—' && <span className={s.owner}>{owner.name}</span>}
+        {owner && <span className={s.owner}>{owner.name}</span>}
       </h2>
       {plan ? (
         <>

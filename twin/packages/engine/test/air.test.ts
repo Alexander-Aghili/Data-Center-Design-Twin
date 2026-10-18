@@ -63,4 +63,36 @@ describe('air side', () => {
     expect(result.checks).toEqual([])
     for (const m of result.metrics) expect(m.value === null || Number.isFinite(m.value)).toBe(true)
   })
+
+  describe('rack air temperatures (coordinator ruling a)', () => {
+    const approach = rules.crahCoilApproachK.value!
+    const rack = (r: ReturnType<typeof airSide>, groupId: string) => r.racks.find((x) => x.groupId === groupId)!
+
+    it('inlet is facility supply + coil approach, never below 18 °C; outlet adds the contained ΔT', () => {
+      const cold = rack(run(makePlan([airGroup], { cooling: { ...makePlan([]).cooling, facilitySupplyC: 10 } })), 'g1')
+      expect(cold.airInletC).toBe(18)
+      const warm = rack(run(makePlan([airGroup], { cooling: { ...makePlan([]).cooling, facilitySupplyC: 32 } })), 'g1')
+      expect(warm.airInletC).toBe(32 + approach)
+      expect(warm.airOutletC).toBe(32 + approach + rules.airDeltaTKContained.value!)
+    })
+
+    it('uses the open-room ΔT without containment and scales it by the air overload', () => {
+      const plan = makePlan([{ ...airGroup, rackTypeId: gb300.id }], { cooling: { ...makePlan([]).cooling, containment: 'none' } })
+      const r = rack(run(plan), 'g1')
+      expect(r.airOutletC! - r.airInletC!).toBeCloseTo(rules.airDeltaTK.value! * (132_000 / 40_000), 9)
+    })
+
+    it('a DLC rack within its rating gets the plain ΔT on its residual air', () => {
+      const r = rack(run(makePlan([{ ...airGroup, rackTypeId: gb300.id, coolingMethodId: RACK_COOLING.DLC_1P }])), 'g1')
+      expect(r.airOutletC! - r.airInletC!).toBe(rules.airDeltaTKContained.value!)
+    })
+
+    it('a rack with no air heat has its outlet at its inlet', () => {
+      const ctx = makeCtx(makePlan([airGroup]))
+      const allLiquid = makeRacks(ctx).map((r) => ({ ...r, liquidW: r.heatW, airW: 0 }))
+      const r = rack(airSide(ctx, allLiquid), 'g1')
+      expect(r.airInletC).toBe(18 + approach)
+      expect(r.airOutletC).toBe(r.airInletC)
+    })
+  })
 })

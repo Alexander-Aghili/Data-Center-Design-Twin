@@ -19,7 +19,7 @@ export function NumberInput(props: {
   /** Smallest value excluded, for quantities that must be positive. */
   above?: number
 }) {
-  const { controlId, setError, run } = useField()
+  const { controlId, a11y, setError, run } = useField()
   const scale = props.scale ?? 1
   const [draft, setDraft] = useState<string | null>(null)
 
@@ -45,6 +45,7 @@ export function NumberInput(props: {
     <span className={s.number}>
       <input
         id={controlId}
+        {...a11y}
         type="text"
         inputMode="decimal"
         autoComplete="off"
