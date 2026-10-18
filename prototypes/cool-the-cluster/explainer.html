@@ -1,0 +1,351 @@
+<title>Cool the Cluster</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column (~68ch) with full-width figures and tables; a facility drawing as the anchor image. */
+:root {
+  --bg: #F2F5F7;
+  --surface: #FFFFFF;
+  --fg: #14212B;
+  --muted: #566775;
+  --line: #D3DCE2;
+  --accent: #0B7480;          /* coolant */
+  --heat: #B8501A;            /* hot aisle / exhaust */
+  --heat-soft: #F6E3D8;
+  --cold-soft: #DCEEF0;
+  --job-a: #0B7480;
+  --job-b: #4757B8;
+  --job-s: #9A6B12;
+  --spine: #14212B;
+  --storage: #8696A3;
+  --good: #2F7D4A;
+  --warn: #A86B00;
+  --bad: #B23A2E;
+  --display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", sans-serif;
+  --body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E151B; --surface: #151F27; --fg: #E4ECF1; --muted: #93A4B2; --line: #283643;
+    --accent: #3DB6C1; --heat: #EE7F45; --heat-soft: #3A2419; --cold-soft: #12303A;
+    --job-a: #3DB6C1; --job-b: #8E9CF2; --job-s: #E0AE4C; --spine: #E4ECF1; --storage: #6D7E8B;
+    --good: #5CC283; --warn: #E3A23A; --bad: #F07468;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E151B; --surface: #151F27; --fg: #E4ECF1; --muted: #93A4B2; --line: #283643;
+  --accent: #3DB6C1; --heat: #EE7F45; --heat-soft: #3A2419; --cold-soft: #12303A;
+  --job-a: #3DB6C1; --job-b: #8E9CF2; --job-s: #E0AE4C; --spine: #E4ECF1; --storage: #6D7E8B;
+  --good: #5CC283; --warn: #E3A23A; --bad: #F07468;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font: 400 16px/1.6 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 980px; margin: 0 auto; padding-block: 48px 72px; display: grid; gap: 56px; }
+.prose { max-width: 68ch; }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; letter-spacing: .01em; text-wrap: balance; margin: 0; line-height: 1.05; }
+h1 { font-size: clamp(2.6rem, 6vw, 4.2rem); font-weight: 700; text-transform: uppercase; letter-spacing: .02em; }
+h2 { font-size: 1.9rem; text-transform: uppercase; letter-spacing: .03em; }
+h3 { font-size: 1.3rem; }
+p { margin: 0; }
+section { display: grid; gap: 18px; min-width: 0; }
+.eyebrow { font: 500 .78rem/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.lede { font-size: 1.18rem; line-height: 1.55; max-width: 62ch; }
+.muted { color: var(--muted); }
+code, .mono { font-family: var(--mono); font-size: .9em; }
+.num { font-variant-numeric: tabular-nums; font-family: var(--mono); }
+
+header.top { display: grid; gap: 18px; padding-bottom: 28px; border-bottom: 2px solid var(--fg); }
+.stamp { display: flex; flex-wrap: wrap; gap: 8px 22px; font: 400 .82rem/1.4 var(--mono); color: var(--muted); }
+.stamp b { color: var(--fg); font-weight: 500; }
+
+.tbl { overflow-x: auto; border-top: 1px solid var(--line); }
+table { width: 100%; border-collapse: collapse; font-size: .93rem; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--line); }
+th { font: 500 .74rem/1.3 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+td:first-child { font-weight: 600; white-space: nowrap; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+
+.asked { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0; border-top: 1px solid var(--line); }
+.asked > div { padding: 16px 18px 18px 0; border-bottom: 1px solid var(--line); display: grid; gap: 6px; min-width: 0; }
+.asked q { quotes: none; font-style: italic; color: var(--muted); }
+.asked q::before { content: "“"; } .asked q::after { content: "”"; }
+
+.engine { display: grid; grid-template-columns: 1fr auto 1.2fr auto 1fr; align-items: center; gap: 14px; }
+.engine .box { border: 1.5px solid var(--fg); padding: 14px 16px; background: var(--surface); display: grid; gap: 4px; min-width: 0; }
+.engine .core { border-color: var(--accent); border-width: 2px; }
+.engine .core h3 { color: var(--accent); }
+.engine .arrow { font: 500 1.4rem/1 var(--mono); color: var(--muted); }
+.uses { display: grid; gap: 10px; }
+@media (max-width: 760px) {
+  .engine { grid-template-columns: 1fr; }
+  .engine .arrow { transform: rotate(90deg); justify-self: center; }
+}
+
+figure { margin: 0; display: grid; gap: 10px; min-width: 0; }
+.fp-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); padding: 10px; }
+svg.fp { width: 100%; min-width: 640px; height: auto; display: block; font-family: var(--mono); }
+.fp .aisle-cold { fill: var(--cold-soft); }
+.fp .aisle-hot { fill: var(--heat-soft); }
+.fp .contain { fill: none; stroke: var(--heat); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.fp .aisle-lbl { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.fp .aisle-lbl.hot { fill: var(--heat); } .fp .aisle-lbl.cold { fill: var(--accent); }
+.fp .crah { stroke: var(--accent); stroke-width: 5; }
+.fp .cap { font-size: 11px; fill: var(--muted); }
+.fp .rack rect { stroke: var(--bg); stroke-width: 1; }
+.fp .rack text { font-size: 9.5px; font-weight: 500; fill: var(--bg); }
+.fp .k-train_a rect { fill: var(--job-a); } .fp .k-train_b rect { fill: var(--job-b); }
+.fp .k-serve rect { fill: var(--job-s); } .fp .k-spine rect { fill: var(--spine); } .fp .k-storage rect { fill: var(--storage); }
+.fp .blocked { fill: none; stroke: var(--muted); stroke-dasharray: 2 3; }
+.fp .cdu rect { fill: var(--surface); stroke: var(--accent); stroke-width: 2; }
+.fp .cdu text { font-size: 10px; font-weight: 500; fill: var(--accent); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font: 400 .8rem/1.4 var(--mono); color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legend i { width: 14px; height: 9px; display: inline-block; }
+figcaption { font-size: .9rem; color: var(--muted); max-width: 72ch; }
+
+.score { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0; border-top: 2px solid var(--fg); }
+.score > div { padding: 16px 16px 16px 0; display: grid; gap: 4px; border-bottom: 1px solid var(--line); }
+.score .big { font: 600 2.6rem/1 var(--display); font-variant-numeric: tabular-nums; }
+.score .big.acc { color: var(--accent); }
+
+.pill { display: inline-block; font: 500 .72rem/1 var(--mono); letter-spacing: .05em; text-transform: uppercase; padding: 4px 7px; border: 1px solid currentColor; white-space: nowrap; }
+.pill.high { color: var(--bad); } .pill.med { color: var(--warn); } .pill.ok { color: var(--good); }
+
+.share { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.share > div { border: 1px solid var(--line); background: var(--surface); padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+pre { margin: 0; background: var(--surface); border: 1px solid var(--line); padding: 14px 16px; overflow-x: auto; font: 400 .85rem/1.55 var(--mono); }
+ul.plain { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="wrap">
+
+<header class="top">
+  <div class="eyebrow">AutoLab hill · data center digital twin</div>
+  <h1>Cool the Cluster</h1>
+  <p class="lede">A simulator of one AI data hall that scores any design on a single number: <b>energy per unit of useful GPU work</b>. Agents on AutoLab use it to search for better designs. A tracker uses the same simulator to read sensor data, spot what is degrading, predict where it leads, and rank fixes.</p>
+  <div class="stamp">
+    <span>hall <b>30 racks · ~1 MW IT</b></span>
+    <span>GPUs <b>768</b></span>
+    <span>eval <b>~14 ms</b></span>
+    <span>checks <b>21 / 21 passing</b></span>
+    <span>built <b>2026-10-18</b></span>
+  </div>
+</header>
+
+<section>
+  <div class="eyebrow">Where this came from</div>
+  <h2>What you asked, what got built</h2>
+  <div class="asked">
+    <div><q>teach me about fiber optics and organizing data centers so they are more efficient</q><p>Fiber became one of the twin's six dimensions. Each rack picks an optical module, which sets power, reach and latency. The spine picks packet, co-packaged optics, or an optical circuit switch.</p></div>
+    <div><q>a digital twin… so we can track and predict how things will change and suggest possible changes</q><p>One simulator with three jobs. It scores designs (the hill), calibrates to sensor data (the tracker), and re-runs itself for each candidate fix (suggestions).</p></div>
+    <div><q>rack layout, heating and cooling, latency of the rack layout, networking equipment, quality of pipes</q><p>Each one is modeled and coupled to the others: placement, recirculation and chillers, cable-length latency, the optics and switch catalog, and pipe friction and fouling.</p></div>
+    <div><q>tracking them and optimizing them</q><p>Optimizing: AutoLab agents edit a design file and climb the score. Tracking: a script reads telemetry and outputs findings, a forecast and ranked fixes.</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">How it works</div>
+  <h2>One engine, three uses</h2>
+  <div class="engine">
+    <div class="box"><span class="eyebrow">input</span><h3>A hall design</h3><p class="muted">Rack slots, jobs, optics, spine type, setpoints, containment, pipe per rack. One JSON file.</p></div>
+    <div class="arrow" aria-hidden="true">→</div>
+    <div class="box core"><span class="eyebrow">twin.py</span><h3>The digital twin</h3><p class="muted">Simulates 5 scenarios × 24 h: summer, winter, inference peak, MoE all-to-all, 5-year-aged summer. It checks every hard limit, then returns kWh per rack-hour of work.</p></div>
+    <div class="arrow" aria-hidden="true">→</div>
+    <div class="uses">
+      <div class="box"><h3>Optimize</h3><p class="muted">AutoLab hill. Agents climb the score.</p></div>
+      <div class="box"><h3>Track + predict</h3><p class="muted">Calibrate to sensors, project +30 and +90 days.</p></div>
+      <div class="box"><h3>Suggest</h3><p class="muted">Re-run per fix, rank by MWh/yr saved.</p></div>
+    </div>
+  </div>
+  <p class="prose muted">The score is energy <i>per unit of work</i>, not raw energy. A hall that saves power by letting GPUs throttle, or by using a slower network, does less work, and the score catches it.</p>
+</section>
+
+<section>
+  <div class="eyebrow">The six dimensions</div>
+  <h2>What it tracks, models and optimizes</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Dimension</th><th>Tracked from sensors</th><th>How the twin models it</th><th>What a design can change</th></tr></thead>
+    <tbody>
+      <tr><td>Rack layout</td><td>Slot, rack type, row power</td><td>12 × 6 slot floor, 4 blocked slots, 230 kW per row busway. Distance sets cable length, pipe length and hot-air recirculation.</td><td>Slot of all 30 racks; which racks form each job</td></tr>
+      <tr><td>Heat &amp; cooling</td><td>Rack inlet °C, CRAH fans, chiller kW, outdoor wet bulb</td><td>Inlet = supply air + Σ recirculation from neighbours. Hot spots form at row ends. Containment cuts recirculation by 85%. Fans follow the cube law. Free cooling runs when the outdoor air allows, with a chiller otherwise.</td><td>Supply-air and coolant setpoints (per season); containment per hot aisle</td></tr>
+      <tr><td>Pipes</td><td>Branch ΔP, coolant °C, GPU junction °C</td><td>Darcy–Weisbach friction per branch. Pump head ≤ 185 kPa. Flow 0.5–2.0 m/s. Five-year aging fouls cold plates by 6% for copper, 2% for stainless and 15% for PEX.</td><td>CDU, pipe size (DN25/32/40) and material per rack</td></tr>
+      <tr><td>Network &amp; fiber</td><td>Optic Tx bias, Rx power, module temp</td><td>Six modules: copper DAC, AEC, SR8, DR8, LPO-SR8 and LPO-DR8, each with reach, watts and cost. Spine is packet, CPO or OCS. LPO reach is derated more for aging.</td><td>Module per rack, spine type, within a $1.05M budget</td></tr>
+      <tr><td>Latency</td><td>Link latency, step time</td><td>Two leaf hops + spine + module DSP time + 4.9 ns per metre of cable. The serving job has a hard 1.95 µs limit.</td><td>Follows from layout and gear</td></tr>
+      <tr><td>Work done</td><td>Throttle events, step time</td><td>GPUs slow 4% per °C above 87 °C, and a job runs at its slowest rack. Communication not hidden by compute adds to each step. OCS halves all-to-all bandwidth.</td><td>Follows from everything above</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <div class="eyebrow">Result of a 2,000-step search</div>
+  <h2>The hall it found</h2>
+  <div class="score">
+    <div><span class="eyebrow">random starting layout</span><span class="big num">1.000</span><span class="muted">51.42 kWh per rack-hour</span></div>
+    <div><span class="eyebrow">best found (3 seeds)</span><span class="big num acc">0.967</span><span class="muted">≈ 3.3% less energy for the same work</span></div>
+    <div><span class="eyebrow">final pass (15-min steps)</span><span class="big num">0.967</span><span class="muted">holds at finer resolution</span></div>
+  </div>
+  <figure>
+    <div class="fp-wrap"><svg viewBox="0 0 786 567" role="img" aria-labelledby="fp-t" class="fp">
+<title id="fp-t">Floor plan of the optimized hall: six rows of racks, three contained hot aisles, three CDUs</title>
+<rect class="aisle-cold" x="70.0" y="34.0" width="52.8" height="492.8"/>
+<text class="aisle-lbl cold" transform="translate(100.4,280.4) rotate(-90)" text-anchor="middle">cold aisle</text>
+<rect class="aisle-hot" x="175.6" y="34.0" width="52.8" height="492.8"/>
+<rect class="contain" x="175.6" y="45.0" width="52.8" height="470.8"/>
+<text class="aisle-lbl hot" transform="translate(206.0,280.4) rotate(-90)" text-anchor="middle">hot aisle · contained</text>
+<rect class="aisle-cold" x="281.2" y="34.0" width="52.8" height="492.8"/>
+<text class="aisle-lbl cold" transform="translate(311.6,280.4) rotate(-90)" text-anchor="middle">cold aisle</text>
+<rect class="aisle-hot" x="386.8" y="34.0" width="52.8" height="492.8"/>
+<rect class="contain" x="386.8" y="45.0" width="52.8" height="470.8"/>
+<text class="aisle-lbl hot" transform="translate(417.2,280.4) rotate(-90)" text-anchor="middle">hot aisle · contained</text>
+<rect class="aisle-cold" x="492.4" y="34.0" width="52.8" height="492.8"/>
+<text class="aisle-lbl cold" transform="translate(522.8,280.4) rotate(-90)" text-anchor="middle">cold aisle</text>
+<rect class="aisle-hot" x="598.0" y="34.0" width="52.8" height="492.8"/>
+<rect class="contain" x="598.0" y="45.0" width="52.8" height="470.8"/>
+<text class="aisle-lbl hot" transform="translate(628.4,280.4) rotate(-90)" text-anchor="middle">hot aisle · contained</text>
+<rect class="aisle-cold" x="703.6" y="34.0" width="52.8" height="492.8"/>
+<text class="aisle-lbl cold" transform="translate(734.0,280.4) rotate(-90)" text-anchor="middle">cold aisle</text>
+<line class="crah" x1="70.0" y1="34.0" x2="756.4" y2="34.0"/>
+<line class="crah" x1="70.0" y1="526.8" x2="756.4" y2="526.8"/>
+<text class="cap" x="70.0" y="24.0">CRAH wall · cool air supply</text>
+<text class="cap" x="70.0" y="548.8">CRAH wall · cool air supply</text>
+<rect class="blocked" x="336.0" y="281.9" width="48.8" height="23.4"/>
+<rect class="blocked" x="441.6" y="281.9" width="48.8" height="23.4"/>
+<rect class="blocked" x="652.8" y="123.5" width="48.8" height="23.4"/>
+<rect class="blocked" x="124.8" y="413.9" width="48.8" height="23.4"/>
+<g class="rack k-train_b"><rect x="230.4" y="176.3" width="48.8" height="23.4" rx="2"/><text x="254.8" y="192.0" text-anchor="middle">G00</text></g>
+<g class="rack k-train_a"><rect x="547.2" y="202.7" width="48.8" height="23.4" rx="2"/><text x="571.6" y="218.4" text-anchor="middle">G01</text></g>
+<g class="rack k-train_b"><rect x="124.8" y="202.7" width="48.8" height="23.4" rx="2"/><text x="149.2" y="218.4" text-anchor="middle">G02</text></g>
+<g class="rack k-train_a"><rect x="124.8" y="123.5" width="48.8" height="23.4" rx="2"/><text x="149.2" y="139.2" text-anchor="middle">G03</text></g>
+<g class="rack k-train_b"><rect x="652.8" y="149.9" width="48.8" height="23.4" rx="2"/><text x="677.2" y="165.6" text-anchor="middle">G04</text></g>
+<g class="rack k-train_a"><rect x="547.2" y="176.3" width="48.8" height="23.4" rx="2"/><text x="571.6" y="192.0" text-anchor="middle">G05</text></g>
+<g class="rack k-serve"><rect x="124.8" y="229.1" width="48.8" height="23.4" rx="2"/><text x="149.2" y="244.8" text-anchor="middle">G06</text></g>
+<g class="rack k-train_a"><rect x="230.4" y="123.5" width="48.8" height="23.4" rx="2"/><text x="254.8" y="139.2" text-anchor="middle">G07</text></g>
+<g class="rack k-train_a"><rect x="441.6" y="229.1" width="48.8" height="23.4" rx="2"/><text x="466.0" y="244.8" text-anchor="middle">G08</text></g>
+<g class="rack k-train_a"><rect x="547.2" y="149.9" width="48.8" height="23.4" rx="2"/><text x="571.6" y="165.6" text-anchor="middle">G09</text></g>
+<g class="rack k-train_a"><rect x="547.2" y="123.5" width="48.8" height="23.4" rx="2"/><text x="571.6" y="139.2" text-anchor="middle">G10</text></g>
+<g class="rack k-train_b"><rect x="441.6" y="202.7" width="48.8" height="23.4" rx="2"/><text x="466.0" y="218.4" text-anchor="middle">G11</text></g>
+<g class="rack k-train_b"><rect x="336.0" y="334.7" width="48.8" height="23.4" rx="2"/><text x="360.4" y="350.4" text-anchor="middle">G12</text></g>
+<g class="rack k-serve"><rect x="336.0" y="123.5" width="48.8" height="23.4" rx="2"/><text x="360.4" y="139.2" text-anchor="middle">G13</text></g>
+<g class="rack k-serve"><rect x="441.6" y="123.5" width="48.8" height="23.4" rx="2"/><text x="466.0" y="139.2" text-anchor="middle">G14</text></g>
+<g class="rack k-serve"><rect x="230.4" y="255.5" width="48.8" height="23.4" rx="2"/><text x="254.8" y="271.2" text-anchor="middle">G15</text></g>
+<g class="rack k-train_b"><rect x="547.2" y="334.7" width="48.8" height="23.4" rx="2"/><text x="571.6" y="350.4" text-anchor="middle">G16</text></g>
+<g class="rack k-train_a"><rect x="124.8" y="176.3" width="48.8" height="23.4" rx="2"/><text x="149.2" y="192.0" text-anchor="middle">G17</text></g>
+<g class="rack k-train_a"><rect x="230.4" y="308.3" width="48.8" height="23.4" rx="2"/><text x="254.8" y="324.0" text-anchor="middle">G18</text></g>
+<g class="rack k-train_b"><rect x="336.0" y="202.7" width="48.8" height="23.4" rx="2"/><text x="360.4" y="218.4" text-anchor="middle">G19</text></g>
+<g class="rack k-train_a"><rect x="336.0" y="229.1" width="48.8" height="23.4" rx="2"/><text x="360.4" y="244.8" text-anchor="middle">G20</text></g>
+<g class="rack k-train_b"><rect x="336.0" y="176.3" width="48.8" height="23.4" rx="2"/><text x="360.4" y="192.0" text-anchor="middle">G21</text></g>
+<g class="rack k-train_a"><rect x="230.4" y="281.9" width="48.8" height="23.4" rx="2"/><text x="254.8" y="297.6" text-anchor="middle">G22</text></g>
+<g class="rack k-train_a"><rect x="124.8" y="149.9" width="48.8" height="23.4" rx="2"/><text x="149.2" y="165.6" text-anchor="middle">G23</text></g>
+<g class="rack k-spine"><rect x="441.6" y="176.3" width="48.8" height="23.4" rx="2"/><text x="466.0" y="192.0" text-anchor="middle">N0</text></g>
+<g class="rack k-spine"><rect x="230.4" y="149.9" width="48.8" height="23.4" rx="2"/><text x="254.8" y="165.6" text-anchor="middle">N1</text></g>
+<g class="rack k-storage"><rect x="441.6" y="255.5" width="48.8" height="23.4" rx="2"/><text x="466.0" y="271.2" text-anchor="middle">S0</text></g>
+<g class="rack k-storage"><rect x="124.8" y="334.7" width="48.8" height="23.4" rx="2"/><text x="149.2" y="350.4" text-anchor="middle">S1</text></g>
+<g class="rack k-storage"><rect x="652.8" y="202.7" width="48.8" height="23.4" rx="2"/><text x="677.2" y="218.4" text-anchor="middle">S2</text></g>
+<g class="rack k-storage"><rect x="652.8" y="413.9" width="48.8" height="23.4" rx="2"/><text x="677.2" y="429.6" text-anchor="middle">S3</text></g>
+<g class="cdu"><rect x="180.0" y="48.4" width="44" height="24" rx="3"/><text x="202.0" y="64.4" text-anchor="middle">CDU0</text></g>
+<g class="cdu"><rect x="391.2" y="488.4" width="44" height="24" rx="3"/><text x="413.2" y="504.4" text-anchor="middle">CDU1</text></g>
+<g class="cdu"><rect x="602.4" y="48.4" width="44" height="24" rx="3"/><text x="624.4" y="64.4" text-anchor="middle">CDU2</text></g>
+<text class="cap" x="149.2" y="558.8" text-anchor="middle">row 0</text>
+<text class="cap" x="254.8" y="558.8" text-anchor="middle">row 1</text>
+<text class="cap" x="360.4" y="558.8" text-anchor="middle">row 2</text>
+<text class="cap" x="466.0" y="558.8" text-anchor="middle">row 3</text>
+<text class="cap" x="571.6" y="558.8" text-anchor="middle">row 4</text>
+<text class="cap" x="677.2" y="558.8" text-anchor="middle">row 5</text>
+<text class="cap" x="8" y="280.4" transform="rotate(-90 14 280.4)" text-anchor="middle">11.2 m along each row</text>
+</svg>
+</div>
+    <div class="legend">
+      <span><i style="background:var(--job-a)"></i>train_a · 12 racks</span>
+      <span><i style="background:var(--job-b)"></i>train_b · 8 racks</span>
+      <span><i style="background:var(--job-s)"></i>serve · 4 racks</span>
+      <span><i style="background:var(--spine)"></i>spine switches</span>
+      <span><i style="background:var(--storage)"></i>storage</span>
+      <span><i style="border:1px dashed var(--muted)"></i>blocked slot</span>
+    </div>
+    <figcaption>Optimized hall, top-down. Cool air enters from the CRAH walls at top and bottom. Every hot aisle got containment. Spine racks sit mid-floor so most uplinks fit low-power LPO optics (18 racks) or short copper AEC (4 racks). Setpoints rose from 18 °C air / 30 °C coolant to 26 °C / 33.5 °C. Coolant stops at the point where GPUs would start throttling.</figcaption>
+  </figure>
+  <div class="tbl"><table>
+    <thead><tr><th>Lever</th><th>Starting layout</th><th>Found</th><th>Why it helps</th></tr></thead>
+    <tbody>
+      <tr><td>Optics</td><td>SR8 pluggables, 15 W per end</td><td>LPO 8–9 W, AEC 6 W</td><td>About half the optics power. Requires racks within ~12 m of the spines, which shaped the layout.</td></tr>
+      <tr><td>Containment</td><td>none</td><td>all 3 hot aisles</td><td>Less recirculation lets supply air run 8 °C warmer without breaking the 27 °C inlet limit</td></tr>
+      <tr><td>Coolant</td><td>30 °C</td><td>33.5 °C</td><td>Free cooling all summer. Any warmer and GPUs throttle, which loses more than it saves.</td></tr>
+      <tr><td>Spine</td><td>packet</td><td>packet</td><td>OCS saves switch power but halves all-to-all bandwidth (−17% on the MoE job) and breaks the budget with containment</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <div class="eyebrow">Tracker demo · 120 days of synthetic telemetry</div>
+  <h2>Track, predict, suggest</h2>
+  <p class="prose">To test the tracker, five problems were planted in fake sensor data for the optimized hall. The tracker never sees the answer key. It found all five, and its estimates land close to the planted values.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Found</th><th>Asset</th><th>Evidence</th><th class="n">Estimated</th><th class="n">Planted</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>Clogged cold plates</td><td class="mono">G21</td><td>junction 81 → 92 °C at the same power</td><td class="n">+21%</td><td class="n">+22%</td><td><span class="pill high">throttling now</span></td></tr>
+      <tr><td>Scale in a pipe</td><td class="mono">G08</td><td>branch ΔP 117 → 122 kPa</td><td class="n">673 µm</td><td class="n">656 µm</td><td><span class="pill med">pump limit ~485 d</span></td></tr>
+      <tr><td>Missing blanking panel</td><td class="mono">S2</td><td>inlet +0.85 K over the twin since day 60</td><td class="n">×3.3</td><td class="n">×3.5</td><td><span class="pill high">over 27 °C in summer</span></td></tr>
+      <tr><td>Laser wearing out</td><td class="mono">G03→N1 · 5</td><td>Tx bias 7.1 → 10.6 mA</td><td class="n">+49%</td><td class="n">drift</td><td><span class="pill high">past alarm</span></td></tr>
+      <tr><td>Dirty fiber connector</td><td class="mono">G19→N0 · 2</td><td>Rx power −2.6 → −5.8 dBm on day 75</td><td class="n">−3.2 dB</td><td class="n">−3.2 dB</td><td><span class="pill med">clean it</span></td></tr>
+    </tbody>
+  </table></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Forecast</th><th class="n">kWh / rack-hr</th><th class="n">Summer job speed</th><th class="n">Hottest GPU °C</th></tr></thead>
+    <tbody>
+      <tr><td>As designed</td><td class="n">49.74</td><td class="n">1.000</td><td class="n">82.0</td></tr>
+      <tr><td>Today (calibrated)</td><td class="n">49.88</td><td class="n">0.966</td><td class="n">87.9</td></tr>
+      <tr><td>+30 days</td><td class="n">50.05</td><td class="n">0.928</td><td class="n">88.8</td></tr>
+      <tr><td>+90 days</td><td class="n">50.42</td><td class="n">0.861</td><td class="n">90.5</td></tr>
+    </tbody>
+  </table></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Suggested fix, ranked</th><th class="n">MWh / yr saved</th><th>When</th></tr></thead>
+    <tbody>
+      <tr><td>Flush loop + clean cold plates on G21; move PEX branches to stainless</td><td class="n">22.8</td><td>now</td></tr>
+      <tr><td>Stop-gap: run summer coolant 0.5 °C colder until the flush</td><td class="n">3.4</td><td>this week</td></tr>
+      <tr><td>Re-install blanking panel at S2</td><td class="n">—</td><td>now (inlet limit)</td></tr>
+      <tr><td>Descale branch G08; add strainer + water sampling</td><td class="n">—</td><td>within ~485 days</td></tr>
+      <tr><td>Replace transceiver G03→N1 lane 5</td><td class="n">—</td><td>now</td></tr>
+      <tr><td>Clean connector G19→N0 lane 2</td><td class="n">—</td><td>next walk-through</td></tr>
+    </tbody>
+  </table></div>
+  <p class="prose muted">Savings are measured at equal output. A throttled hall uses fewer kWh only because it does less work, so the ranking uses kWh per unit of work.</p>
+</section>
+
+<section>
+  <div class="eyebrow">Run it yourself</div>
+  <h2>Commands</h2>
+<pre>curl -fsSL https://app.autolab.ai/install.sh | sh     # autolab CLI
+autolab hills check cool-the-cluster                    # 21 tests
+autolab hills eval &lt;dir-with-submission.json&gt; -H cool-the-cluster [--final]
+
+cd twin-tracker
+python3 synth_telemetry.py    # 120 days of fake sensors, 5 planted faults
+python3 track.py              # → tracker_report.md</pre>
+  <p class="prose muted">A design is one <code>submission.json</code>. Every constant is in <code>challenge_spec.json</code>, and the hill README documents the full contract.</p>
+</section>
+
+<section>
+  <div class="eyebrow">Limits</div>
+  <h2>What this is not</h2>
+  <ul class="plain prose">
+    <li>Numbers are benchmark assumptions, not measurements from a real facility. They are good for comparing designs, not for quoting a real PUE.</li>
+    <li>Recirculation is a heat-flow matrix, not CFD. Humidity, N+1 redundancy and chiller part-load curves are not modeled.</li>
+    <li>Sensor data is synthetic. A real hall would feed the same CSV columns from its building-management system and optic diagnostics.</li>
+    <li>Gains top out around 3–4% because server power dominates. That matches real facilities, where cooling and network are about 10% of the load.</li>
+  </ul>
+</section>
+
+</div>

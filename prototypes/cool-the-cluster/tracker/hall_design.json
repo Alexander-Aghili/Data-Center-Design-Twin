@@ -1,0 +1,316 @@
+{
+ "placements": {
+  "G00": [
+   2,
+   1
+  ],
+  "G01": [
+   3,
+   4
+  ],
+  "G02": [
+   3,
+   0
+  ],
+  "G03": [
+   0,
+   0
+  ],
+  "G04": [
+   1,
+   5
+  ],
+  "G05": [
+   2,
+   4
+  ],
+  "G06": [
+   4,
+   0
+  ],
+  "G07": [
+   0,
+   1
+  ],
+  "G08": [
+   4,
+   3
+  ],
+  "G09": [
+   1,
+   4
+  ],
+  "G10": [
+   0,
+   4
+  ],
+  "G11": [
+   3,
+   3
+  ],
+  "G12": [
+   8,
+   2
+  ],
+  "G13": [
+   0,
+   2
+  ],
+  "G14": [
+   0,
+   3
+  ],
+  "G15": [
+   5,
+   1
+  ],
+  "G16": [
+   8,
+   4
+  ],
+  "G17": [
+   2,
+   0
+  ],
+  "G18": [
+   7,
+   1
+  ],
+  "G19": [
+   3,
+   2
+  ],
+  "G20": [
+   4,
+   2
+  ],
+  "G21": [
+   2,
+   2
+  ],
+  "G22": [
+   6,
+   1
+  ],
+  "G23": [
+   1,
+   0
+  ],
+  "N0": [
+   2,
+   3
+  ],
+  "N1": [
+   1,
+   1
+  ],
+  "S0": [
+   5,
+   3
+  ],
+  "S1": [
+   8,
+   0
+  ],
+  "S2": [
+   3,
+   5
+  ],
+  "S3": [
+   11,
+   5
+  ]
+ },
+ "jobs": {
+  "train_a": [
+   "G18",
+   "G10",
+   "G09",
+   "G20",
+   "G22",
+   "G01",
+   "G08",
+   "G05",
+   "G03",
+   "G23",
+   "G07",
+   "G17"
+  ],
+  "train_b": [
+   "G19",
+   "G02",
+   "G12",
+   "G21",
+   "G04",
+   "G16",
+   "G11",
+   "G00"
+  ],
+  "serve": [
+   "G14",
+   "G15",
+   "G06",
+   "G13"
+  ]
+ },
+ "network": {
+  "spine_type": "packet",
+  "leaf_module": {
+   "default": "dac",
+   "G09": "lpo_sr8",
+   "G21": "aec",
+   "G20": "lpo_sr8",
+   "G19": "lpo_sr8",
+   "G15": "lpo_sr8",
+   "G14": "aec",
+   "G02": "lpo_sr8",
+   "G13": "aec",
+   "G16": "lpo_dr8",
+   "G10": "lpo_sr8",
+   "G06": "lpo_sr8",
+   "G01": "lpo_sr8",
+   "G07": "lpo_sr8",
+   "G22": "lpo_sr8",
+   "G05": "lpo_sr8",
+   "G18": "lpo_sr8",
+   "G17": "lpo_sr8",
+   "G12": "lpo_sr8",
+   "G04": "lpo_sr8",
+   "G11": "lpo_sr8",
+   "G23": "lpo_dr8",
+   "G00": "aec",
+   "G08": "lpo_sr8",
+   "G03": "lpo_sr8"
+  }
+ },
+ "liquid": {
+  "default": {
+   "dn": "DN32",
+   "material": "copper",
+   "cdu": "CDU0"
+  },
+  "G00": {
+   "cdu": "CDU0",
+   "dn": "DN40",
+   "material": "pex"
+  },
+  "G01": {
+   "cdu": "CDU0",
+   "material": "copper",
+   "dn": "DN40"
+  },
+  "G02": {
+   "cdu": "CDU0",
+   "material": "copper"
+  },
+  "G03": {
+   "cdu": "CDU2",
+   "material": "stainless",
+   "dn": "DN40"
+  },
+  "G04": {
+   "cdu": "CDU2",
+   "material": "stainless",
+   "dn": "DN32"
+  },
+  "G05": {
+   "cdu": "CDU2",
+   "material": "stainless"
+  },
+  "G06": {
+   "cdu": "CDU1",
+   "material": "pex",
+   "dn": "DN32"
+  },
+  "G07": {
+   "cdu": "CDU2",
+   "material": "stainless",
+   "dn": "DN40"
+  },
+  "G08": {
+   "cdu": "CDU1",
+   "dn": "DN32",
+   "material": "copper"
+  },
+  "G09": {
+   "cdu": "CDU2",
+   "material": "copper",
+   "dn": "DN32"
+  },
+  "G10": {
+   "cdu": "CDU2",
+   "material": "stainless"
+  },
+  "G11": {
+   "cdu": "CDU0",
+   "dn": "DN40",
+   "material": "pex"
+  },
+  "G12": {
+   "cdu": "CDU2",
+   "material": "stainless",
+   "dn": "DN40"
+  },
+  "G13": {
+   "cdu": "CDU2",
+   "material": "stainless",
+   "dn": "DN40"
+  },
+  "G14": {
+   "cdu": "CDU2",
+   "material": "copper"
+  },
+  "G15": {
+   "cdu": "CDU0",
+   "material": "pex",
+   "dn": "DN40"
+  },
+  "G16": {
+   "cdu": "CDU0",
+   "dn": "DN40"
+  },
+  "G17": {
+   "cdu": "CDU0",
+   "material": "stainless",
+   "dn": "DN32"
+  },
+  "G18": {
+   "cdu": "CDU0",
+   "dn": "DN40",
+   "material": "copper"
+  },
+  "G19": {
+   "cdu": "CDU1",
+   "material": "copper",
+   "dn": "DN40"
+  },
+  "G20": {
+   "cdu": "CDU0",
+   "dn": "DN40",
+   "material": "copper"
+  },
+  "G21": {
+   "cdu": "CDU1",
+   "material": "pex"
+  },
+  "G22": {
+   "cdu": "CDU0",
+   "material": "stainless",
+   "dn": "DN40"
+  },
+  "G23": {
+   "cdu": "CDU0",
+   "dn": "DN32",
+   "material": "stainless"
+  }
+ },
+ "containment": [
+  true,
+  true,
+  true
+ ],
+ "setpoints": {
+  "crah_supply_c": 26.0,
+  "cdu_supply_c": 33.5
+ }
+}

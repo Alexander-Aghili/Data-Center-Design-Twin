@@ -1,0 +1,570 @@
+{
+ "_about": "Every fixed quantity the evaluator uses. Coefficients are benchmark assumptions, not measurements of a real facility.",
+ "hall": {
+  "cols": 12,
+  "rows": 6,
+  "slot_pitch_m": 0.6,
+  "x_offset_m": 2.0,
+  "hall_length_m": 11.2,
+  "row_center_y_m": [
+   1.8,
+   4.2,
+   6.6,
+   9.0,
+   11.4,
+   13.8
+  ],
+  "hot_aisle_of_row": [
+   0,
+   0,
+   1,
+   1,
+   2,
+   2
+  ],
+  "blocked_slots": [
+   [
+    6,
+    2
+   ],
+   [
+    6,
+    3
+   ],
+   [
+    0,
+    5
+   ],
+   [
+    11,
+    0
+   ]
+  ],
+  "row_busway_kw": 230.0,
+  "cable_riser_m": 1.0,
+  "cable_slack_m": 0.5,
+  "pipe_riser_m": 3.0
+ },
+ "inventory": {
+  "gpu_racks": [
+   "G00",
+   "G01",
+   "G02",
+   "G03",
+   "G04",
+   "G05",
+   "G06",
+   "G07",
+   "G08",
+   "G09",
+   "G10",
+   "G11",
+   "G12",
+   "G13",
+   "G14",
+   "G15",
+   "G16",
+   "G17",
+   "G18",
+   "G19",
+   "G20",
+   "G21",
+   "G22",
+   "G23"
+  ],
+  "spine_racks": [
+   "N0",
+   "N1"
+  ],
+  "storage_racks": [
+   "S0",
+   "S1",
+   "S2",
+   "S3"
+  ]
+ },
+ "gpu_rack": {
+  "gpus": 32,
+  "gpu_tdp_w": 1000.0,
+  "gpu_idle_w": 150.0,
+  "server_overhead_w": 4800.0,
+  "server_overhead_idle_frac": 0.6,
+  "leaf_switch_w": 1200.0,
+  "uplinks_per_spine_rack": 8,
+  "liquid_capture_gpu": 0.95,
+  "liquid_capture_overhead": 0.5,
+  "design_flow_kg_s": 0.75,
+  "cold_plate_r_k_per_w": 0.045,
+  "throttle_start_c": 87.0,
+  "throttle_slope_per_k": 0.04,
+  "min_speed": 0.5,
+  "junction_limit_c": 92.0,
+  "manifold_dp_kpa": 110.0
+ },
+ "storage_rack_w": 14000.0,
+ "coolant": {
+  "rho": 1020.0,
+  "cp": 3900.0,
+  "mu": 0.0015,
+  "minor_loss_k": 10.0
+ },
+ "cdus": {
+  "CDU0": {
+   "x_m": 0.6,
+   "y_m": 3.0,
+   "capacity_kw": 420.0
+  },
+  "CDU1": {
+   "x_m": 10.6,
+   "y_m": 7.8,
+   "capacity_kw": 420.0
+  },
+  "CDU2": {
+   "x_m": 0.6,
+   "y_m": 12.6,
+   "capacity_kw": 420.0
+  }
+ },
+ "cdu_common": {
+  "internal_dp_kpa": 40.0,
+  "max_head_kpa": 185.0,
+  "pump_eff": 0.6,
+  "hx_approach_k": 3.0
+ },
+ "pipes": {
+  "diameters": {
+   "DN25": {
+    "id_m": 0.0266,
+    "cost_per_m": 40.0
+   },
+   "DN32": {
+    "id_m": 0.0351,
+    "cost_per_m": 55.0
+   },
+   "DN40": {
+    "id_m": 0.0409,
+    "cost_per_m": 70.0
+   }
+  },
+  "materials": {
+   "copper": {
+    "roughness_new_m": 1.5e-06,
+    "roughness_aged_m": 3e-05,
+    "cold_plate_fouling": 0.06,
+    "cost_mult": 1.0,
+    "leak_risk_per_joint": 0.0004
+   },
+   "stainless": {
+    "roughness_new_m": 1.5e-05,
+    "roughness_aged_m": 2e-05,
+    "cold_plate_fouling": 0.02,
+    "cost_mult": 1.7,
+    "leak_risk_per_joint": 0.0002
+   },
+   "pex": {
+    "roughness_new_m": 7e-06,
+    "roughness_aged_m": 2e-05,
+    "cold_plate_fouling": 0.15,
+    "cost_mult": 0.55,
+    "leak_risk_per_joint": 0.0008
+   }
+  },
+  "velocity_min_m_s": 0.5,
+  "velocity_max_m_s": 2.0
+ },
+ "air": {
+  "rho_cp": 1206.0,
+  "supply_drift_k_per_m": 0.08,
+  "recirc_self_k_per_kw": 0.012,
+  "recirc_self_contained_k_per_kw": 0.004,
+  "recirc_same_aisle_k_per_kw": 0.1,
+  "recirc_same_aisle_length_m": 1.5,
+  "recirc_cross_k_per_kw": 0.006,
+  "recirc_cross_length_m": 4.0,
+  "containment_same_aisle_factor": 0.15,
+  "containment_cross_factor": 0.3,
+  "end_of_row_factor": 1.6,
+  "end_of_row_contained_factor": 1.15,
+  "crah_units": 8,
+  "crah_rated_kw": 6.0,
+  "crah_rated_flow_m3_s": 6.0,
+  "crah_min_speed": 0.3,
+  "crah_dt_open_k": 10.0,
+  "crah_dt_contained_k": 16.0,
+  "coil_approach_k": 3.0,
+  "inlet_limit_c": 27.0,
+  "containment_cost": 35000.0,
+  "top_of_rack_stratification": 1.15
+ },
+ "plant": {
+  "chiller_eta": 0.45,
+  "cop_min": 2.5,
+  "cop_max": 9.0,
+  "tower_approach_k": 4.0,
+  "condenser_lift_k": 5.0,
+  "evap_approach_k": 2.0,
+  "free_cooling_full_margin_k": 1.0,
+  "free_cooling_none_margin_k": 2.0,
+  "tower_and_pumps_frac": 0.015,
+  "ups_eff": 0.965,
+  "pdu_eff": 0.99,
+  "lighting_kw": 5.0
+ },
+ "network": {
+  "link_gbps": 800,
+  "rack_uplink_bytes_s": 1600000000000.0,
+  "propagation_ns_per_m": 4.9,
+  "leaf_latency_us": 0.5,
+  "modules": {
+   "dac": {
+    "reach_m": 2.5,
+    "w_per_end": 0.2,
+    "cost_per_link": 180.0,
+    "cost_per_module": 0.0,
+    "fiber_cost_per_m": 0.0,
+    "optical": false,
+    "single_mode": false,
+    "latency_us": 0.0,
+    "aging_reach_factor": 1.0
+   },
+   "aec": {
+    "reach_m": 7.0,
+    "w_per_end": 6.0,
+    "cost_per_link": 700.0,
+    "cost_per_module": 0.0,
+    "fiber_cost_per_m": 0.0,
+    "optical": false,
+    "single_mode": false,
+    "latency_us": 0.02,
+    "aging_reach_factor": 1.0
+   },
+   "sr8": {
+    "reach_m": 50.0,
+    "w_per_end": 15.0,
+    "cost_per_link": 0.0,
+    "cost_per_module": 750.0,
+    "fiber_cost_per_m": 3.0,
+    "optical": true,
+    "single_mode": false,
+    "latency_us": 0.06,
+    "aging_reach_factor": 0.85
+   },
+   "dr8": {
+    "reach_m": 500.0,
+    "w_per_end": 16.5,
+    "cost_per_link": 0.0,
+    "cost_per_module": 950.0,
+    "fiber_cost_per_m": 2.0,
+    "optical": true,
+    "single_mode": true,
+    "latency_us": 0.06,
+    "aging_reach_factor": 0.85
+   },
+   "lpo_sr8": {
+    "reach_m": 20.0,
+    "w_per_end": 8.0,
+    "cost_per_link": 0.0,
+    "cost_per_module": 700.0,
+    "fiber_cost_per_m": 3.0,
+    "optical": true,
+    "single_mode": false,
+    "latency_us": 0.005,
+    "aging_reach_factor": 0.6
+   },
+   "lpo_dr8": {
+    "reach_m": 40.0,
+    "w_per_end": 9.0,
+    "cost_per_link": 0.0,
+    "cost_per_module": 900.0,
+    "fiber_cost_per_m": 2.0,
+    "optical": true,
+    "single_mode": true,
+    "latency_us": 0.005,
+    "aging_reach_factor": 0.6
+   }
+  },
+  "spine_types": {
+   "packet": {
+    "switches_per_rack": 4,
+    "body_w": 1600.0,
+    "latency_us": 0.6,
+    "spine_end": "mirror",
+    "premium_per_switch": 0.0,
+    "cost_per_port": 0.0,
+    "requires_single_mode": false,
+    "reach_factor": {}
+   },
+   "packet_cpo": {
+    "switches_per_rack": 4,
+    "body_w": 1600.0,
+    "latency_us": 0.6,
+    "spine_end": "cpo",
+    "spine_end_w": 5.0,
+    "spine_end_latency_us": 0.005,
+    "premium_per_switch": 45000.0,
+    "cost_per_port": 500.0,
+    "requires_single_mode": true,
+    "reach_factor": {}
+   },
+   "ocs": {
+    "switches_per_rack": 4,
+    "body_w": 150.0,
+    "latency_us": 0.0,
+    "spine_end": "passive",
+    "spine_end_w": 0.0,
+    "spine_end_latency_us": 0.0,
+    "premium_per_switch": 70000.0,
+    "cost_per_port": 350.0,
+    "requires_single_mode": true,
+    "reach_factor": {
+     "dr8": 0.8,
+     "lpo_dr8": 0.6
+    },
+    "all_to_all_bandwidth_factor": 0.5,
+    "all_to_all_extra_latency_us": 0.5
+   }
+  }
+ },
+ "jobs": {
+  "train_a": {
+   "racks": 12
+  },
+  "train_b": {
+   "racks": 8
+  },
+  "serve": {
+   "racks": 4,
+   "latency_sla_us": 1.95
+  }
+ },
+ "budget_usd": 1050000.0,
+ "setpoint_bounds": {
+  "crah_supply_c": [
+   16.0,
+   27.0
+  ],
+  "cdu_supply_c": [
+   18.0,
+   45.0
+  ]
+ },
+ "scenarios": {
+  "summer_training": {
+   "weather": {
+    "db_mean": 32.0,
+    "db_amp": 5.0,
+    "wb_mean": 23.0,
+    "wb_amp": 2.0
+   },
+   "aged": false,
+   "jobs": {
+    "train_a": {
+     "util": "training",
+     "base": 0.95,
+     "pattern": "ring",
+     "t_comp_s": 1.0,
+     "n_latency": 900,
+     "bytes": 24000000000.0,
+     "overlap": 0.6
+    },
+    "train_b": {
+     "util": "training",
+     "base": 0.92,
+     "pattern": "ring",
+     "t_comp_s": 1.0,
+     "n_latency": 900,
+     "bytes": 24000000000.0,
+     "overlap": 0.6
+    },
+    "serve": {
+     "util": "diurnal",
+     "base": 0.4,
+     "amp": 0.25,
+     "pattern": "ring",
+     "t_comp_s": 0.05,
+     "n_latency": 60,
+     "bytes": 200000000.0,
+     "overlap": 0.0
+    }
+   },
+   "weight": 0.25
+  },
+  "winter_training": {
+   "weather": {
+    "db_mean": 2.0,
+    "db_amp": 4.0,
+    "wb_mean": 0.0,
+    "wb_amp": 3.0
+   },
+   "aged": false,
+   "jobs": {
+    "train_a": {
+     "util": "training",
+     "base": 0.95,
+     "pattern": "ring",
+     "t_comp_s": 1.0,
+     "n_latency": 900,
+     "bytes": 24000000000.0,
+     "overlap": 0.6
+    },
+    "train_b": {
+     "util": "training",
+     "base": 0.92,
+     "pattern": "ring",
+     "t_comp_s": 1.0,
+     "n_latency": 900,
+     "bytes": 24000000000.0,
+     "overlap": 0.6
+    },
+    "serve": {
+     "util": "diurnal",
+     "base": 0.4,
+     "amp": 0.25,
+     "pattern": "ring",
+     "t_comp_s": 0.05,
+     "n_latency": 60,
+     "bytes": 200000000.0,
+     "overlap": 0.0
+    }
+   },
+   "weight": 0.25
+  },
+  "inference_peak": {
+   "weather": {
+    "db_mean": 18.0,
+    "db_amp": 6.0,
+    "wb_mean": 12.0,
+    "wb_amp": 3.0
+   },
+   "aged": false,
+   "jobs": {
+    "train_a": {
+     "util": "training",
+     "base": 0.6,
+     "pattern": "ring",
+     "t_comp_s": 1.0,
+     "n_latency": 900,
+     "bytes": 24000000000.0,
+     "overlap": 0.6
+    },
+    "train_b": {
+     "util": "training",
+     "base": 0.6,
+     "pattern": "ring",
+     "t_comp_s": 1.0,
+     "n_latency": 900,
+     "bytes": 24000000000.0,
+     "overlap": 0.6
+    },
+    "serve": {
+     "util": "diurnal",
+     "base": 0.6,
+     "amp": 0.38,
+     "pattern": "ring",
+     "t_comp_s": 0.05,
+     "n_latency": 60,
+     "bytes": 200000000.0,
+     "overlap": 0.0
+    }
+   },
+   "weight": 0.2
+  },
+  "moe_all_to_all": {
+   "weather": {
+    "db_mean": 26.0,
+    "db_amp": 5.0,
+    "wb_mean": 19.0,
+    "wb_amp": 2.5
+   },
+   "aged": false,
+   "jobs": {
+    "train_a": {
+     "util": "training",
+     "base": 0.9,
+     "pattern": "all_to_all",
+     "t_comp_s": 1.0,
+     "n_latency": 900,
+     "bytes": 300000000000.0,
+     "overlap": 0.15
+    },
+    "train_b": {
+     "util": "training",
+     "base": 0.9,
+     "pattern": "ring",
+     "t_comp_s": 1.0,
+     "n_latency": 900,
+     "bytes": 24000000000.0,
+     "overlap": 0.6
+    },
+    "serve": {
+     "util": "diurnal",
+     "base": 0.4,
+     "amp": 0.25,
+     "pattern": "ring",
+     "t_comp_s": 0.05,
+     "n_latency": 60,
+     "bytes": 200000000.0,
+     "overlap": 0.0
+    }
+   },
+   "weight": 0.15
+  },
+  "aged_5yr_summer": {
+   "weather": {
+    "db_mean": 32.0,
+    "db_amp": 5.0,
+    "wb_mean": 23.0,
+    "wb_amp": 2.0
+   },
+   "aged": true,
+   "jobs": {
+    "train_a": {
+     "util": "training",
+     "base": 0.95,
+     "pattern": "ring",
+     "t_comp_s": 1.0,
+     "n_latency": 900,
+     "bytes": 24000000000.0,
+     "overlap": 0.6
+    },
+    "train_b": {
+     "util": "training",
+     "base": 0.92,
+     "pattern": "ring",
+     "t_comp_s": 1.0,
+     "n_latency": 900,
+     "bytes": 24000000000.0,
+     "overlap": 0.6
+    },
+    "serve": {
+     "util": "diurnal",
+     "base": 0.4,
+     "amp": 0.25,
+     "pattern": "ring",
+     "t_comp_s": 0.05,
+     "n_latency": 60,
+     "bytes": 200000000.0,
+     "overlap": 0.0
+    }
+   },
+   "weight": 0.15
+  }
+ },
+ "timesteps": {
+  "validation": {
+   "step_min": 60,
+   "noise": 0.0,
+   "seed": 0
+  },
+  "final": {
+   "step_min": 15,
+   "noise": 0.04,
+   "seed": 20261018
+  }
+ },
+ "checkpoint_dip": {
+  "every_h": 6,
+  "util": 0.55,
+  "duration_min": 20
+ }
+}

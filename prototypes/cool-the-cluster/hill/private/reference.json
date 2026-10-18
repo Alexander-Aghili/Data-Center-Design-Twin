@@ -1,0 +1,22 @@
+{
+ "validation": {
+  "annual_kwh_per_rack_hour": 51.422946491145176,
+  "scenarios": {
+   "summer_training": 51.84009442611196,
+   "winter_training": 48.64520120279585,
+   "inference_peak": 55.89684219993403,
+   "moe_all_to_all": 50.6093654396423,
+   "aged_5yr_summer": 51.84092622890943
+  }
+ },
+ "final": {
+  "annual_kwh_per_rack_hour": 51.45623402847786,
+  "scenarios": {
+   "summer_training": 51.8623820415987,
+   "winter_training": 48.683479827480646,
+   "inference_peak": 55.999734037208526,
+   "moe_all_to_all": 50.60419884105621,
+   "aged_5yr_summer": 51.86440289343671
+  }
+ }
+}
