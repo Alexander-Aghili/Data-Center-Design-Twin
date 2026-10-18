@@ -1,7 +1,8 @@
 import { Html } from '@react-three/drei'
+import { useThree } from '@react-three/fiber'
 import type { Evaluation, Plan, Status } from '@twin/schema'
 import { useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from 'react'
-import { Color, type Mesh } from 'three'
+import { Color, SRGBColorSpace, type Mesh } from 'three'
 import { useTwinStore } from '../../state/store'
 import { PALETTE } from '../palette'
 import { useSceneRegistry } from '../registry'
@@ -11,15 +12,20 @@ export const LOAD_SCALE_MAX = 1.2
 
 const SCALE_LOW = new Color(PALETTE.floor)
 const SCALE_HIGH = new Color(PALETTE.heat)
+const mixed = new Color()
 
 /**
- * Sequential load color, one hue from the bare floor (0%) to heat red (120% and over).
- * Interpolated in three's linear working space, so lightness falls steadily. Null (unknown) is dark clay.
+ * Sequential load color, one hue from the bare floor (0%) to heat red (120% and over). Mixed in sRGB rather than
+ * three's linear working space, which would keep the middle of the scale nearly as pale as the floor.
+ * Null (unknown) is dark clay.
  */
 export function utilizationColor(utilization: number | null): string {
   if (utilization === null) return PALETTE.clay.dark
   const t = Math.min(1, Math.max(0, utilization / LOAD_SCALE_MAX))
-  return `#${SCALE_LOW.clone().lerp(SCALE_HIGH, t).getHexString().toUpperCase()}`
+  const low = SCALE_LOW.getRGB({ r: 0, g: 0, b: 0 }, SRGBColorSpace)
+  const high = SCALE_HIGH.getRGB({ r: 0, g: 0, b: 0 }, SRGBColorSpace)
+  mixed.setRGB(low.r + (high.r - low.r) * t, low.g + (high.g - low.g) * t, low.b + (high.b - low.b) * t, SRGBColorSpace)
+  return `#${mixed.getHexString().toUpperCase()}`
 }
 
 export const STATUS_GLYPH: Record<Status, string> = { pass: '✓', warn: '▲', fail: '✕', unknown: '?' }
@@ -89,12 +95,24 @@ const tagStyle: CSSProperties = {
   userSelect: 'none',
 }
 
+/**
+ * Lets pointer input reach the canvas through labels. drei's `pointerEvents` prop only applies in `transform` mode;
+ * without this the full-canvas legend would swallow every click and drag.
+ */
+const PASS_THROUGH: CSSProperties = { pointerEvents: 'none' }
+
+/** drei's Html remounts (and drops its content) when the canvas event target attaches, so labels wait for it. */
+function useHtmlReady(): boolean {
+  return Boolean(useThree((s) => s.events.connected))
+}
+
 const GLYPH_COLOR: Record<Status, string> = { pass: 'var(--ok)', warn: 'var(--warning)', fail: 'var(--heat)', unknown: 'var(--graphite)' }
 
 /** A small tag pinned to a point in the hall. With a status it leads with the status glyph: shape plus text, never color alone. */
 export function SceneTag({ position, status, children }: { position: [number, number, number]; status?: Status; children: ReactNode }) {
+  if (!useHtmlReady()) return null
   return (
-    <Html position={position} center zIndexRange={[20, 10]} pointerEvents="none">
+    <Html position={position} center zIndexRange={[20, 10]} style={PASS_THROUGH}>
       <span style={tagStyle}>
         {status ? (
           <span aria-hidden style={{ color: GLYPH_COLOR[status], marginRight: 4 }}>
@@ -111,7 +129,7 @@ const legendStyle: CSSProperties = {
   position: 'absolute',
   left: 'var(--space-4)',
   bottom: 'var(--space-4)',
-  width: 232,
+  width: 248,
   margin: 0,
   padding: 'var(--space-2) var(--space-3) var(--space-3)',
   background: 'var(--panel)',
@@ -128,10 +146,14 @@ const legendTitleStyle: CSSProperties = {
   marginBottom: 'var(--space-2)',
 }
 
+// With `fullscreen`, drei offsets the wrapper by half the canvas; anchoring it at the centre makes it cover the canvas.
+const centerOfCanvas = (_: unknown, __: unknown, size: { width: number; height: number }) => [size.width / 2, size.height / 2]
+
 /** Legend card in the scene's bottom-left corner, laid over the canvas. */
 export function OverlayLegend({ title, children }: { title: string; children: ReactNode }) {
+  if (!useHtmlReady()) return null
   return (
-    <Html fullscreen calculatePosition={(_, __, size) => [size.width / 2, size.height / 2]} zIndexRange={[30, 20]} pointerEvents="none">
+    <Html fullscreen calculatePosition={centerOfCanvas} zIndexRange={[30, 20]} style={PASS_THROUGH}>
       <figure aria-label={title} style={legendStyle}>
         <figcaption style={legendTitleStyle}>{title}</figcaption>
         {children}
@@ -153,32 +175,30 @@ export function LegendRow({ mark, label, value }: { mark: ReactNode; label: stri
   )
 }
 
-const SCALE_TICKS = [0, 0.5, 1, LOAD_SCALE_MAX]
+const SCALE_TICKS = [0, 0.5, 1]
 const GRADIENT_STOPS = 6
 
-/** Gradient bar for the 0–120% load scale; the 100% tick marks the rating. */
+/** Gradient bar for the 0–120% load scale; the line at 100% marks the rating. */
 export function LoadScale() {
-  const stops = Array.from({ length: GRADIENT_STOPS + 1 }, (_, i) => `${utilizationColor((i / GRADIENT_STOPS) * LOAD_SCALE_MAX)} ${((i / GRADIENT_STOPS) * 100).toFixed(1)}%`)
+  const stops = Array.from({ length: GRADIENT_STOPS + 1 }, (_, i) => {
+    const t = i / GRADIENT_STOPS
+    return `${utilizationColor(t * LOAD_SCALE_MAX)} ${(t * 100).toFixed(1)}%`
+  })
+  const at = (u: number) => `${(u / LOAD_SCALE_MAX) * 100}%`
   return (
     <div>
       <div style={{ position: 'relative', height: 10, borderRadius: 'var(--radius)', background: `linear-gradient(to right, ${stops.join(', ')})` }}>
-        <span style={{ position: 'absolute', left: `${(1 / LOAD_SCALE_MAX) * 100}%`, top: -3, bottom: -3, borderLeft: '1px solid var(--ink)' }} />
+        <span style={{ position: 'absolute', left: at(1), top: -3, bottom: -3, borderLeft: '1px solid var(--ink)' }} />
       </div>
       <div style={{ position: 'relative', height: 18, fontSize: 'var(--text-xs)', color: 'var(--graphite)' }}>
         {SCALE_TICKS.map((u) => (
-          <span
-            key={u}
-            style={{
-              position: 'absolute',
-              top: 3,
-              left: `${(u / LOAD_SCALE_MAX) * 100}%`,
-              transform: u === 0 ? 'none' : u === LOAD_SCALE_MAX ? 'translateX(-100%)' : 'translateX(-50%)',
-              color: u === 1 ? 'var(--ink)' : undefined,
-            }}
-          >
-            {u === 1 ? `${percent(u)} rating` : u === LOAD_SCALE_MAX ? `${percent(u)}+` : percent(u)}
+          <span key={u} style={{ position: 'absolute', top: 3, left: at(u), transform: u === 0 ? 'none' : 'translateX(-50%)' }}>
+            {percent(u)}
           </span>
         ))}
+      </div>
+      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--graphite)' }}>
+        The line marks the rating; {percent(LOAD_SCALE_MAX)} and over is full red.
       </div>
     </div>
   )

@@ -66,6 +66,8 @@ export function createPicker({
   const pointer = new Vector2()
   let indexed: Map<string, SceneObject> | null = null
   let byRef = new Map<Object3D, string>()
+  // Registered objects with no registered ancestor; the recursive raycast reaches the rest through them.
+  let roots: Object3D[] = []
 
   function idOf(object: Object3D, instanceId: number | undefined): string | null {
     const instanceIds: unknown = object.userData.instanceObjectIds
@@ -82,9 +84,13 @@ export function createPicker({
     if (registered !== indexed) {
       indexed = registered
       byRef = new Map([...registered].map(([id, o]) => [o.ref, id]))
+      roots = [...byRef.keys()].filter((ref) => {
+        for (let o = ref.parent; o; o = o.parent) if (byRef.has(o)) return false
+        return true
+      })
     }
     raycaster.setFromCamera(pointer.set(ndc.x, ndc.y), camera)
-    for (const hit of raycaster.intersectObjects([...byRef.keys()], true)) {
+    for (const hit of raycaster.intersectObjects(roots, true)) {
       const id = idOf(hit.object, hit.instanceId)
       const selection = id === null ? null : selectionForObjectId(id)
       if (id !== null && selection) return { objectId: outlineId(id, registered), selection }

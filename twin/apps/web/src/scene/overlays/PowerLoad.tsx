@@ -17,23 +17,25 @@ export interface BuswayLoad {
   objectIds: string[]
 }
 
-/** Each row's busway current, joined with its `power.busway` check and its busway's scene objects. */
+/** Each row's busway current, joined with its `power.busway` check and its busway's scene objects. Empty rows are left out. */
 export function buswayLoads(plan: Plan, evaluation: Evaluation): BuswayLoad[] {
   const rowIds = new Set(plan.hall.rows.map((r) => r.id))
   const checks = new Map(evaluation.checks.filter((c) => c.kind === 'power.busway').map((c) => [c.subject.id, c]))
   const busways = new Map(evaluation.equipment.filter((e) => e.category === 'busway').map((e) => [e.key, e]))
   return evaluation.rows
     .filter((row) => rowIds.has(row.rowId))
-    .map((row) => {
+    .flatMap((row): BuswayLoad[] => {
       const check = checks.get(row.rowId)
-      return {
+      // An empty row has neither load nor check: nothing to show, rather than an unknown.
+      if (!check && row.buswayLoadA === 0) return []
+      return [{
         rowId: row.rowId,
         loadA: row.buswayLoadA,
         limitA: check?.limit ?? null,
         utilization: check?.utilization ?? null,
         status: check?.status ?? 'unknown',
         objectIds: busways.get(`busway:${row.rowId}`)?.objectIds ?? [],
-      }
+      }]
     })
 }
 

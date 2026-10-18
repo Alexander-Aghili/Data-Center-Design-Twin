@@ -149,11 +149,15 @@ describe('floor load overlay', () => {
 })
 
 describe('power load overlay', () => {
-  it('joins each row busway current with its busway check', () => {
+  it('joins each row busway current with its busway check and leaves empty rows out', () => {
     const plan = createDefaultPlan()
     const evaluation: Evaluation = {
       ...emptyEvaluation(),
-      rows: [{ rowId: 'R3', airW: 0, liquidW: 0, flowLps: 0, buswayLoadA: 1100, cduKey: null }],
+      rows: [
+        { rowId: 'R3', airW: 0, liquidW: 0, flowLps: 0, buswayLoadA: 1100, cduKey: null },
+        { rowId: 'R4', airW: 0, liquidW: 0, flowLps: 0, buswayLoadA: 200, cduKey: null },
+        { rowId: 'R8', airW: 0, liquidW: 0, flowLps: 0, buswayLoadA: 0, cduKey: null },
+      ],
       equipment: [equipment('busway:R3', EQUIPMENT.BUSWAY_1250A, ['eq:busway:R3:0'], [])],
       checks: [
         check({
@@ -170,6 +174,8 @@ describe('power load overlay', () => {
 
     expect(m.power.buswayLoads(plan, evaluation)).toEqual([
       { rowId: 'R3', loadA: 1100, limitA: 1250, utilization: 0.88, status: 'warn', objectIds: ['eq:busway:R3:0'] },
+      // Load without a check is unknown; the empty row R8 is left out.
+      { rowId: 'R4', loadA: 200, limitA: null, utilization: null, status: 'unknown', objectIds: [] },
     ])
   })
 })

@@ -119,7 +119,12 @@ interface GhostBox {
   /** Groups boxes under one tag, e.g. "changed|R3|Direct liquid cooling". */
   tagKey: string
   tag: string
+  /** Tag at the west end instead of the middle: for long equipment runs such as busways. */
+  tagWest: boolean
 }
+
+// Equipment longer than any cabinet is a run along a row, such as a busway.
+const LONG_RUN_M = 4
 
 function rackBox(state: PlanState, id: string): Box3 | null {
   const placement = state.plan.placements.find((p) => objectIdForPlacement(p.id) === id)
@@ -163,12 +168,12 @@ function describeRackChange(base: PlanState, preview: PlanState, id: string): st
   }
   const before = groupOf(base)
   const after = groupOf(preview)
-  if (!after) return 'Changed'
+  if (!after) return 'Rack group removed'
   const catalog = planCatalog(preview.plan)
   if (before?.coolingMethodId !== after.coolingMethodId)
-    return `Now ${catalog.get(after.coolingMethodId, 'rackCooling')?.name ?? after.coolingMethodId}`
-  if (before?.rackTypeId !== after.rackTypeId) return `Now ${catalog.get(after.rackTypeId, 'rack')?.name ?? after.rackTypeId}`
-  return `Now in ${after.name}`
+    return `Cooling: ${catalog.get(after.coolingMethodId, 'rackCooling')?.name ?? after.coolingMethodId}`
+  if (before?.rackTypeId !== after.rackTypeId) return `Rack type: ${catalog.get(after.rackTypeId, 'rack')?.name ?? after.rackTypeId}`
+  return `Group: ${after.name}`
 }
 
 function rackRow(state: PlanState, id: string): string {
@@ -193,7 +198,9 @@ function ghostBoxes(diff: GhostDiff, base: PlanState, preview: PlanState, object
 
   const out: GhostBox[] = []
   const push = (id: string, mode: Mode, box: Box3 | null, tagKey: string, tag: string) => {
-    if (box && !box.isEmpty()) out.push({ id, mode, box, tagKey, tag })
+    if (!box || box.isEmpty()) return
+    const longRun = !id.startsWith('rack:') && box.max.x - box.min.x > LONG_RUN_M
+    out.push({ id, mode, box, tagKey, tag, tagWest: longRun })
   }
   const addedRacks = diff.added.filter((id) => id.startsWith('rack:'))
   const removedRacks = diff.removed.filter((id) => id.startsWith('rack:'))
@@ -217,7 +224,7 @@ function ghostBoxes(diff: GhostDiff, base: PlanState, preview: PlanState, object
       push(id, 'changed', rendered(id) ?? rackBox(preview, id), `changed|${rackRow(preview, id)}|${tag}`, tag)
     } else {
       const item = previewUnits.get(id)
-      if (item) push(id, 'changed', rendered(id) ?? unitBox(preview, item, id, objects), `changed|${item.key}`, `Now ${modelName(item)}`)
+      if (item) push(id, 'changed', rendered(id) ?? unitBox(preview, item, id, objects), `changed|${item.key}`, `Model: ${modelName(item)}`)
     }
   }
   for (const id of diff.added.filter((x) => !x.startsWith('rack:'))) {
@@ -235,6 +242,9 @@ function unitsSuffix(ids: string[], item: SizedEquipment): string {
   const n = item.objectIds.filter((id) => ids.includes(id)).length
   return n === 1 ? '' : `, ${n} units`
 }
+
+// Tags float this far above the top of what they describe.
+const TAG_ABOVE_M = 0.35
 
 // The move arrow runs just above the floor tiles.
 const MOVE_LINE_Y_M = 0.05
@@ -278,11 +288,11 @@ export function Ghost() {
   }, [plan, evaluation, proposal, preview, objects])
   if (ghosts.length === 0) return null
 
-  const tags = new Map<string, { tag: string; box: Box3 }>()
+  const tags = new Map<string, { tag: string; box: Box3; west: boolean }>()
   for (const g of ghosts) {
     const entry = tags.get(g.tagKey)
     if (entry) entry.box.union(g.box)
-    else tags.set(g.tagKey, { tag: g.tag, box: g.box.clone() })
+    else tags.set(g.tagKey, { tag: g.tag, box: g.box.clone(), west: g.tagWest })
   }
   const boxOf = (id: string, mode: Mode) => ghosts.find((g) => g.id === id && g.mode === mode)?.box
 
@@ -298,10 +308,12 @@ export function Ghost() {
         const points = [a.getCenter(new Vector3()).setY(MOVE_LINE_Y_M), b.getCenter(new Vector3()).setY(MOVE_LINE_Y_M)]
         return <Line key={to} points={points} color={PALETTE.ink} lineWidth={1} dashed dashSize={0.2} gapSize={0.12} raycast={() => null} />
       })}
-      {[...tags.entries()].map(([key, { tag, box }]) => {
+      {[...tags.entries()].map(([key, { tag, box, west }]) => {
         const c = box.getCenter(new Vector3())
+        // Long runs (busways) take their tag at the west end, clear of the racks tagged mid-row beneath them.
+        const x = west ? box.min.x : c.x
         return (
-          <SceneTag key={key} position={[c.x, box.max.y + 0.35, c.z]}>
+          <SceneTag key={key} position={[x, box.max.y + TAG_ABOVE_M, c.z]}>
             {tag}
           </SceneTag>
         )
