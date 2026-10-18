@@ -138,8 +138,9 @@ a { color: var(--accent); }
   <p class="lede">Which hall design does the most GPU work per kWh, and what is wearing out in a hall that's already running? One simulator answers both. It scores designs so agents can search for better ones, and it reads sensor data to predict failures and rank fixes.</p>
   <div class="stamp">
     <span>hall <b>30 racks · 768 GPUs · ~1 MW</b></span>
-    <span>best design <b>3.3% less energy per unit of work</b></span>
+    <span>best design <b>3.5% less energy per unit of work</b></span>
     <span>tracker <b>5 of 5 planted faults found</b></span>
+    <span>sourced <b>optics, switches, plant from the team catalog</b></span>
   </div>
 </header>
 
@@ -162,8 +163,8 @@ a { color: var(--accent); }
       <tr><td>Rack layout</td><td>12 × 6 floor, 230 kW per row. Distance sets cable length, pipe length and how much hot air recirculates.</td><td>Slot of all 30 racks; which racks form each job</td><td>Row power</td></tr>
       <tr><td>Cooling</td><td>Inlet temp = supply + recirculation from neighbours. Free cooling when outdoor air allows, chiller otherwise.</td><td>Air and coolant setpoints; hot-aisle containment</td><td>Inlet °C, chiller kW, wet bulb</td></tr>
       <tr><td>Pipes</td><td>Pressure drop per branch; pump limit 185 kPa; aging fouls cold plates (PEX 15%, copper 6%, stainless 2%)</td><td>Coolant unit, pipe size and material per rack</td><td>Branch ΔP, GPU °C</td></tr>
-      <tr><td>Fiber &amp; network</td><td>Copper, pluggable and LPO optics, each with reach, watts and cost. Spine is packet, co-packaged (CPO) or optical circuit switch (OCS).</td><td>Module per rack, spine type, $1.05M budget</td><td>Laser bias, Rx power</td></tr>
-      <tr><td>Latency</td><td>Switch hops + optics delay + 4.9 ns per metre. Serving limit 1.95 µs.</td><td>Follows from layout and gear</td><td>Step time</td></tr>
+      <tr><td>Fiber &amp; network</td><td>Copper (DAC, ACC, AEC), pluggable (SR8, DR8, 2×FR4) and LPO optics, each with reach, watts and cost. Reach and watts come from the team catalog. Spine is packet, co-packaged (CPO) or optical circuit switch (OCS).</td><td>Module per rack, spine type, $1.05M budget</td><td>Laser bias, Rx power</td></tr>
+      <tr><td>Latency</td><td>Switch hops (0.6 µs each, SN5600) + optics delay + 5 ns per metre. Serving limit 2.15 µs.</td><td>Follows from layout and gear</td><td>Step time</td></tr>
       <tr><td>GPU work</td><td>GPUs slow 4% per °C above 87 °C. A job runs at its slowest rack.</td><td>Follows from all of the above</td><td>Throttle events</td></tr>
     </tbody>
   </table></div>
@@ -199,36 +200,36 @@ a { color: var(--accent); }
 <rect class="blocked" x="441.6" y="281.9" width="48.8" height="23.4"/>
 <rect class="blocked" x="652.8" y="123.5" width="48.8" height="23.4"/>
 <rect class="blocked" x="124.8" y="413.9" width="48.8" height="23.4"/>
-<g class="rack k-train_b"><rect x="230.4" y="176.3" width="48.8" height="23.4" rx="2"/><text x="254.8" y="192.0" text-anchor="middle">G00</text></g>
-<g class="rack k-train_a"><rect x="547.2" y="202.7" width="48.8" height="23.4" rx="2"/><text x="571.6" y="218.4" text-anchor="middle">G01</text></g>
-<g class="rack k-train_b"><rect x="124.8" y="202.7" width="48.8" height="23.4" rx="2"/><text x="149.2" y="218.4" text-anchor="middle">G02</text></g>
-<g class="rack k-train_a"><rect x="124.8" y="123.5" width="48.8" height="23.4" rx="2"/><text x="149.2" y="139.2" text-anchor="middle">G03</text></g>
-<g class="rack k-train_b"><rect x="652.8" y="149.9" width="48.8" height="23.4" rx="2"/><text x="677.2" y="165.6" text-anchor="middle">G04</text></g>
-<g class="rack k-train_a"><rect x="547.2" y="176.3" width="48.8" height="23.4" rx="2"/><text x="571.6" y="192.0" text-anchor="middle">G05</text></g>
-<g class="rack k-serve"><rect x="124.8" y="229.1" width="48.8" height="23.4" rx="2"/><text x="149.2" y="244.8" text-anchor="middle">G06</text></g>
-<g class="rack k-train_a"><rect x="230.4" y="123.5" width="48.8" height="23.4" rx="2"/><text x="254.8" y="139.2" text-anchor="middle">G07</text></g>
-<g class="rack k-train_a"><rect x="441.6" y="229.1" width="48.8" height="23.4" rx="2"/><text x="466.0" y="244.8" text-anchor="middle">G08</text></g>
-<g class="rack k-train_a"><rect x="547.2" y="149.9" width="48.8" height="23.4" rx="2"/><text x="571.6" y="165.6" text-anchor="middle">G09</text></g>
-<g class="rack k-train_a"><rect x="547.2" y="123.5" width="48.8" height="23.4" rx="2"/><text x="571.6" y="139.2" text-anchor="middle">G10</text></g>
-<g class="rack k-train_b"><rect x="441.6" y="202.7" width="48.8" height="23.4" rx="2"/><text x="466.0" y="218.4" text-anchor="middle">G11</text></g>
-<g class="rack k-train_b"><rect x="336.0" y="334.7" width="48.8" height="23.4" rx="2"/><text x="360.4" y="350.4" text-anchor="middle">G12</text></g>
-<g class="rack k-serve"><rect x="336.0" y="123.5" width="48.8" height="23.4" rx="2"/><text x="360.4" y="139.2" text-anchor="middle">G13</text></g>
-<g class="rack k-serve"><rect x="441.6" y="123.5" width="48.8" height="23.4" rx="2"/><text x="466.0" y="139.2" text-anchor="middle">G14</text></g>
-<g class="rack k-serve"><rect x="230.4" y="255.5" width="48.8" height="23.4" rx="2"/><text x="254.8" y="271.2" text-anchor="middle">G15</text></g>
-<g class="rack k-train_b"><rect x="547.2" y="334.7" width="48.8" height="23.4" rx="2"/><text x="571.6" y="350.4" text-anchor="middle">G16</text></g>
-<g class="rack k-train_a"><rect x="124.8" y="176.3" width="48.8" height="23.4" rx="2"/><text x="149.2" y="192.0" text-anchor="middle">G17</text></g>
-<g class="rack k-train_a"><rect x="230.4" y="308.3" width="48.8" height="23.4" rx="2"/><text x="254.8" y="324.0" text-anchor="middle">G18</text></g>
-<g class="rack k-train_b"><rect x="336.0" y="202.7" width="48.8" height="23.4" rx="2"/><text x="360.4" y="218.4" text-anchor="middle">G19</text></g>
-<g class="rack k-train_a"><rect x="336.0" y="229.1" width="48.8" height="23.4" rx="2"/><text x="360.4" y="244.8" text-anchor="middle">G20</text></g>
-<g class="rack k-train_b"><rect x="336.0" y="176.3" width="48.8" height="23.4" rx="2"/><text x="360.4" y="192.0" text-anchor="middle">G21</text></g>
-<g class="rack k-train_a"><rect x="230.4" y="281.9" width="48.8" height="23.4" rx="2"/><text x="254.8" y="297.6" text-anchor="middle">G22</text></g>
-<g class="rack k-train_a"><rect x="124.8" y="149.9" width="48.8" height="23.4" rx="2"/><text x="149.2" y="165.6" text-anchor="middle">G23</text></g>
-<g class="rack k-spine"><rect x="441.6" y="176.3" width="48.8" height="23.4" rx="2"/><text x="466.0" y="192.0" text-anchor="middle">N0</text></g>
-<g class="rack k-spine"><rect x="230.4" y="149.9" width="48.8" height="23.4" rx="2"/><text x="254.8" y="165.6" text-anchor="middle">N1</text></g>
-<g class="rack k-storage"><rect x="441.6" y="255.5" width="48.8" height="23.4" rx="2"/><text x="466.0" y="271.2" text-anchor="middle">S0</text></g>
-<g class="rack k-storage"><rect x="124.8" y="334.7" width="48.8" height="23.4" rx="2"/><text x="149.2" y="350.4" text-anchor="middle">S1</text></g>
-<g class="rack k-storage"><rect x="652.8" y="202.7" width="48.8" height="23.4" rx="2"/><text x="677.2" y="218.4" text-anchor="middle">S2</text></g>
-<g class="rack k-storage"><rect x="652.8" y="413.9" width="48.8" height="23.4" rx="2"/><text x="677.2" y="429.6" text-anchor="middle">S3</text></g>
+<g class="rack k-train_a"><rect x="441.6" y="202.7" width="48.8" height="23.4" rx="2"/><text x="466.0" y="218.4" text-anchor="middle">G00</text></g>
+<g class="rack k-train_b"><rect x="230.4" y="281.9" width="48.8" height="23.4" rx="2"/><text x="254.8" y="297.6" text-anchor="middle">G01</text></g>
+<g class="rack k-train_b"><rect x="230.4" y="255.5" width="48.8" height="23.4" rx="2"/><text x="254.8" y="271.2" text-anchor="middle">G02</text></g>
+<g class="rack k-train_b"><rect x="230.4" y="123.5" width="48.8" height="23.4" rx="2"/><text x="254.8" y="139.2" text-anchor="middle">G03</text></g>
+<g class="rack k-serve"><rect x="547.2" y="308.3" width="48.8" height="23.4" rx="2"/><text x="571.6" y="324.0" text-anchor="middle">G04</text></g>
+<g class="rack k-train_b"><rect x="336.0" y="149.9" width="48.8" height="23.4" rx="2"/><text x="360.4" y="165.6" text-anchor="middle">G05</text></g>
+<g class="rack k-train_b"><rect x="230.4" y="149.9" width="48.8" height="23.4" rx="2"/><text x="254.8" y="165.6" text-anchor="middle">G06</text></g>
+<g class="rack k-train_b"><rect x="441.6" y="149.9" width="48.8" height="23.4" rx="2"/><text x="466.0" y="165.6" text-anchor="middle">G07</text></g>
+<g class="rack k-train_a"><rect x="230.4" y="229.1" width="48.8" height="23.4" rx="2"/><text x="254.8" y="244.8" text-anchor="middle">G08</text></g>
+<g class="rack k-train_a"><rect x="441.6" y="123.5" width="48.8" height="23.4" rx="2"/><text x="466.0" y="139.2" text-anchor="middle">G09</text></g>
+<g class="rack k-train_a"><rect x="441.6" y="255.5" width="48.8" height="23.4" rx="2"/><text x="466.0" y="271.2" text-anchor="middle">G10</text></g>
+<g class="rack k-train_a"><rect x="336.0" y="361.1" width="48.8" height="23.4" rx="2"/><text x="360.4" y="376.8" text-anchor="middle">G11</text></g>
+<g class="rack k-train_a"><rect x="336.0" y="308.3" width="48.8" height="23.4" rx="2"/><text x="360.4" y="324.0" text-anchor="middle">G12</text></g>
+<g class="rack k-train_a"><rect x="547.2" y="176.3" width="48.8" height="23.4" rx="2"/><text x="571.6" y="192.0" text-anchor="middle">G13</text></g>
+<g class="rack k-serve"><rect x="336.0" y="255.5" width="48.8" height="23.4" rx="2"/><text x="360.4" y="271.2" text-anchor="middle">G14</text></g>
+<g class="rack k-train_a"><rect x="441.6" y="361.1" width="48.8" height="23.4" rx="2"/><text x="466.0" y="376.8" text-anchor="middle">G15</text></g>
+<g class="rack k-train_a"><rect x="124.8" y="202.7" width="48.8" height="23.4" rx="2"/><text x="149.2" y="218.4" text-anchor="middle">G16</text></g>
+<g class="rack k-serve"><rect x="124.8" y="334.7" width="48.8" height="23.4" rx="2"/><text x="149.2" y="350.4" text-anchor="middle">G17</text></g>
+<g class="rack k-train_b"><rect x="441.6" y="229.1" width="48.8" height="23.4" rx="2"/><text x="466.0" y="244.8" text-anchor="middle">G18</text></g>
+<g class="rack k-train_a"><rect x="124.8" y="176.3" width="48.8" height="23.4" rx="2"/><text x="149.2" y="192.0" text-anchor="middle">G19</text></g>
+<g class="rack k-train_a"><rect x="547.2" y="229.1" width="48.8" height="23.4" rx="2"/><text x="571.6" y="244.8" text-anchor="middle">G20</text></g>
+<g class="rack k-serve"><rect x="124.8" y="149.9" width="48.8" height="23.4" rx="2"/><text x="149.2" y="165.6" text-anchor="middle">G21</text></g>
+<g class="rack k-train_a"><rect x="547.2" y="202.7" width="48.8" height="23.4" rx="2"/><text x="571.6" y="218.4" text-anchor="middle">G22</text></g>
+<g class="rack k-train_b"><rect x="230.4" y="176.3" width="48.8" height="23.4" rx="2"/><text x="254.8" y="192.0" text-anchor="middle">G23</text></g>
+<g class="rack k-spine"><rect x="336.0" y="229.1" width="48.8" height="23.4" rx="2"/><text x="360.4" y="244.8" text-anchor="middle">N0</text></g>
+<g class="rack k-spine"><rect x="336.0" y="202.7" width="48.8" height="23.4" rx="2"/><text x="360.4" y="218.4" text-anchor="middle">N1</text></g>
+<g class="rack k-storage"><rect x="652.8" y="281.9" width="48.8" height="23.4" rx="2"/><text x="677.2" y="297.6" text-anchor="middle">S0</text></g>
+<g class="rack k-storage"><rect x="652.8" y="255.5" width="48.8" height="23.4" rx="2"/><text x="677.2" y="271.2" text-anchor="middle">S1</text></g>
+<g class="rack k-storage"><rect x="547.2" y="413.9" width="48.8" height="23.4" rx="2"/><text x="571.6" y="429.6" text-anchor="middle">S2</text></g>
+<g class="rack k-storage"><rect x="124.8" y="123.5" width="48.8" height="23.4" rx="2"/><text x="149.2" y="139.2" text-anchor="middle">S3</text></g>
 <g class="cdu"><rect x="180.0" y="48.4" width="44" height="24" rx="3"/><text x="202.0" y="64.4" text-anchor="middle">CDU0</text></g>
 <g class="cdu"><rect x="391.2" y="488.4" width="44" height="24" rx="3"/><text x="413.2" y="504.4" text-anchor="middle">CDU1</text></g>
 <g class="cdu"><rect x="602.4" y="48.4" width="44" height="24" rx="3"/><text x="624.4" y="64.4" text-anchor="middle">CDU2</text></g>
@@ -249,14 +250,14 @@ a { color: var(--accent); }
       <span><i style="background:var(--storage)"></i>storage</span>
       <span><i style="border:1px dashed var(--muted)"></i>building column</span>
     </div>
-    <figcaption>Best design after 2,000 steps: 0.967, compared with 1.000 for a random layout. Same result on 3 seeds and at 15-minute resolution. Spine racks moved mid-floor so most racks are within reach of short, low-power optics.</figcaption>
+    <figcaption>Best design after 2,000 steps: 0.965, compared with 1.000 for a random layout. Same result on 3 seeds and at 15-minute resolution. Spine racks moved mid-floor so most racks are within reach of short, low-power optics.</figcaption>
   </figure>
   <div class="tbl"><table>
     <thead><tr><th>Lever</th><th>Random</th><th>Found</th><th>Effect</th></tr></thead>
     <tbody>
-      <tr><td>Optics</td><td>Pluggable, 15 W</td><td>LPO 8 W, short copper 6 W</td><td>About half the optics power. Forces racks within ~12 m of spines.</td></tr>
+      <tr><td>Optics</td><td>Pluggable, 17 W</td><td>LPO 8 W; active copper 1.5 W beside the spines</td><td>About half the optics power. Forces racks within ~12 m of spines. AEC (10 W) never wins.</td></tr>
       <tr><td>Containment</td><td>None</td><td>All 3 hot aisles</td><td>Supply air can run 8 °C warmer</td></tr>
-      <tr><td>Coolant</td><td>30 °C</td><td>33.5 °C</td><td>Free cooling all summer. Warmer than this throttles GPUs.</td></tr>
+      <tr><td>Coolant</td><td>30 °C</td><td>33–33.5 °C</td><td>Free cooling all summer. Warmer than this throttles GPUs.</td></tr>
       <tr><td>CPO / OCS spine</td><td>—</td><td>Rejected</td><td>OCS cuts MoE bandwidth 17%; both strain the budget. Plain LPO wins in one hall.</td></tr>
     </tbody>
   </table></div>
@@ -267,18 +268,18 @@ a { color: var(--accent); }
   <div class="tbl"><table>
     <thead><tr><th>Problem</th><th>Asset</th><th>Evidence</th><th class="n">Found / planted</th><th>Fix</th><th class="n">MWh/yr</th></tr></thead>
     <tbody>
-      <tr><td>Clogged cold plate</td><td class="mono">G21</td><td>GPU 81 → 92 °C at equal power</td><td class="n">+21% / +22%</td><td>Flush now; colder coolant until then (+3.4)</td><td class="n">22.8</td></tr>
-      <tr><td>Blanking panel missing</td><td class="mono">S2</td><td>Inlet +0.85 K since day 60</td><td class="n">×3.3 / ×3.5</td><td>Refit now. Inlet goes over 27 °C in summer.</td><td class="n">—</td></tr>
-      <tr><td>Laser wearing out</td><td class="mono">G03→N1</td><td>Bias 7.1 → 10.6 mA</td><td class="n">flagged</td><td>Replace now</td><td class="n">—</td></tr>
-      <tr><td>Dirty connector</td><td class="mono">G19→N0</td><td>Rx −3.2 dB on day 75</td><td class="n">−3.2 / −3.2 dB</td><td>Clean</td><td class="n">—</td></tr>
-      <tr><td>Pipe scale</td><td class="mono">G08</td><td>ΔP 117 → 122 kPa</td><td class="n">673 / 656 µm</td><td>Descale within ~485 days</td><td class="n">—</td></tr>
+      <tr><td>Clogged cold plate</td><td class="mono">G13</td><td>GPU 82 → 91 °C at equal power</td><td class="n">+21% / +22%</td><td>Flush now; colder coolant until then (+4.5)</td><td class="n">50.7</td></tr>
+      <tr><td>Blanking panel missing</td><td class="mono">S2</td><td>Inlet +0.64 K since day 60</td><td class="n">×3.5 / ×3.5</td><td>Refit now. Inlet goes over 27 °C in summer.</td><td class="n">—</td></tr>
+      <tr><td>Laser wearing out</td><td class="mono">G09→N1</td><td>Bias 7.1 → 10.6 mA</td><td class="n">flagged</td><td>Replace now</td><td class="n">—</td></tr>
+      <tr><td>Dirty connector</td><td class="mono">G23→N0</td><td>Rx −3.2 dB on day 75</td><td class="n">−3.2 / −3.2 dB</td><td>Clean</td><td class="n">—</td></tr>
+      <tr><td>Pipe scale</td><td class="mono">G08</td><td>ΔP 119 → 123 kPa, now level</td><td class="n">539 / 669 µm</td><td>Descale; 22 kPa pump margin left</td><td class="n">—</td></tr>
     </tbody>
   </table></div>
   <div class="tbl"><table>
     <thead><tr><th>Forecast if nothing is fixed</th><th class="n">Today</th><th class="n">+30 d</th><th class="n">+90 d</th></tr></thead>
     <tbody>
-      <tr><td>Summer GPU speed</td><td class="n">0.97</td><td class="n">0.93</td><td class="n">0.86</td></tr>
-      <tr><td>Hottest GPU °C</td><td class="n">87.9</td><td class="n">88.8</td><td class="n">90.5</td></tr>
+      <tr><td>Summer GPU speed</td><td class="n">0.95</td><td class="n">0.91</td><td class="n">0.84</td></tr>
+      <tr><td>Hottest GPU °C</td><td class="n">88.4</td><td class="n">89.3</td><td class="n">91.0</td></tr>
     </tbody>
   </table></div>
 </section>
@@ -287,8 +288,8 @@ a { color: var(--accent); }
   <h2>What this does not prove</h2>
   <ul class="plain prose">
     <li><b>The tracker test is circular.</b> The same model generated the sensor data and read it back, so 5/5 is a pipeline check, not field accuracy. Real BMS and optics telemetry is the next test.</li>
-    <li><b>Coefficients are estimates,</b> not vendor-sourced. Results are good for ranking designs, not for quoting a real PUE.</li>
-    <li><b>3.3% is small but realistic.</b> Server power dominates; cooling and network are about 10% of the load.</li>
+    <li><b>Hall physics is estimated.</b> 18 of 302 numbers (optics, switches, UPS, air handlers, CDU) are vendor-sourced from the team catalog. Recirculation, chiller, rack power and prices are not yet. Good for ranking designs, not for quoting a real PUE.</li>
+    <li><b>3.5% is small at this density.</b> The benchmark rack is ~38 kW; catalog racks are 130–245 kW, where liquid, CDU and floor limits dominate. Server power dominates; cooling and network are about 10% of the load.</li>
     <li>No airflow simulation (CFD), humidity or N+1 redundancy.</li>
   </ul>
 </section>
@@ -297,7 +298,7 @@ a { color: var(--accent); }
   <h2>Run it</h2>
 <pre>autolab hills check cool-the-cluster        # 21 tests
 cd tracker &amp;&amp; python3 synth_telemetry.py &amp;&amp; python3 track.py</pre>
-  <p class="muted">Code: <a href="https://github.com/Alexander-Aghili/Data-Center-Design-Twin/pull/1">Data-Center-Design-Twin, PR #1</a> · <code>prototypes/cool-the-cluster/</code></p>
+  <p class="muted">Code: <a href="https://github.com/Alexander-Aghili/Data-Center-Design-Twin/tree/main/prototypes/cool-the-cluster">Data-Center-Design-Twin</a> · <code>prototypes/cool-the-cluster/</code></p>
 </section>
 
 </div>

@@ -1,22 +1,22 @@
 {
  "validation": {
-  "annual_kwh_per_rack_hour": 51.422946491145176,
+  "annual_kwh_per_rack_hour": 52.29476886463742,
   "scenarios": {
-   "summer_training": 51.84009442611196,
-   "winter_training": 48.64520120279585,
-   "inference_peak": 55.89684219993403,
-   "moe_all_to_all": 50.6093654396423,
-   "aged_5yr_summer": 51.84092622890943
+   "summer_training": 52.7085815568935,
+   "winter_training": 49.397101399997744,
+   "inference_peak": 57.026839582623055,
+   "moe_all_to_all": 51.440424150546555,
+   "aged_5yr_summer": 52.709479505996825
   }
  },
  "final": {
-  "annual_kwh_per_rack_hour": 51.45623402847786,
+  "annual_kwh_per_rack_hour": 52.329696765114846,
   "scenarios": {
-   "summer_training": 51.8623820415987,
-   "winter_training": 48.683479827480646,
-   "inference_peak": 55.999734037208526,
-   "moe_all_to_all": 50.60419884105621,
-   "aged_5yr_summer": 51.86440289343671
+   "summer_training": 52.73209584249121,
+   "winter_training": 49.43722593362873,
+   "inference_peak": 57.13489844107504,
+   "moe_all_to_all": 51.43488996167281,
+   "aged_5yr_summer": 52.7341408098337
   }
  }
 }

@@ -79,10 +79,16 @@ def main():
         util_by_day[d][ctx["rack_job"][g]] = float(r["util"])
     sp_summer = dict(sub["setpoints"])
     sp_summer.update(sub.get("setpoints_by_scenario", {}).get("summer_training", {}))
-    p_full = gr["gpu_idle_w"] + (gr["gpu_tdp_w"] - gr["gpu_idle_w"]) * 0.95
-    full = twin._gpu_rack_state(SPEC, 0.95, 1.0, sp_summer["cdu_supply_c"], 1.0, 8.0)
-    dT_full = full["liq"] / (gr["design_flow_kg_s"] * SPEC["coolant"]["cp"])
-    f_max = (THROTTLE_C - sp_summer["cdu_supply_c"] - 0.5 * dT_full) / (p_full * gr["cold_plate_r_k_per_w"]) - 1.0
+    u_peak = defaultdict(float)
+    for r in cooling:
+        u_peak[r["rack"]] = max(u_peak[r["rack"]], float(r["util"]))
+
+    def throttle_fouling(g):
+        """Fouling at which rack g throttles at its own peak load with summer coolant."""
+        p_peak = gr["gpu_idle_w"] + (gr["gpu_tdp_w"] - gr["gpu_idle_w"]) * u_peak[g]
+        st = twin._gpu_rack_state(SPEC, u_peak[g], 1.0, sp_summer["cdu_supply_c"], 1.0, 8.0)
+        dT = st["liq"] / (gr["design_flow_kg_s"] * SPEC["coolant"]["cp"])
+        return (THROTTLE_C - sp_summer["cdu_supply_c"] - 0.5 * dT) / (p_peak * gr["cold_plate_r_k_per_w"]) - 1.0
     fouling_now, fouling_slope = {}, {}
     for g, ser in foul_series.items():
         base = mean(v for d, v in ser if d < BASE_DAYS)
@@ -93,6 +99,7 @@ def main():
         fouling_slope[g] = max(0.0, sl)
         tj_recent = max(float(r["gpu_junction_c"]) for r in cooling if r["rack"] == g and int(r["day"]) > last - 7)
         if fouling_now[g] > 0.05 or tj_recent > THROTTLE_C:
+            f_max = throttle_fouling(g)
             days = (f_max - fouling_now[g]) / fouling_slope[g] if fouling_slope[g] > 1e-6 else None
             findings.append({
                 "kind": "cold_plate_fouling", "asset": g, "severity": "high" if tj_recent > THROTTLE_C else "medium",
@@ -120,11 +127,12 @@ def main():
             days = (head_limit - now) / sl if sl > 1e-6 else None
             findings.append({
                 "kind": "pipe_scaling", "asset": g, "severity": "medium",
-                "evidence": f"branch dP {base:.1f} -> {now:.1f} kPa (+{sl*30:.2f} kPa/month); inferred roughness "
+                "evidence": f"branch dP {base:.1f} -> {now:.1f} kPa ({sl*30:+.2f} kPa/month over the last 30 days); inferred roughness "
                             f"{eps*1e6:.0f} um vs {mat['roughness_new_m']*1e6:.1f} um new / "
                             f"{mat['roughness_aged_m']*1e6:.0f} um 5-yr spec",
                 "prediction": (f"{ctx['branch'][g]['cdu']} hits its {SPEC['cdu_common']['max_head_kpa']:.0f} kPa pump-head "
-                               f"limit in ~{days:.0f} days" if days else "stable"),
+                               f"limit in ~{days:.0f} days" if days and days > 0 else
+                               f"rise has levelled off; {head_limit - now:.0f} kPa of pump-head margin left"),
             })
 
     # ------------------------------------------------------------------ optics
@@ -203,7 +211,9 @@ def main():
             st["fouling"][g] = 0.0
         _, kpr, sim = annual_kwh(SPEC, ctx, st)
         actions.append({"action": f"Flush loop + clean cold plates on {', '.join(fouled)}; "
-                                  f"move {'/'.join(sorted({ctx['branch'][g]['material'] for g in fouled}))} branches to stainless at next window",
+                                  + (f"move {'/'.join(sorted(mats))} branches to stainless at next window"
+                                     if (mats := {ctx['branch'][g]['material'] for g in fouled} - {"stainless"})
+                                     else "check water treatment (branches are already stainless)"),
                         "saves_mwh_yr": saved_mwh(base_kpr, kpr, sim, SPEC), "urgency": "now"})
         # stop-gap: colder summer coolant until the flush happens
         best = None

@@ -18,21 +18,37 @@ DAYS = 120
 OUT = HERE / "telemetry"
 
 FAULTS = {
-    "cold_plate_fouling": {"rack": "G21", "start_day": 20, "per_day": 0.0022,
+    "cold_plate_fouling": {"rack": None, "start_day": 20, "per_day": 0.0022,
                            "why": "pex loop, oxygen ingress -> corrosion particulate on cold plates"},
-    "pipe_scaling": {"rack": "G08", "start_day": 10, "roughness_m_per_day": 6.0e-6,
+    "pipe_scaling": {"rack": None, "start_day": 10, "roughness_m_per_day": 6.0e-6,
                      "why": "scale/biofilm in a branch -> rising pressure drop"},
-    "laser_wear": {"rack": "G03", "spine": "N1", "lane": 5, "start_day": 40, "bias_ma_per_day": 0.045,
+    "laser_wear": {"rack": None, "spine": "N1", "lane": 5, "start_day": 40, "bias_ma_per_day": 0.045,
                    "why": "transmitter laser wearing out -> bias current climbs to hold power"},
-    "dirty_connector": {"rack": "G19", "spine": "N0", "lane": 2, "day": 75, "rx_drop_db": 3.2,
+    "dirty_connector": {"rack": None, "spine": "N0", "lane": 2, "day": 75, "rx_drop_db": 3.2,
                         "why": "connector contaminated during a re-patch"},
     "missing_blanking": {"rack": "S2", "start_day": 60, "recirc_scale": 3.5,
                          "why": "blanking panel removed during maintenance -> hot air recirculates"},
 }
 
 
+def pick_fault_racks(ctx):
+    """Plant each fault where it matters in *this* layout, so the demo survives a new design:
+    fouling on a busy training rack, scale on the fastest-flowing (narrowest, longest) branch,
+    and the two optics faults on two different optically-linked training racks."""
+    modules = SPEC["network"]["modules"]
+    training = [g for j, rs in ctx["job_racks"].items() if j != "serve" for g in sorted(rs)]
+    not_stainless = [g for g in training if ctx["branch"][g]["material"] != "stainless"]
+    FAULTS["cold_plate_fouling"]["rack"] = (not_stainless or training)[0]
+    FAULTS["pipe_scaling"]["rack"] = max(
+        (g for g in training if g != FAULTS["cold_plate_fouling"]["rack"]),
+        key=lambda g: (ctx["pipe_rows"][g]["velocity_m_s"], ctx["pipe_rows"][g]["length_m"]))
+    optical = [g for g in training if modules[ctx["leaf_mod"][g]]["optical"]]
+    FAULTS["laser_wear"]["rack"], FAULTS["dirty_connector"]["rack"] = optical[0], optical[-1]
+
+
 def main():
     sub, ctx = load_design()
+    pick_fault_racks(ctx)
     rng = random.Random(42)
     OUT.mkdir(exist_ok=True)
     sp = sub["setpoints"]
