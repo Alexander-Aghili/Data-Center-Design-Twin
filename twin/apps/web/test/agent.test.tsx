@@ -100,6 +100,19 @@ describe('agent thread', () => {
     expect(screen.queryByRole('button', { name: 'New conversation' })).toBeNull()
   })
 
+  it('a message the person sends brings the thread back to its end, even after they scrolled up', () => {
+    setup(chatTurn)
+    const log = screen.getByRole('log')
+    Object.defineProperty(log, 'scrollHeight', { configurable: true, value: 1000 })
+    Object.defineProperty(log, 'clientHeight', { configurable: true, value: 200 })
+    log.scrollTop = 0
+    fireEvent.scroll(log)
+    push({ kind: 'messageStart', messageId: 'm9', trigger: 'observation', severity: 'info' })
+    expect(log.scrollTop).toBe(0)
+    push({ kind: 'userMessage', messageId: 'u9', text: 'Fix the floor' })
+    expect(log.scrollTop).toBe(1000)
+  })
+
   it('tool calls render as one quiet line with summary', () => {
     setup(problemTurn)
     const lines = document.querySelectorAll<HTMLElement>('.ag-tool')

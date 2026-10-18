@@ -101,6 +101,8 @@ export function Thread() {
 
   useLayoutEffect(() => {
     const el = log.current
+    // Sending a message means the person wants the reply in view, wherever they had scrolled.
+    if (thread.at(-1)?.kind === 'userMessage') stick.current = true
     if (el && stick.current) el.scrollTop = el.scrollHeight
   }, [thread])
 

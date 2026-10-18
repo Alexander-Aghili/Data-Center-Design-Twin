@@ -114,10 +114,11 @@ describe('twin store', () => {
     const rename = { ...proposal, id: 'pr', commands: [{ type: 'renamePlan', payload: { name: 'B' } }] }
     for (const p of [cooling, rename]) backend.onMsg({ t: 'agent', event: { kind: 'proposal', messageId: 'm1', proposal: p } })
     store.getState().dispatchView({ type: 'setLayer', layer: 'compute' })
+    store.getState().dispatchView({ type: 'focus', target: { kind: 'rack', id: 'R4-08' }, shot: 'gpu' })
     backend.onMsg({ t: 'agent', event: { kind: 'proposalStatus', proposalId: 'pr', status: 'applied' } })
-    expect(store.getState()).toMatchObject({ activeLayer: 'compute', pipeFill: 0 })
+    expect(store.getState()).toMatchObject({ activeLayer: 'compute', pipeFill: 0, selection: { kind: 'rack', id: 'R4-08' } })
     backend.onMsg({ t: 'agent', event: { kind: 'proposalStatus', proposalId: 'pc', status: 'applied' } })
-    expect(store.getState()).toMatchObject({ activeLayer: 'cooling', overlay: 'liquid', shot: 'hall', pipeFill: 1 })
+    expect(store.getState()).toMatchObject({ activeLayer: 'cooling', overlay: 'liquid', shot: 'hall', pipeFill: 1, selection: null })
   })
 
   it('previewing a proposal pulls the camera back to the hall so its ghost and clouds are in view', () => {
@@ -140,6 +141,19 @@ describe('twin store', () => {
     backend.onMsg({ t: 'view', action: { type: 'annotate', annotation: cloud(2) } })
     backend.onMsg({ t: 'agent', event: { kind: 'proposalStatus', proposalId: 'p1', status: 'applied' } })
     expect(store.getState().annotations.map((a) => a.tag)).toEqual([2])
+  })
+
+  it('a problem cloud pulls the camera out of a rack close-up so it can be seen; other clouds do not', () => {
+    const store = createTwinStore({ backend: new FakeBackend() })
+    const cloud = (tag: number, severity: 'problem' | 'warning') => ({ tag, objectIds: ['rack:R3-00'], label: 'Air limit', severity })
+    store.getState().dispatchView({ type: 'setLayer', layer: 'compute' })
+    store.getState().dispatchView({ type: 'annotate', annotation: cloud(1, 'warning') })
+    expect(store.getState().shot).toBe('gpu')
+    store.getState().dispatchView({ type: 'annotate', annotation: cloud(2, 'problem') })
+    expect(store.getState().shot).toBe('hall')
+    store.getState().dispatchView({ type: 'setLayer', layer: 'layout' })
+    store.getState().dispatchView({ type: 'annotate', annotation: cloud(3, 'problem') })
+    expect(store.getState().shot).toBe('row')
   })
 
   it('resetChat asks the server for a new conversation', () => {

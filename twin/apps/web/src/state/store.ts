@@ -57,6 +57,8 @@ const FOCUS_SHOT: Record<'rack' | 'row' | 'equipment' | 'gpu' | 'bay', ShotId> =
   bay: 'row',
 }
 
+const CLOSE_UPS = new Set<ShotId>(['rack', 'tray', 'gpu'])
+
 /** Pure view reducer shared by local and server-pushed view actions. */
 export function reduceView(s: TwinState, a: ViewAction): Partial<TwinState> {
   switch (a.type) {
@@ -68,8 +70,11 @@ export function reduceView(s: TwinState, a: ViewAction): Partial<TwinState> {
       return { selection: a.target, shot: a.shot ?? FOCUS_SHOT[a.target.kind] }
     case 'select':
       return { selection: a.target }
-    case 'annotate':
-      return { annotations: [...s.annotations.filter((x) => x.tag !== a.annotation.tag), a.annotation] }
+    case 'annotate': {
+      const annotations = [...s.annotations.filter((x) => x.tag !== a.annotation.tag), a.annotation]
+      // From inside a rack the hall-scale cloud cannot be seen, so a problem pulls the camera back out.
+      return a.annotation.severity === 'problem' && CLOSE_UPS.has(s.shot) ? { annotations, shot: 'hall' } : { annotations }
+    }
     case 'clearAnnotations':
       return { annotations: [] }
     case 'previewProposal':
@@ -100,7 +105,8 @@ function settleView(s: TwinState, proposalId: string, status: Proposal['status']
   }
   if (status !== 'applied') return preview
   if (!changesCooling(s.proposals[proposalId])) return { ...preview, shot: 'hall' }
-  return { ...preview, activeLayer: 'cooling', ...LAYER_DEFAULTS.cooling, shot: 'hall', pipeFill: s.pipeFill + 1 }
+  // The hall-wide pipe fill is the point of this moment, so a rack close-up and its inspector close.
+  return { ...preview, activeLayer: 'cooling', ...LAYER_DEFAULTS.cooling, shot: 'hall', selection: null, pipeFill: s.pipeFill + 1 }
 }
 
 export interface TwinStoreOptions {
