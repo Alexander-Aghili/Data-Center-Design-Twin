@@ -107,3 +107,33 @@ export function fmtValue(value: number | null | undefined, unit: string): string
     }
   })
 }
+
+/**
+ * Display units and the factor from the engine's SI value to what is shown (shown = SI / factor), in step
+ * with the formatters above. A percentage can show a ratio (fmtPct) or a value already in percent. Units that
+ * fmtValue passes through unchanged have factor 1. The agent thread reads this to match numbers to tool results.
+ */
+export const DISPLAY_UNIT_FACTORS: Readonly<Record<string, readonly number[]>> = {
+  W: [1],
+  kW: [1e3],
+  MW: [1e6],
+  VA: [1],
+  A: [1],
+  kg: [1],
+  t: [1e3],
+  'L/s': [1],
+  'L/min': [1 / 60],
+  '%': [0.01, 1],
+  '°C': [1],
+  K: [1],
+  week: [1],
+  weeks: [1],
+  s: [1],
+  'm³/day': [1],
+  kN: [1],
+  'kN/m²': [1],
+  PFLOPS: [1],
+}
+
+/** The suffixes fmtMoney writes after a dollar amount: $950K, $6.1M, $1.25B. */
+export const MONEY_SUFFIX_FACTORS: Readonly<Record<string, number>> = { K: 1e3, M: 1e6, B: 1e9 }
