@@ -134,9 +134,10 @@ const swing = (checks: Check[]) => checks.filter((c) => c.kind === 'power.traini
 const target = (checks: Check[]) => checks.find((c) => c.kind === 'workload.targetCompute')
 
 describe('power.trainingSwing', () => {
-  it('warns when load × peakToAverageTraining exceeds 90% of the busway rating', () => {
-    // 1050 A × 1.1 = 1155 A > 0.9 × 1250 A = 1125 A
-    const [check] = swing(demandChecks(context(), racks, power([{ rowId: 'R1', buswayLoadA: 1050 }], { R1: 1250 })).checks)
+  it('warns when the training design current (load × peakToAverageTraining) exceeds 90% of the busway rating', () => {
+    // The power module's buswayLoadA already carries the purpose's peak-to-average factor (1050 A × 1.1 = 1155 A);
+    // it must not be applied twice. 1155 A > 0.9 × 1250 A = 1125 A.
+    const [check] = swing(demandChecks(context(), racks, power([{ rowId: 'R1', buswayLoadA: 1155 }], { R1: 1250 })).checks)
     expect(check).toMatchObject({ id: 'power.trainingSwing:R1', status: 'warn', unit: 'A', layer: 'power' })
     expect(check!.value).toBeCloseTo(1155, 6)
     expect(check!.limit).toBeCloseTo(1125, 6)
@@ -145,8 +146,8 @@ describe('power.trainingSwing', () => {
   })
 
   it('passes below 90% of the rating', () => {
-    // 900 A × 1.1 = 990 A < 1125 A
-    const [check] = swing(demandChecks(context(), racks, power([{ rowId: 'R1', buswayLoadA: 900 }], { R1: 1250 })).checks)
+    // 1100 A < 1125 A, although 1100 A × 1.1 would exceed it
+    const [check] = swing(demandChecks(context(), racks, power([{ rowId: 'R1', buswayLoadA: 1100 }], { R1: 1250 })).checks)
     expect(check!.status).toBe('pass')
   })
 

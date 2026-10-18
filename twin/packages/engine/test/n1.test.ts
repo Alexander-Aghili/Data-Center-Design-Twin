@@ -135,6 +135,13 @@ describe('applyFailureScenarios', () => {
     expect(byId(out, 'power.ups:site').worstFailure).toMatchObject({ scenario: 'One UPS module offline', status: 'pass', utilization: 0.8 })
   })
 
+  it('removes one unit from the full installed count, not from the units counted after redundancy', () => {
+    // N+1 with 3 modules: the power check counts 2 serving modules (limit 1 MW). Losing one of the 3 leaves 2 × 500 kW.
+    const ups3 = { ...check('power.ups', 'ups', 900_000), limit: 1_000_000 }
+    const out = applyFailureScenarios(ctx, base([sized('ups', 'ups', ups.id, 3)], [ups3]))
+    expect(byId(out, 'power.ups:ups').worstFailure).toMatchObject({ status: 'warn', utilization: 0.9 })
+  })
+
   it('a hall-wide check keeps the worst of its zones, using each zone load', () => {
     const out = applyFailureScenarios(
       ctx,

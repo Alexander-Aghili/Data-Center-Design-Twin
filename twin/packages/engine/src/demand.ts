@@ -19,6 +19,11 @@ function rowObjectIds(racks: RackResult[], rowId: string): string[] {
   return racks.filter((r) => r.rowId === rowId).map((r) => r.objectId)
 }
 
+/**
+ * The power module's `buswayLoadA` is the design current: peak rack power × the purpose's peak-to-average
+ * factor ÷ the oversubscription allowance. For training that already is load × `peakToAverageTraining`, so
+ * it is compared to 90% of the busway capacity as is, without applying the factor a second time.
+ */
 function trainingSwingChecks(ctx: EvalContext, racks: RackResult[], power: PowerResult): Check[] {
   if (ctx.plan.workload.purpose !== 'training') return []
   const peakToAverage = num(ctx.rules.peakToAverageTraining)
@@ -29,15 +34,16 @@ function trainingSwingChecks(ctx: EvalContext, racks: RackResult[], power: Power
         (c) => c.kind === 'power.busway' && (c.subject.id === row.rowId || c.id === `power.busway:${row.rowId}`),
       )
       const rating = busway?.limit ?? null
-      const value = peakToAverage === null ? null : row.buswayLoadA * peakToAverage
+      const value = row.buswayLoadA
       const limit = rating === null ? null : rating * SWING_LIMIT_FRACTION
-      const utilization = value !== null && limit !== null && limit > 0 ? value / limit : null
+      const utilization = limit !== null && limit > 0 ? value / limit : null
       const status = utilization === null ? 'unknown' : utilization > 1 ? 'warn' : 'pass'
+      const factor = peakToAverage === null ? '' : ` (×${peakToAverage} peak-to-average)`
       const explanation =
-        value === null || limit === null || rating === null
-          ? `Row ${row.rowId} carries ${unit(row.buswayLoadA, 'A')}, but the busway rating or the training peak factor is unknown.`
-          : `Synchronized training steps raise row ${row.rowId} from ${unit(row.buswayLoadA, 'A')} to ${unit(value, 'A')} at peak ` +
-            `(×${peakToAverage}). That is ${Math.round((value / rating) * 100)}% of the ${unit(rating, 'A')} busway; ` +
+        limit === null || rating === null
+          ? `Synchronized training steps put row ${row.rowId} at ${unit(value, 'A')}${factor}, but the busway capacity is unknown.`
+          : `Synchronized training steps put row ${row.rowId} at ${unit(value, 'A')} at peak${factor}. ` +
+            `That is ${Math.round((value / rating) * 100)}% of the ${unit(rating, 'A')} busway capacity; ` +
             `above ${Math.round(SWING_LIMIT_FRACTION * 100)}% the breaker may trip on the swings.`
       return {
         id: `power.trainingSwing:${row.rowId}`,
