@@ -1,9 +1,13 @@
 import type { CatalogIndex, Placement, Plan, RackCoolingCategory, RackCoolingEntry, RackEntry, Row } from '@twin/schema'
 
-/** "B300" from "NVIDIA B300 (HGX, SXM)", "MI455X" from "AMD Instinct MI455X": the model, without vendor or variant. */
+/**
+ * The GPU's model id: "B300" from "NVIDIA B300 (HGX, SXM)", "MI455X" from "AMD Instinct MI455X". A model id in
+ * brackets is more specific and wins: "GB300" from "NVIDIA B300 (GB300 superchip)", "VR200" from "NVIDIA Rubin (VR200)".
+ */
 export function gpuShortName(name: string): string {
-  const words = name.replace(/\s*\([^)]*\)/g, '').trim().split(/\s+/)
-  return words.at(-1) || name
+  const bracketed = /\(([^)]*)\)/.exec(name)?.[1]?.split(/[\s,]+/)[0]
+  if (bracketed && /\d/.test(bracketed)) return bracketed
+  return name.replace(/\s*\([^)]*\)/g, '').trim().split(/\s+/).at(-1) || name
 }
 
 export const ROLE_LABEL: Record<RackEntry['role'], string> = { compute: 'Compute', network: 'Network', storage: 'Storage' }
@@ -15,10 +19,11 @@ export function rackCarries(rack: RackEntry | undefined, catalog: CatalogIndex):
   return gpu ? gpuShortName(gpu.name) : ROLE_LABEL[rack.role]
 }
 
-/** The GPU's full name without the variant in brackets: "NVIDIA B300". */
+/** The GPU by vendor and model id, matching the chips: "NVIDIA GB300", "AMD MI455X". */
 export function gpuName(rack: RackEntry, catalog: CatalogIndex): string | null {
   const gpu = rack.gpuId ? catalog.get(rack.gpuId, 'gpu') : undefined
-  return gpu ? gpu.name.replace(/\s*\([^)]*\)/g, '').trim() : null
+  if (!gpu) return null
+  return [gpu.vendor, gpuShortName(gpu.name)].filter(Boolean).join(' ')
 }
 
 const COOLING_LABEL: Record<RackCoolingCategory, string> = {

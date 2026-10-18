@@ -18,31 +18,29 @@ export function CoolingPills(props: {
   const hintId = useId()
   const methods = coolingMethodsFor(props.rack, props.catalog)
   const current = methods.find((m) => m.id === props.value)
+  const small = new Set(methods.filter((m) => methodTooSmall(m, props.rack)).map((m) => m.id))
   const load = fmtNull(props.rack.nominalPowerW.value, fmtPower)
   if (methods.length === 0) return <p className={s.hint}>The catalog has no cooling method this rack takes.</p>
   return (
     <>
       <div role="group" aria-labelledby={props.labelledBy} className={s.pills}>
-        {methods.map((m) => {
-          const small = methodTooSmall(m, props.rack)
-          return (
-            <button
-              key={m.id}
-              type="button"
-              className={s.pill}
-              aria-pressed={m.id === props.value}
-              aria-describedby={small ? hintId : undefined}
-              onClick={() => props.onPick(m)}
-            >
-              {small && (
-                <span className={s.warnMark} aria-hidden="true">
-                  ▲
-                </span>
-              )}
-              {m.name}
-            </button>
-          )
-        })}
+        {methods.map((m) => (
+          <button
+            key={m.id}
+            type="button"
+            className={s.pill}
+            aria-pressed={m.id === props.value}
+            aria-describedby={small.has(m.id) ? hintId : undefined}
+            onClick={() => props.onPick(m)}
+          >
+            {small.has(m.id) && (
+              <span className={s.warnMark} aria-hidden="true">
+                ▲
+              </span>
+            )}
+            {m.name}
+          </button>
+        ))}
       </div>
       {current === undefined ? (
         <p className={s.hint}>
@@ -52,7 +50,7 @@ export function CoolingPills(props: {
           Pick a cooling method this rack takes.
         </p>
       ) : null}
-      {methods.some((m) => methodTooSmall(m, props.rack)) && (
+      {small.size > 0 && (
         <p id={hintId} className={s.hint}>
           <span className={s.warnMark} aria-hidden="true">
             ▲

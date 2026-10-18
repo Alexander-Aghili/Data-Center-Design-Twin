@@ -49,7 +49,14 @@ export function NewGroupPanel(props: { plan: Plan; catalog: CatalogIndex; titleI
         <label htmlFor={`${id}-name`} className={s.sectionLabel}>
           Name
         </label>
-        <input id={`${id}-name`} className={`input ${s.nameInput}`} value={name} onChange={(e) => setName(e.currentTarget.value)} />
+        <input
+          id={`${id}-name`}
+          name="groupName"
+          autoComplete="off"
+          className={`input ${s.nameInput}`}
+          value={name}
+          onChange={(e) => setName(e.currentTarget.value)}
+        />
       </div>
 
       <Section label="Rack type" id={`${id}-racks`}>

@@ -116,6 +116,7 @@ function Bar({ plan }: { plan: Plan }) {
               plan={plan}
               catalog={catalog}
               open={open}
+              colorOf={(groupId) => groups.find((g) => g.id === groupId)?.color ?? 'currentColor'}
               titleId={titleId}
               setOpen={setOpen}
               onClose={close}
@@ -133,10 +134,14 @@ function Bar({ plan }: { plan: Plan }) {
           return (
             <button key={g.id} {...chipProps(g.id)} className={s.chip} aria-current={current === g.id ? 'true' : undefined} onClick={() => pickGroup(g.id)}>
               <span className={s.swatch} style={{ background: g.color }} aria-hidden="true" />
-              <span className={s.chipName}>{g.name}</span>
+              <span className={s.chipName} title={g.name}>
+                {g.name}
+              </span>
               <span className={s.chipCount}>{g.racks}</span>
               <span className="visually-hidden"> racks, </span>
-              <span className={s.chipGpu}>{rackCarries(catalog.get(rackTypeId, 'rack'), catalog)}</span>
+              <span className={s.chipGpu} translate="no">
+                {rackCarries(catalog.get(rackTypeId, 'rack'), catalog)}
+              </span>
             </button>
           )
         })}
@@ -153,6 +158,7 @@ function Panel(props: {
   plan: Plan
   catalog: CatalogIndex
   open: NonNullable<Open>
+  colorOf(groupId: string): string
   titleId: string
   setOpen(open: Open): void
   onClose(): void
@@ -182,7 +188,7 @@ function Panel(props: {
       plan={plan}
       catalog={catalog}
       group={group}
-      color={workloadGroups(plan).find((g) => g.id === group.id)?.color ?? 'currentColor'}
+      color={props.colorOf(group.id)}
       titleId={titleId}
       onClose={onClose}
       onPlace={() => setOpen({ kind: 'group', id: group.id, placing: true })}

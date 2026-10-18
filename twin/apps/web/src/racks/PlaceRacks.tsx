@@ -30,7 +30,9 @@ export function PlaceRacks(props: {
   const [rowId, setRowId] = useState<string | null>(null)
   // null follows the picked row's room.
   const [countDraft, setCount] = useState<string | null>(null)
-  const picked = rows.find((r) => r.row.id === rowId) ?? rows[0]
+  // Until one is picked, the row with the most room (the first of equals).
+  const roomiest = rows.reduce<(typeof rows)[number] | undefined>((best, r) => (!best || r.starts.length > best.starts.length ? r : best), undefined)
+  const picked = rows.find((r) => r.row.id === rowId) ?? roomiest
   const room = picked?.starts.length ?? 0
   const count = countDraft ?? String(room)
 
@@ -87,6 +89,8 @@ export function PlaceRacks(props: {
             </label>
             <input
               id={`${id}-count`}
+              name="rackCount"
+              autoComplete="off"
               className={`input ${s.count}`}
               type="number"
               inputMode="numeric"

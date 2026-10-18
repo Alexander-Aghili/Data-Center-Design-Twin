@@ -4,7 +4,7 @@ import { useTwinStore } from '../state/store'
 import { CoolingPills } from './CoolingPills'
 import { ErrorLine, PopoverHeader, Section, useCommandResult } from './Popover'
 import { RackPicker } from './RackPicker'
-import { coolingTaken, groupRacks } from './rackFacts'
+import { groupRacks } from './rackFacts'
 import s from './racks.module.css'
 
 /** "48 racks in R3, R4, R5" or "No racks placed yet". */
@@ -48,6 +48,9 @@ function GroupTitle(props: { group: RackGroup; color: string; titleId: string; o
           <input
             className={`input ${s.titleInput}`}
             aria-label="Group name"
+            name="groupName"
+            autoComplete="off"
+            // Rename was just asked for, so the field takes focus.
             autoFocus
             value={draft}
             onChange={(e) => setDraft(e.currentTarget.value)}
@@ -89,7 +92,7 @@ export function GroupPanel(props: {
   const placed = groupRacks(plan, group.id).length
 
   const cautionFor = (r: RackEntry) =>
-    r.id !== group.rackTypeId && method && !r.supportedCooling.includes(method.category) ? `Needs other cooling. ${coolingTaken(r)}.` : undefined
+    r.id !== group.rackTypeId && method && !r.supportedCooling.includes(method.category) ? 'Needs a cooling change' : undefined
 
   return (
     <>

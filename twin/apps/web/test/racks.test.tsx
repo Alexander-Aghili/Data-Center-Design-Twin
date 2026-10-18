@@ -46,10 +46,12 @@ describe('rack bar chips', () => {
     expect(chips.map((c) => c.textContent)).toEqual(['Inference block32 racks, B300', 'Training block48 racks, B300', 'New group'])
   })
 
-  it('names GPUs by their model', () => {
+  it('names GPUs by their model id', () => {
     expect(gpuShortName('NVIDIA B300 (HGX, SXM)')).toBe('B300')
     expect(gpuShortName('AMD Instinct MI455X')).toBe('MI455X')
-    expect(gpuShortName('NVIDIA Rubin (VR200)')).toBe('Rubin')
+    // A model id in brackets is the more specific name: GB300 and HGX B300 racks must not both read "B300".
+    expect(gpuShortName('NVIDIA Rubin (VR200)')).toBe('VR200')
+    expect(gpuShortName('NVIDIA B300 (GB300 superchip)')).toBe('GB300')
   })
 
   it('a click focuses the camera on the group’s first rack and marks the chip selected', () => {
@@ -110,7 +112,8 @@ describe('group panel', () => {
     expect(gb300.textContent).toContain('72\u00a0GPUs')
     expect(gb300.textContent).toContain('132\u00a0kW')
     expect(gb300.textContent).toContain('1.6\u00a0t')
-    expect(gb300.textContent).toContain('B300')
+    // Rack name, then the GPU by the same model id the chips use.
+    expect(gb300.textContent).toContain('NVL72NVIDIA GB300')
     expect(gb300.textContent).toContain('Direct-to-chip')
   })
 
@@ -196,7 +199,9 @@ describe('new group', () => {
       ...['R1', 'R2', 'R3', 'R4', 'R5'].map((r) => `${r}, 8 free`),
       ...['R6', 'R7', 'R8'].map((r) => `${r}, 24 free`),
     ])
-    expect((within(place).getByRole('spinbutton', { name: 'Racks' }) as HTMLInputElement).value).toBe('8')
+    // The row with the most room comes picked.
+    expect(within(rows).getByRole('button', { name: /R6/ }).getAttribute('aria-pressed')).toBe('true')
+    expect((within(place).getByRole('spinbutton', { name: 'Racks' }) as HTMLInputElement).value).toBe('24')
     fireEvent.click(within(rows).getByRole('button', { name: /R7/ }))
     fireEvent.change(within(place).getByRole('spinbutton', { name: 'Racks' }), { target: { value: '10' } })
     await act(async () => fireEvent.click(within(place).getByRole('button', { name: 'Place racks' })))

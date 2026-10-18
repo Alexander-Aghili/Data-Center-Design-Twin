@@ -43,6 +43,7 @@
   color: var(--ink);
   white-space: nowrap;
   cursor: pointer;
+  touch-action: manipulation;
   transition:
     background-color var(--dur-fast) var(--ease),
     border-color var(--dur-fast) var(--ease);
@@ -75,7 +76,10 @@
 }
 
 .chipName {
+  max-width: 22ch;
+  overflow: hidden;
   font-weight: var(--weight-semibold);
+  text-overflow: ellipsis;
 }
 
 .chipCount {
@@ -133,14 +137,14 @@
   bottom: calc(100% + var(--space-2));
   left: 0;
   z-index: 1;
-  width: min(620px, calc(100vw - 32px));
+  width: min(720px, calc(100vw - 32px));
 }
 
 .popover {
   display: grid;
-  gap: var(--space-4);
-  max-height: min(64vh, 580px);
-  padding: var(--space-4);
+  gap: var(--space-3);
+  max-height: min(66vh, 540px);
+  padding: var(--space-3) var(--space-4) var(--space-4);
   overflow-y: auto;
   overscroll-behavior: contain;
   border: var(--rule);
@@ -152,7 +156,7 @@
 
 .popover > form {
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
 
 @keyframes rise {
@@ -192,6 +196,7 @@
   font-weight: var(--weight-semibold);
   line-height: var(--leading-tight);
   overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
 .titleInput {
@@ -216,7 +221,7 @@
 
 .section {
   display: grid;
-  gap: var(--space-2);
+  gap: 6px;
 }
 
 .sectionLabel {
@@ -230,22 +235,23 @@
 
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
-  gap: var(--space-2);
+  grid-template-columns: repeat(auto-fill, minmax(152px, 1fr));
+  gap: 6px;
 }
 
 .card {
   display: grid;
   align-content: start;
-  gap: 3px;
+  gap: 2px;
   min-width: 0;
-  padding: 10px var(--space-3) var(--space-3);
+  padding: var(--space-2) 10px 10px;
   border: var(--rule);
   border-radius: 6px;
   background: var(--ink-inverse);
   color: var(--ink);
   text-align: left;
   cursor: pointer;
+  touch-action: manipulation;
   transition:
     background-color var(--dur-fast) var(--ease),
     border-color var(--dur-fast) var(--ease);
@@ -290,9 +296,10 @@
 .facts {
   display: flex;
   flex-wrap: wrap;
-  column-gap: var(--space-3);
-  margin-top: var(--space-1);
+  column-gap: var(--space-2);
+  margin-top: 2px;
   font-size: var(--text-md);
+  font-stretch: var(--stretch-label);
   font-variant-numeric: tabular-nums;
   font-weight: var(--weight-medium);
 }
@@ -330,6 +337,7 @@
   color: var(--ink);
   text-align: left;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .pill:hover {
@@ -386,6 +394,7 @@
   gap: var(--space-3);
   padding-top: var(--space-3);
   border-top: var(--rule);
+  margin-top: var(--space-1);
 }
 
 .footEnd {
