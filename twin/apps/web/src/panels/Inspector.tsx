@@ -71,6 +71,7 @@ const CHECK_LIMITS: Record<CheckKind, string> = {
   'cooling.cduPositions': 'the CDU positions that serve these rows (plan)',
   'cooling.manifoldBalance': 'the minimum flow share per rack, 0.9 to warn and 0.8 to fail (engine rule)',
   'cooling.coolantTemp': 'the rack maximum coolant supply temperature (catalog)',
+  'cooling.airInletTemp': 'the ASHRAE TC9.9 class A1 allowable inlet air temperature for air-cooled servers (textbook)',
   'cooling.heatRejection': 'heat rejection unit capacity times the units sized (catalog)',
   'cooling.rideThrough': 'the chiller restart time and allowed temperature rise (rules)',
   'cooling.waterPeakDay': 'the site water allowance (plan)',
