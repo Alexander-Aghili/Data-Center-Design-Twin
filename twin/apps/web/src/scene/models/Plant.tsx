@@ -1,7 +1,7 @@
 import { num, type HeatRejectionEntry, type Plan } from '@twin/schema'
 import type { Group } from 'three'
 import { FINISH, LOUVER_TILE_M } from '../Lighting'
-import { useRegistered } from '../Scene'
+import { useRegistered } from '../hooks'
 import { FanGrille } from './Crah'
 import type { EquipmentUnit } from './Hall'
 import { catalogEntry, panelGeometry } from './Rack'

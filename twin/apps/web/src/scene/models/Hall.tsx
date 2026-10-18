@@ -1,10 +1,10 @@
 import { num, type Evaluation, type Plan, type SizedEquipment } from '@twin/schema'
-import { useLayoutEffect, useMemo, useRef } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { BoxGeometry, Object3D, type Group, type InstancedMesh } from 'three'
 import { selectOpenness, useRackOpenness } from '../camera/openness'
 import { objectIdForEquipment, objectIdForPlacement, slotWorld } from '../geometry'
 import { FINISH, LOUVER_TILE_M } from '../Lighting'
-import { useRegistered } from '../Scene'
+import { useRegistered } from '../hooks'
 import { Busway } from './Busway'
 import { Cdu, CDU_SIZE } from './Cdu'
 import { Crah, CRAH_SIZE } from './Crah'
@@ -235,6 +235,23 @@ interface HallProps {
   openRack: string | null
 }
 
+/** The rack stays drawn in full this long after the rig closes it, so the door and trays finish easing shut. */
+const CLOSE_LINGER_MS = 300
+
+/** `value`, or for `ms` after it turns null, the last non-null value. */
+function useLingering(value: string | null, ms: number): string | null {
+  const [held, setHeld] = useState(value)
+  useEffect(() => {
+    if (value !== null) {
+      setHeld(value)
+      return
+    }
+    const timer = setTimeout(() => setHeld(null), ms)
+    return () => clearTimeout(timer)
+  }, [value, ms])
+  return value ?? held
+}
+
 /** The open rack, driven by the camera rig's openness slice. */
 function RigRack({ placementId }: { placementId: string }) {
   const openness = useRackOpenness(selectOpenness(placementId))
@@ -245,7 +262,8 @@ function RigRack({ placementId }: { placementId: string }) {
 /** Racks in their slots (instanced when there are many), the one open rack, and the equipment inside the hall. */
 export function Hall({ plan, units, openRack }: HallProps) {
   const instanced = plan.placements.length > INSTANCE_THRESHOLD
-  const open = openRack && plan.placements.some((p) => p.id === openRack) ? openRack : null
+  const lingering = useLingering(openRack, CLOSE_LINGER_MS)
+  const open = lingering && plan.placements.some((p) => p.id === lingering) ? lingering : null
 
   const batches = useMemo(() => {
     if (!instanced) return []

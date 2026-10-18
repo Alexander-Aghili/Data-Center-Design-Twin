@@ -2,13 +2,14 @@ import { Stats } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
 import { EffectComposer, SMAA, SSAO, ToneMapping } from '@react-three/postprocessing'
 import { ToneMappingMode } from 'postprocessing'
-import { useLayoutEffect, useMemo, useRef, type ReactNode } from 'react'
-import { NoToneMapping, PCFShadowMap, type Object3D } from 'three'
+import { useMemo, type ReactNode } from 'react'
+import { NoToneMapping, PCFShadowMap } from 'three'
 import { useTwinStore } from '../state/store'
 import { CameraBridge } from './annotations/cameraBridge'
 import { CameraRig } from './camera/CameraRig'
 import { useRackOpenness } from './camera/openness'
 import { Ground } from './Ground'
+import { useStable } from './hooks'
 import { Lighting } from './Lighting'
 import { Hall, equipmentUnits } from './models/Hall'
 import { Pipes, pipeRuns } from './models/Pipes'
@@ -16,22 +17,6 @@ import { Site } from './models/Site'
 import { Overlays } from './overlays'
 import { PALETTE } from './palette'
 import { Picking } from './Picking'
-import { useSceneRegistry } from './registry'
-
-/**
- * Registers an object under its scene id for its lifetime and tags it with `userData.objectId`,
- * so the camera, picking and annotations can find it.
- */
-export function useRegistered<T extends Object3D>(id: string, kind: string) {
-  const ref = useRef<T>(null)
-  useLayoutEffect(() => {
-    const object = ref.current
-    if (!object) return
-    object.userData.objectId = id
-    return useSceneRegistry.getState().register(id, kind, object)
-  }, [id, kind])
-  return ref
-}
 
 function World() {
   const plan = useTwinStore((s) => s.plan)
@@ -40,8 +25,9 @@ function World() {
   const overlay = useTwinStore((s) => s.overlay)
   const openRack = useRackOpenness((s) => (s.value > 0 ? s.placementId : null))
 
-  const units = useMemo(() => (plan ? equipmentUnits(plan, evaluation) : []), [plan, evaluation])
-  const runs = useMemo(() => (plan ? pipeRuns(plan, units) : []), [plan, units])
+  // Stable while unchanged, so a re-evaluation does not rebuild pipe and deck geometry.
+  const units = useStable(useMemo(() => (plan ? equipmentUnits(plan, evaluation) : []), [plan, evaluation]))
+  const runs = useStable(useMemo(() => (plan ? pipeRuns(plan, units) : []), [plan, units]))
 
   if (!plan) return null
   return (

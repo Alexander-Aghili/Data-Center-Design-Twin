@@ -4,7 +4,7 @@ import { CylinderGeometry, Quaternion, SphereGeometry, Vector3, type BufferGeome
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { GROUND_Y } from '../Ground'
 import { FINISH } from '../Lighting'
-import { useRegistered } from '../Scene'
+import { useRegistered } from '../hooks'
 import { CDU_SIZE } from './Cdu'
 import { CRAH_SIZE } from './Crah'
 import type { EquipmentUnit } from './Hall'

@@ -2,6 +2,7 @@ import type { Plan } from '@twin/schema'
 import { useEffect, useMemo } from 'react'
 import { BoxGeometry, type BufferGeometry } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import { useStable } from './hooks'
 import { FINISH, FLOOR_TILE_M } from './Lighting'
 import type { PipeRun } from './models/Pipes'
 
@@ -85,10 +86,8 @@ function deckGeometry(panels: Rect[]): BufferGeometry {
 export function Ground({ plan, runs }: { plan: Plan; runs: PipeRun[] }) {
   const { widthM, depthM } = plan.hall
   const raised = plan.hall.floor.type === 'raised'
-  const deck = useMemo(
-    () => deckGeometry(deckPanels(widthM, depthM, raised ? trenches(plan, runs) : [])),
-    [plan, runs, widthM, depthM, raised],
-  )
+  const panels = useStable(deckPanels(widthM, depthM, raised ? trenches(plan, runs) : []))
+  const deck = useMemo(() => deckGeometry(panels), [panels])
   useEffect(() => () => deck.dispose(), [deck])
   return (
     <group>

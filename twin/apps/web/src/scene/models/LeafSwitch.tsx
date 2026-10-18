@@ -1,7 +1,7 @@
 import { RACK, type Plan } from '@twin/schema'
 import type { Group } from 'three'
 import { FINISH } from '../Lighting'
-import { useRegistered } from '../Scene'
+import { useRegistered } from '../hooks'
 import type { EquipmentUnit } from './Hall'
 import { SHELL_MATERIALS, rackModel, rackShellGeometry } from './Rack'
 
