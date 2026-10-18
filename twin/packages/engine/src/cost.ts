@@ -1,5 +1,6 @@
 import { num, type Check, type EquipmentEntry, type Evaluation, type Metric, type Quantity, type RackResult, type SizedEquipment } from '@twin/schema'
 import type { EvalContext } from './context'
+import { placedCompute } from './power'
 
 export interface CostSlice {
   cost: Evaluation['cost']
@@ -196,16 +197,10 @@ function pipingItem(ctx: EvalContext, racks: RackResult[], equipment: SizedEquip
   ]
 }
 
-function gpuCount(ctx: EvalContext, racks: RackResult[]): number {
-  return sum(
-    racks.map((r) => {
-      const typeId = ctx.plan.rackGroups.find((g) => g.id === r.groupId)?.rackTypeId
-      return (typeId ? ctx.catalog.get(typeId, 'rack')?.gpuCount : undefined) ?? 0
-    }),
-  )
+const weeks = (n: number) => {
+  const rounded = Math.round(n * 10) / 10
+  return `${rounded}\u00a0${rounded === 1 ? 'week' : 'weeks'}`
 }
-
-const weeks = (n: number) => `${Math.round(n * 10) / 10} weeks`
 
 function leadTimeCheck(scheduled: Item[], buildWeeks: number, critical: Item[]): Check {
   const missing = [...new Set(scheduled.filter((i) => i.leadWeeks === null).map((i) => i.name))]
@@ -218,7 +213,7 @@ function leadTimeCheck(scheduled: Item[], buildWeeks: number, critical: Item[]):
     explanation = 'Nothing is on order yet, so there is no build-out schedule.'
   } else {
     const install = first.installWeeks > 0 ? ` plus ${weeks(first.installWeeks)} to install` : ''
-    explanation = `Build-out takes ${weeks(buildWeeks)}. ${names.join(' and ')} sets the critical path: ${weeks(first.leadWeeks ?? 0)} lead time${install}.`
+    explanation = `Build-out takes ${weeks(buildWeeks)}. ${names.join(' and ')} ${names.length === 1 ? 'sets' : 'set'} the critical path: ${weeks(first.leadWeeks ?? 0)} lead time${install}.`
   }
   return {
     id: 'demand.leadTime:site',
@@ -268,7 +263,7 @@ export function costAndSchedule(ctx: EvalContext, racks: RackResult[], equipment
   const buildWeeks = Math.max(0, ...scheduled.map(total))
   const critical = buildWeeks > 0 ? scheduled.filter((i) => total(i) === buildWeeks) : []
   const criticalPath = [...new Set(critical.map((i) => i.name))]
-  const delayCostUsd = buildWeeks * HOURS_PER_WEEK * gpuCount(ctx, racks) * ctx.plan.site.valueOfComputeUsdPerGpuHour
+  const delayCostUsd = buildWeeks * HOURS_PER_WEEK * placedCompute(ctx, racks).gpuCount * ctx.plan.site.valueOfComputeUsdPerGpuHour
 
   return {
     cost: { capexUsd, byCategory, buildWeeks, criticalPath, delayCostUsd },
