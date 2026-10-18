@@ -153,6 +153,8 @@ class TurnOutput {
   #wroteText = false
   #lastIndex = -1
   #streamedThisRequest = false
+  /** What this request has shown of each content block, by index. */
+  #shown = new Map<number, string>()
 
   constructor(private readonly ctx: TurnContext) {}
 
@@ -169,6 +171,7 @@ class TurnOutput {
   newRequest(): void {
     this.#lastIndex = -1
     this.#streamedThisRequest = false
+    this.#shown.clear()
   }
 
   /** A request that already showed text cannot be retried without repeating that text. */
@@ -183,7 +186,22 @@ class TurnOutput {
     this.#lastIndex = index
     this.#wroteText = true
     this.#streamedThisRequest = true
+    this.#shown.set(index, (this.#shown.get(index) ?? '') + text)
     this.ctx.emit({ kind: 'textDelta', messageId: this.ctx.messageId, text: separated })
+  }
+
+  /**
+   * Shows whatever text of the finished message the stream did not deliver: text that came only in the final
+   * message, or a stream that ended early. Thinking blocks with text are progress notes; those of a declined
+   * attempt before a fallback boundary are not shown.
+   */
+  catchUp(content: BetaContentBlock[]): void {
+    const boundary = content.findLastIndex((b) => b.type === 'fallback')
+    content.forEach((block, index) => {
+      const full = block.type === 'text' ? block.text : block.type === 'thinking' && index > boundary ? block.thinking : ''
+      const shown = this.#shown.get(index) ?? ''
+      if (full.length > shown.length && full.startsWith(shown)) this.text(index, full.slice(shown.length))
+    })
   }
 
   error(message: string): void {
@@ -212,7 +230,12 @@ async function callModel(ctx: TurnContext, out: TurnOutput): Promise<FinalMessag
         if (ctx.signal.aborted) throw new Anthropic.APIUserAbortError()
         if (event.type === 'message_start') ctx.meter.progress((usage = usageFromStart(event.message.usage)))
         else if (event.type === 'message_delta') ctx.meter.progress((usage = usageFromDelta(usage, event.usage)))
-        else if (event.type === 'content_block_delta') {
+        else if (event.type === 'content_block_start') {
+          // A block can open with text already in it.
+          const block = event.content_block
+          if (block.type === 'text') out.text(event.index, block.text)
+          else if (block.type === 'thinking') out.text(event.index, block.thinking)
+        } else if (event.type === 'content_block_delta') {
           // With display "updates", a non-empty thinking block is a progress note between tool calls.
           if (event.delta.type === 'text_delta') out.text(event.index, event.delta.text)
           else if (event.delta.type === 'thinking_delta') out.text(event.index, event.delta.thinking)
@@ -271,6 +294,7 @@ export async function runTurn(ctx: TurnContext): Promise<void> {
       const message = await callModel(ctx, out)
       // A refusal can cut a tool call off mid-input: never run its tools, and keep the partial out of history.
       if (message.stop_reason === 'refusal') return out.error(MESSAGES.refusal)
+      out.catchUp(message.content)
       const content = echoable(message.content)
       ctx.conversation.append({ role: 'assistant', content })
       const toolUses = content.filter((b): b is BetaToolUseBlock => b.type === 'tool_use')
