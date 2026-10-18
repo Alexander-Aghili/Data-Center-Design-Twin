@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { applyCommand, formatIssues, listCommands, registry, type Registry } from '@twin/commands'
 import { diffEvaluations, evaluate, makeCatalogIndex } from '@twin/engine'
-import type { Builtins, Command, EvalDiff, Evaluation, Plan, Proposal, ProposalStatus, ViewAction } from '@twin/schema'
+import type { Builtins, Command, EvalDiff, Evaluation, Plan, Proposal, ProposalStatus, Severity, ViewAction } from '@twin/schema'
 import type { PlanStore } from '../../contracts.js'
 import { compactDiff, defineTool, describeDiff, failure, success, type AgentTool } from './schema.js'
 import { sceneObjectIds, type TagCounter } from './view.js'
@@ -151,6 +151,15 @@ export class ProposalBook {
   }
 }
 
+/** A proposal marks the objects it fixes: red when a check on them fails now, amber when one warns, else grey. */
+function cloudSeverity(store: PlanStore, objectIds: string[]): Severity {
+  const marked = new Set(objectIds)
+  const statuses = new Set(
+    store.state().evaluation.checks.filter((c) => c.subject.objectIds.some((id) => marked.has(id))).map((c) => c.status),
+  )
+  return statuses.has('fail') ? 'problem' : statuses.has('warn') ? 'warning' : 'info'
+}
+
 export function proposeTools(deps: {
   store: PlanStore
   proposals: ProposalBook
@@ -178,7 +187,8 @@ export function proposeTools(deps: {
           preview,
         )
         if (input.annotate && annotationTag !== undefined) {
-          emitView({ type: 'annotate', annotation: { tag: annotationTag, objectIds: sceneObjectIds(store, input.annotate.objectIds), label: input.annotate.label, severity: 'info' } })
+          const objectIds = sceneObjectIds(store, input.annotate.objectIds)
+          emitView({ type: 'annotate', annotation: { tag: annotationTag, objectIds, label: input.annotate.label, severity: cloudSeverity(store, objectIds) } })
         }
         return success(
           { proposalId: proposal.id, status: proposal.status, annotationTag: proposal.annotationTag, changes: preview.summaries, diff: compactDiff(preview.diff) },

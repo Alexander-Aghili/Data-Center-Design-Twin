@@ -389,6 +389,24 @@ describe('what-if and proposals', () => {
     expect(okJson(outcome).proposalId).toBe(proposal.id)
   })
 
+  it('a proposal cloud takes the worst status of the checks on its objects, so a fix for a failure draws in red', async () => {
+    const { run, views, store } = setup()
+    const failing = store.state().evaluation.checks.find((c) => c.status === 'fail')!
+    const propose = (objectIds: string[]) =>
+      run('propose_change', {
+        title: 'Rename',
+        rationale: 'Test',
+        commands: [{ type: 'renamePlan', payload: { name: 'X' } }],
+        respectsNotes: [],
+        violatesNotes: [],
+        annotate: { objectIds, label: 'Here' },
+      })
+    await propose(failing.subject.objectIds)
+    await propose(['obj-cooling.crahCapacity:Z1'])
+    await propose(['obj-cooling.coolantTemp:g1'])
+    expect(views.map((v) => (v.type === 'annotate' ? v.annotation.severity : null))).toEqual(['problem', 'warning', 'info'])
+  })
+
   it('propose_change without annotate emits no view action, and invalid commands create no proposal', async () => {
     const { run, views, proposals } = setup()
     const base = { title: 'T', rationale: 'R', respectsNotes: [], violatesNotes: [] }
