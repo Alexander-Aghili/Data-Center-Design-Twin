@@ -42,8 +42,8 @@ export function SiteDecisions({ plan }: { plan: Plan }) {
   const [pickedBay, setPickedBay] = useState(plan.hall.bays[0]?.id ?? '')
   const bayId = selection?.kind === 'bay' ? selection.id : pickedBay
   const ratings = plan.hall.bays.map((b) => b.ratingKnM2)
-  const low = Math.min(...ratings)
-  const high = Math.max(...ratings)
+  const low = ratings.length ? Math.min(...ratings) : 0
+  const high = ratings.length ? Math.max(...ratings) : 0
   const setSite = (field: SiteField) => (value: number) => send({ type: 'setSiteInput', payload: { field, value } })
   const { hall } = plan
 

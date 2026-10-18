@@ -1,8 +1,8 @@
-import { loadBuiltins } from '@twin/catalog'
 import { CATALOG_KINDS, type CatalogEntry, type CatalogKind, type Quantity } from '@twin/schema'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { fmtNumber } from '../format'
 import { downloadJson } from '../io/ImportExport'
+import { useCatalog } from '../panels/fields/CatalogPicker'
 import { useTwinStore } from '../state/store'
 import { EntryForm, type EntryIntent } from './EntryForm'
 import { fieldLabel, formFields, isFormKind, KIND_NAMES, optionLabel, unitText, type FieldSpec } from './schemaForm'
@@ -47,11 +47,8 @@ function CatalogPanel({ initialKind, onClose }: { initialKind: CatalogKind; onCl
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [pane, setPane] = useState<Pane>({ type: 'detail' })
 
-  const all = useMemo(() => {
-    const byId = new Map(loadBuiltins().entries.map((e) => [e.id, e]))
-    for (const e of Object.values(plan?.catalog ?? {})) byId.set(e.id, e)
-    return [...byId.values()]
-  }, [plan])
+  const catalog = useCatalog()
+  const all = useMemo(() => catalog.all(), [catalog])
 
   const counts = useMemo(() => {
     const c = Object.fromEntries(CATALOG_KINDS.map((k) => [k, 0])) as Record<CatalogKind, number>

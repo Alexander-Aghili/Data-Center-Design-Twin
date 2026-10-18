@@ -5,11 +5,20 @@ import { NoteBadge } from '../notes/NoteBadge'
 import { NoteEditor, NoteList } from '../notes/NoteEditor'
 import s from './Field.module.css'
 
+/** Props that name a control by the field's label and tie it to the field's error. */
+export interface ControlA11y {
+  'aria-labelledby': string
+  'aria-invalid'?: true
+  'aria-describedby'?: string
+}
+
 interface FieldContextValue {
-  /** Id of the field's primary control, for `<label htmlFor>`. */
+  /** Id for the field's main control element. */
   controlId: string
-  /** Id of the visible label, for `aria-labelledby` on groups. */
+  /** Id of the visible label. */
   labelId: string
+  /** Spread on the control (input, select, radiogroup). */
+  a11y: ControlA11y
   /** Tracks a command's result; a rejection shows under the field. */
   run(result: void | Promise<void>): void
   /** Shows a local validation message, or clears it with null. */
@@ -25,10 +34,16 @@ export function useField(): FieldContextValue {
     use(FieldContext) ?? {
       controlId: fallbackId,
       labelId: `${fallbackId}-label`,
+      a11y: { 'aria-labelledby': `${fallbackId}-label` },
       run: () => {},
       setError: () => {},
     }
   )
+}
+
+/** The message of a rejection, whatever was thrown. */
+export function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e)
 }
 
 function useNotes(target: string): Note[] {
@@ -62,30 +77,32 @@ export function Field(props: { label: string; target: string; hint?: ReactNode; 
   const id = useId()
   const [error, setError] = useState<string | null>(null)
   const { badge, body } = useNoted(props.target, props.label)
+  const errorId = `${id}-error`
   const ctx = useMemo<FieldContextValue>(
     () => ({
       controlId: `${id}-control`,
       labelId: `${id}-label`,
+      a11y: error ? { 'aria-labelledby': `${id}-label`, 'aria-invalid': true, 'aria-describedby': errorId } : { 'aria-labelledby': `${id}-label` },
       setError,
       run: (result) => {
         setError(null)
-        result?.catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
+        result?.catch((e: unknown) => setError(errorMessage(e)))
       },
     }),
-    [id],
+    [id, error, errorId],
   )
   return (
     <div className={s.field} data-note-target={props.target}>
       <div className={s.head}>
-        <label id={ctx.labelId} htmlFor={ctx.controlId} className={s.label}>
+        <span id={ctx.labelId} className={s.label}>
           {props.label}
-        </label>
+        </span>
         {badge}
       </div>
       <FieldContext value={ctx}>{props.children}</FieldContext>
       {props.hint && <div className={s.hint}>{props.hint}</div>}
       {error && (
-        <p role="alert" className={s.error}>
+        <p id={errorId} role="alert" className={s.error}>
           ✕ {error}
         </p>
       )}

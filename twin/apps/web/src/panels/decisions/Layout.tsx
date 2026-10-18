@@ -23,7 +23,11 @@ function occupancy(plan: Plan, catalog: CatalogIndex, row: Row): (string | null)
 }
 
 /** Why `count` racks `w` slots wide can't go in at `from`, or null when they fit. */
-function fillProblem(slots: (string | null)[], rowId: string, from: number, count: number, w: number): string | null {
+function fillProblem(slots: (string | null)[], rowId: string, fromText: string, countText: string, w: number): string | null {
+  if (fromText.trim() === '') return 'Enter a slot to start from'
+  if (countText.trim() === '') return 'Enter how many racks to place'
+  const from = Number(fromText)
+  const count = Number(countText)
   if (!Number.isInteger(from) || from < 0 || from >= slots.length) return `${rowId} has slots 0 to ${slots.length - 1}`
   if (!Number.isInteger(count) || count < 1) return 'Enter a count of 1 or more'
   if (slots[from] !== null) return `Slot ${from} in ${rowId} is taken`
@@ -95,7 +99,7 @@ function PlaceRacks({ plan, catalog }: { plan: Plan; catalog: CatalogIndex }) {
   const slots = row ? occupancy(plan, catalog, row) : []
   const from = fromDraft ?? String(firstFree(slots))
   const w = slotsWide(plan, catalog, groupId)
-  const problem = row && groupId ? fillProblem(slots, row.id, Number(from), Number(count), w) : 'Create a rack group first'
+  const problem = row && groupId ? fillProblem(slots, row.id, from, count, w) : 'Create a rack group first'
 
   return (
     <form
@@ -209,7 +213,7 @@ function positionName(p: EquipmentPosition): string {
 /** Which rows each equipment position serves (cooling zones, leaf reach). */
 export function ZoneEditor({ plan, kinds }: { plan: Plan; kinds: readonly EquipmentPosition['kind'][] }) {
   const send = useTwinStore((st) => st.send)
-  const { run, controlId } = useField()
+  const { run, controlId, a11y } = useField()
   const positions = plan.hall.positions.filter((p) => kinds.includes(p.kind))
   const [positionId, setPositionId] = useState(positions[0]?.id ?? '')
   const position = positions.find((p) => p.id === positionId)
@@ -220,7 +224,7 @@ export function ZoneEditor({ plan, kinds }: { plan: Plan; kinds: readonly Equipm
   }
   return (
     <div className={s.zones}>
-      <select id={controlId} className="input" value={positionId} onChange={(e) => setPositionId(e.currentTarget.value)}>
+      <select id={controlId} {...a11y} className="input" value={positionId} onChange={(e) => setPositionId(e.currentTarget.value)}>
         {positions.map((p) => (
           <option key={p.id} value={p.id}>
             {positionName(p)}, serves {p.servesRows.length ? p.servesRows.join(', ') : 'no rows'}

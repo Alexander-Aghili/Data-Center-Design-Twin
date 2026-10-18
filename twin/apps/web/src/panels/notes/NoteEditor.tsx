@@ -1,6 +1,7 @@
 import { useId, useState } from 'react'
 import type { Note } from '@twin/schema'
 import { useTwinStore } from '../../state/store'
+import { errorMessage } from '../fields/Field'
 import { Select } from '../fields/Select'
 import { IMPORTANCE_LABEL, IMPORTANCE_ORDER } from './NoteBadge'
 import s from './NoteEditor.module.css'
@@ -30,7 +31,7 @@ export function NoteList(props: { notes: Note[] }) {
                 onClick={() =>
                   send({ type: 'removeNote', payload: { id: note.id } }).then(
                     () => setError(null),
-                    (e: unknown) => setError(e instanceof Error ? e.message : String(e)),
+                    (e: unknown) => setError(errorMessage(e)),
                   )
                 }
               >
@@ -72,7 +73,7 @@ export function NoteEditor(props: { target: string; onAdded?: () => void }) {
         setError(null)
         props.onAdded?.()
       },
-      (e: unknown) => setError(e instanceof Error ? e.message : String(e)),
+      (e: unknown) => setError(errorMessage(e)),
     )
   }
 
