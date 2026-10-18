@@ -1,0 +1,128 @@
+{
+  "id": "rack.hgx-b300-air",
+  "kind": "rack",
+  "name": "HGX B300 air-cooled rack (2 servers)",
+  "vendor": "NVIDIA HGX partners",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "nv-dgx-b300",
+      "url": "https://www.nvidia.com/en-us/data-center/dgx-b300/",
+      "title": "NVIDIA DGX B300 product page"
+    },
+    {
+      "id": "nv-hgx",
+      "url": "https://www.nvidia.com/en-us/data-center/hgx/",
+      "title": "NVIDIA HGX platform page (HGX B300 specs)"
+    },
+    {
+      "id": "smc-822gs",
+      "url": "https://www.supermicro.com/en/products/system/gpu/8u/sys-822gs-nb3rt",
+      "title": "Supermicro SYS-822GS-NB3RT (HGX B300, 8U air) product page"
+    },
+    {
+      "id": "smc-nvidia",
+      "url": "https://www.supermicro.com/en/accelerators/nvidia",
+      "title": "Supermicro NVIDIA accelerated systems page"
+    }
+  ],
+  "summary": "Standard air-cooled rack holding two 8-GPU HGX B300 servers (16 GPUs), the usual density in halls without liquid. About 14 kW per server. Power is AC to server PSUs, which this app groups with the 54 V AC chain.",
+  "role": "compute",
+  "gpuId": "gpu.b300",
+  "gpuCount": 16,
+  "nominalPowerW": {
+    "value": 28000,
+    "unit": "W",
+    "basis": "calculated",
+    "source": "https://www.nvidia.com/en-us/data-center/dgx-b300/",
+    "note": "2 servers x about 14 kW (NVIDIA DGX B300 system power usage)."
+  },
+  "peakPowerW": {
+    "value": 30000,
+    "low": 29000,
+    "high": 32000,
+    "unit": "W",
+    "basis": "estimate",
+    "source": "https://www.supermicro.com/en/products/system/gpu/8u/sys-822gs-nb3rt",
+    "note": "2 servers at about 14.5 kW each plus about 1 kW for the management switch, PDUs and fans at full speed. Bounded above by PSU capacity: Supermicro's 3+3 x 6.6 kW PSUs give 19.8 kW per server."
+  },
+  "weightKg": {
+    "value": 440,
+    "low": 400,
+    "high": 500,
+    "unit": "kg",
+    "basis": "estimate",
+    "source": "https://www.supermicro.com/en/products/system/gpu/8u/sys-822gs-nb3rt",
+    "note": "2 x 119 kg (Supermicro SYS-822GS-NB3RT net weight) + about 140 kg empty 42U enclosure + about 60 kg PDUs, switch and cabling."
+  },
+  "widthMm": {
+    "value": 600,
+    "unit": "mm",
+    "basis": "estimate",
+    "note": "Generic 42U enclosure, 600 mm wide by 1,200 mm deep by 2,000 mm tall; actual size depends on the enclosure vendor."
+  },
+  "depthMm": {
+    "value": 1200,
+    "unit": "mm",
+    "basis": "estimate",
+    "note": "Generic 42U enclosure, 600 mm wide by 1,200 mm deep by 2,000 mm tall; actual size depends on the enclosure vendor. The 950 mm deep server chassis needs at least 1,100 mm."
+  },
+  "heightMm": {
+    "value": 2000,
+    "unit": "mm",
+    "basis": "estimate",
+    "note": "Generic 42U enclosure, 600 mm wide by 1,200 mm deep by 2,000 mm tall; actual size depends on the enclosure vendor."
+  },
+  "slotsWide": 1,
+  "feet": 4,
+  "maxLiquidFraction": {
+    "value": 0,
+    "unit": "fraction",
+    "basis": "oem",
+    "source": "https://www.supermicro.com/en/products/system/gpu/8u/sys-822gs-nb3rt",
+    "note": "Air-cooled system with no cold plates: all heat goes to air. A rear-door heat exchanger moves it to water at the rack."
+  },
+  "maxCoolantSupplyC": {
+    "value": null,
+    "unit": "°C",
+    "basis": "estimate",
+    "note": "Not applicable: air-cooled servers have no liquid loop. Facility water limits come from the RDHx or air handler serving the rack."
+  },
+  "supportedCooling": [
+    "air",
+    "rdhx"
+  ],
+  "supportedPower": [
+    "ac54"
+  ],
+  "scaleOutPorts": 16,
+  "portGbps": 800,
+  "fp8Pflops": {
+    "value": 72,
+    "unit": "PFLOPS",
+    "basis": "calculated",
+    "source": "https://www.nvidia.com/en-us/data-center/hgx/",
+    "note": "Dense. 2 servers x 36 PFLOPS FP8 dense per HGX B300 (72 sparse / 2)."
+  },
+  "trays": {
+    "compute": 2,
+    "switch": 0,
+    "power": 0
+  },
+  "capexUsd": {
+    "value": 950000,
+    "low": 800000,
+    "high": 1100000,
+    "unit": "USD",
+    "basis": "estimate",
+    "note": "No public list price. Scaled from GB300 NVL72 at about $4M to $5M per 72 GPUs (about $55k to $70k per GPU all-in): 16 GPUs at about $55k to $65k, plus about $30k for enclosure, PDUs and management switch."
+  },
+  "leadTimeWeeks": {
+    "value": 12,
+    "low": 8,
+    "high": 16,
+    "unit": "week",
+    "basis": "estimate",
+    "note": "Shipping volume product from many OEMs (NVIDIA: HGX B300 shipping now). Assumed 8 to 16 weeks from order to delivery for a standard configuration."
+  }
+}

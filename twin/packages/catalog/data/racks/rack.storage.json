@@ -1,0 +1,102 @@
+{
+  "id": "rack.storage",
+  "kind": "rack",
+  "name": "Storage rack (all-flash NVMe)",
+  "asOf": "2026-10-18",
+  "sources": [],
+  "summary": "Air-cooled rack of all-flash NVMe storage nodes serving training data and checkpoints. Generic sizing: 16 x 2U nodes, each with two 400G ports. Power and weight can be overridden per placement.",
+  "role": "storage",
+  "gpuCount": 0,
+  "nominalPowerW": {
+    "value": 12000,
+    "low": 8000,
+    "high": 16000,
+    "unit": "W",
+    "basis": "estimate",
+    "note": "16 x 2U all-flash nodes at about 750 W each under load."
+  },
+  "peakPowerW": {
+    "value": 15000,
+    "low": 10000,
+    "high": 20000,
+    "unit": "W",
+    "basis": "estimate",
+    "note": "Nominal plus about 25% for rebuilds, write bursts and fan ramp."
+  },
+  "weightKg": {
+    "value": 700,
+    "low": 550,
+    "high": 900,
+    "unit": "kg",
+    "basis": "estimate",
+    "note": "16 nodes x about 30 kg = 480 kg + about 140 kg empty enclosure + about 80 kg PDUs, switch and cabling."
+  },
+  "widthMm": {
+    "value": 600,
+    "unit": "mm",
+    "basis": "estimate",
+    "note": "Generic 42U enclosure, 600 mm wide by 1,200 mm deep by 2,000 mm tall; actual size depends on the enclosure vendor."
+  },
+  "depthMm": {
+    "value": 1200,
+    "unit": "mm",
+    "basis": "estimate",
+    "note": "Generic 42U enclosure, 600 mm wide by 1,200 mm deep by 2,000 mm tall; actual size depends on the enclosure vendor."
+  },
+  "heightMm": {
+    "value": 2000,
+    "unit": "mm",
+    "basis": "estimate",
+    "note": "Generic 42U enclosure, 600 mm wide by 1,200 mm deep by 2,000 mm tall; actual size depends on the enclosure vendor."
+  },
+  "slotsWide": 1,
+  "feet": 4,
+  "maxLiquidFraction": {
+    "value": 0,
+    "unit": "fraction",
+    "basis": "estimate",
+    "note": "Fan-cooled storage nodes with no cold plates: all heat goes to air."
+  },
+  "maxCoolantSupplyC": {
+    "value": null,
+    "unit": "°C",
+    "basis": "estimate",
+    "note": "Not applicable: air-cooled storage has no liquid loop."
+  },
+  "supportedCooling": [
+    "air",
+    "rdhx"
+  ],
+  "supportedPower": [
+    "ac54"
+  ],
+  "scaleOutPorts": 32,
+  "portGbps": 400,
+  "fp8Pflops": {
+    "value": 0,
+    "unit": "PFLOPS",
+    "basis": "calculated",
+    "note": "No accelerators."
+  },
+  "trays": {
+    "compute": 0,
+    "switch": 0,
+    "power": 0
+  },
+  "capexUsd": {
+    "value": 800000,
+    "low": 500000,
+    "high": 1500000,
+    "unit": "USD",
+    "basis": "estimate",
+    "note": "Assumed about $45k to $55k per all-flash node with drives, x 16, plus enclosure and PDUs. Varies widely with capacity and vendor."
+  },
+  "leadTimeWeeks": {
+    "value": 8,
+    "low": 6,
+    "high": 12,
+    "unit": "week",
+    "basis": "estimate",
+    "note": "Assumed 6 to 12 weeks for standard all-flash storage nodes."
+  }
+}

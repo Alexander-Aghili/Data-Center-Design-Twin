@@ -1,0 +1,120 @@
+{
+  "id": "rack.mi355x-air",
+  "kind": "rack",
+  "name": "AMD MI355X air-cooled rack (2 servers)",
+  "vendor": "AMD Instinct partners",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "smc-a126gs",
+      "url": "https://www.supermicro.com/en/products/system/gpu/10u/as-a126gs-tnmr",
+      "title": "Supermicro AS-A126GS-TNMR (MI355X, 10U air) product page"
+    },
+    {
+      "id": "klockwood-mi355x",
+      "url": "https://glennklockwood.com/garden/processors/MI355X",
+      "title": "Glenn Lockwood: MI355X notes (quotes the AMD MI355X brochure)"
+    }
+  ],
+  "summary": "Standard air-cooled rack holding two 10U 8-GPU MI355X servers (16 GPUs), such as Supermicro's AS-A126GS-TNMR. Rack power is an estimate built from the GPU board power. Power is AC to server PSUs.",
+  "role": "compute",
+  "gpuId": "gpu.mi355x",
+  "gpuCount": 16,
+  "nominalPowerW": {
+    "value": 28000,
+    "low": 26000,
+    "high": 30000,
+    "unit": "W",
+    "basis": "estimate",
+    "source": "https://www.supermicro.com/en/products/system/gpu/10u/as-a126gs-tnmr",
+    "note": "Per server: 8 x 1,400 W GPUs = 11.2 kW, 2 CPUs at up to 500 W = 1 kW, 19 heavy-duty fans about 1 kW at typical load, memory, NICs and drives about 0.8 kW, giving about 14 kW. Two servers."
+  },
+  "peakPowerW": {
+    "value": 31000,
+    "low": 29000,
+    "high": 33000,
+    "unit": "W",
+    "basis": "estimate",
+    "source": "https://www.supermicro.com/en/products/system/gpu/10u/as-a126gs-tnmr",
+    "note": "Nominal plus fans at full speed and GPU transients, about 15.5 kW per server. Bounded above by 4 x 6.6 kW active PSUs = 26.4 kW per server."
+  },
+  "weightKg": {
+    "value": 470,
+    "low": 430,
+    "high": 520,
+    "unit": "kg",
+    "basis": "estimate",
+    "source": "https://www.supermicro.com/en/products/system/gpu/10u/as-a126gs-tnmr",
+    "note": "2 x 133 kg (Supermicro AS-A126GS-TNMR net weight) + about 140 kg empty 42U enclosure + about 60 kg PDUs, switch and cabling."
+  },
+  "widthMm": {
+    "value": 600,
+    "unit": "mm",
+    "basis": "estimate",
+    "note": "Generic 42U enclosure, 600 mm wide by 1,200 mm deep by 2,000 mm tall; actual size depends on the enclosure vendor."
+  },
+  "depthMm": {
+    "value": 1200,
+    "unit": "mm",
+    "basis": "estimate",
+    "note": "Generic 42U enclosure, 600 mm wide by 1,200 mm deep by 2,000 mm tall; actual size depends on the enclosure vendor. The server chassis is 843 mm deep."
+  },
+  "heightMm": {
+    "value": 2000,
+    "unit": "mm",
+    "basis": "estimate",
+    "note": "Generic 42U enclosure, 600 mm wide by 1,200 mm deep by 2,000 mm tall; actual size depends on the enclosure vendor."
+  },
+  "slotsWide": 1,
+  "feet": 4,
+  "maxLiquidFraction": {
+    "value": 0,
+    "unit": "fraction",
+    "basis": "oem",
+    "source": "https://www.supermicro.com/en/products/system/gpu/10u/as-a126gs-tnmr",
+    "note": "Air-cooled OAM modules with no cold plates: all heat goes to air. A rear-door heat exchanger moves it to water at the rack."
+  },
+  "maxCoolantSupplyC": {
+    "value": null,
+    "unit": "°C",
+    "basis": "estimate",
+    "note": "Not applicable: air-cooled servers have no liquid loop. Facility water limits come from the RDHx or air handler serving the rack."
+  },
+  "supportedCooling": [
+    "air",
+    "rdhx"
+  ],
+  "supportedPower": [
+    "ac54"
+  ],
+  "scaleOutPorts": 16,
+  "portGbps": 400,
+  "fp8Pflops": {
+    "value": 80.5,
+    "unit": "PFLOPS",
+    "basis": "calculated",
+    "source": "https://glennklockwood.com/garden/processors/MI355X",
+    "note": "Dense. 16 GPUs x 5.03 PFLOPS FP8."
+  },
+  "trays": {
+    "compute": 2,
+    "switch": 0,
+    "power": 0
+  },
+  "capexUsd": {
+    "value": 650000,
+    "low": 550000,
+    "high": 800000,
+    "unit": "USD",
+    "basis": "estimate",
+    "note": "No public price. Assumed about $25k to $30k per MI355X GPU plus about $60k to $80k per server for chassis, CPUs, memory and NICs, plus about $30k for enclosure and PDUs."
+  },
+  "leadTimeWeeks": {
+    "value": 10,
+    "low": 8,
+    "high": 16,
+    "unit": "week",
+    "basis": "estimate",
+    "note": "Shipping since the second half of 2025 from several OEMs. Assumed 8 to 16 weeks for a standard configuration."
+  }
+}

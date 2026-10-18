@@ -1,0 +1,111 @@
+{
+  "id": "rack.network",
+  "kind": "rack",
+  "name": "Network rack (8 x 64-port 800G switches)",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "nv-sn5000",
+      "url": "https://networking-docs.nvidia.com/sn5000hw/specifications",
+      "title": "NVIDIA Spectrum-4 SN5000 2U switch hardware specifications"
+    }
+  ],
+  "summary": "Air-cooled rack for leaf and spine switches: eight 2U 64-port 800G switches (Spectrum-4 SN5600 class) with patch panels. Power excludes pluggable optics, which the engine counts separately. Power and weight can be overridden per placement.",
+  "role": "network",
+  "gpuCount": 0,
+  "nominalPowerW": {
+    "value": 7520,
+    "low": 6000,
+    "high": 9000,
+    "unit": "W",
+    "basis": "estimate",
+    "source": "https://networking-docs.nvidia.com/sn5000hw/specifications",
+    "note": "8 switches x 940 W typical power with passive cables (SN5600). Excludes optics."
+  },
+  "peakPowerW": {
+    "value": 12000,
+    "low": 10000,
+    "high": 16000,
+    "unit": "W",
+    "basis": "estimate",
+    "source": "https://networking-docs.nvidia.com/sn5000hw/specifications",
+    "note": "About 1.5 kW per switch at full traffic and fan speed, 8 switches. Each switch is bounded by its 3 kW PSUs (1+1). Excludes optics."
+  },
+  "weightKg": {
+    "value": 500,
+    "low": 400,
+    "high": 650,
+    "unit": "kg",
+    "basis": "estimate",
+    "source": "https://networking-docs.nvidia.com/sn5000hw/specifications",
+    "note": "8 x 23.5 kg switches = 188 kg + about 140 kg empty 42U enclosure + about 170 kg patch panels, cable managers and fiber/copper bundles."
+  },
+  "widthMm": {
+    "value": 600,
+    "unit": "mm",
+    "basis": "estimate",
+    "note": "Generic 42U enclosure, 600 mm wide by 1,200 mm deep by 2,000 mm tall; actual size depends on the enclosure vendor."
+  },
+  "depthMm": {
+    "value": 1200,
+    "unit": "mm",
+    "basis": "estimate",
+    "note": "Generic 42U enclosure, 600 mm wide by 1,200 mm deep by 2,000 mm tall; actual size depends on the enclosure vendor."
+  },
+  "heightMm": {
+    "value": 2000,
+    "unit": "mm",
+    "basis": "estimate",
+    "note": "Generic 42U enclosure, 600 mm wide by 1,200 mm deep by 2,000 mm tall; actual size depends on the enclosure vendor."
+  },
+  "slotsWide": 1,
+  "feet": 4,
+  "maxLiquidFraction": {
+    "value": 0,
+    "unit": "fraction",
+    "basis": "estimate",
+    "note": "Fan-cooled switches with no cold plates: all heat goes to air."
+  },
+  "maxCoolantSupplyC": {
+    "value": null,
+    "unit": "°C",
+    "basis": "estimate",
+    "note": "Not applicable: air-cooled switches have no liquid loop."
+  },
+  "supportedCooling": [
+    "air",
+    "rdhx"
+  ],
+  "supportedPower": [
+    "ac54"
+  ],
+  "scaleOutPorts": 0,
+  "portGbps": 0,
+  "fp8Pflops": {
+    "value": 0,
+    "unit": "PFLOPS",
+    "basis": "calculated",
+    "note": "No accelerators."
+  },
+  "trays": {
+    "compute": 0,
+    "switch": 8,
+    "power": 0
+  },
+  "capexUsd": {
+    "value": 600000,
+    "low": 450000,
+    "high": 800000,
+    "unit": "USD",
+    "basis": "estimate",
+    "note": "Assumed about $70k per 64-port 800G switch with software license x 8, plus about $40k for enclosure, PDUs and patch panels. Excludes optics."
+  },
+  "leadTimeWeeks": {
+    "value": 12,
+    "low": 8,
+    "high": 20,
+    "unit": "week",
+    "basis": "estimate",
+    "note": "Assumed 8 to 20 weeks for 800G switches; supply has tracked GPU demand."
+  }
+}

@@ -1,0 +1,143 @@
+{
+  "id": "rack.vr-nvl72",
+  "kind": "rack",
+  "name": "NVIDIA Vera Rubin NVL72",
+  "vendor": "NVIDIA",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "nv-vr",
+      "url": "https://www.nvidia.com/en-us/data-center/vera-rubin-nvl72/",
+      "title": "NVIDIA Vera Rubin NVL72 product page"
+    },
+    {
+      "id": "nv-dgx-vr",
+      "url": "https://docs.nvidia.com/dgx/dgxvr-user-guide/hardware.html",
+      "title": "NVIDIA DGX Vera Rubin NVL72 user guide: hardware"
+    },
+    {
+      "id": "cisco-vr",
+      "url": "https://www.cisco.com/site/us/en/solutions/global-partners/supermicro/nvidia-vera-rubin-nvl72-ds.html",
+      "title": "Cisco AI Rack for NVIDIA Vera Rubin NVL72 data sheet"
+    },
+    {
+      "id": "civo-vr",
+      "url": "https://www.civo.com/unveiling/register",
+      "title": "Civo: Vera Rubin NVL72 rack details"
+    },
+    {
+      "id": "moduledge-vr",
+      "url": "https://moduledge.com/blog/nvidia-vera-rubin",
+      "title": "ModulEdge: NVIDIA Vera Rubin for data center providers"
+    },
+    {
+      "id": "pcgh-vr-price",
+      "url": "https://www.pcgameshardware.de/Kuenstliche-Intelligenz-Hardware-279517/News/Nvidia-Vera-Rubin-NVL72-Preis-pro-Server-Rack-1536205/",
+      "title": "PC Games Hardware: Vera Rubin NVL72 rack price (Morgan Stanley estimate)"
+    }
+  ],
+  "summary": "72 Rubin GPUs and 36 Vera CPUs on the third-generation MGX rack: 18 fanless compute trays, 9 NVLink 6 switch trays, 4 x 110 kW power shelves, 45 °C inlet water. Early access since September 2026; power, weight and price are estimates.",
+  "role": "compute",
+  "gpuId": "gpu.vr200",
+  "gpuCount": 72,
+  "nominalPowerW": {
+    "value": 210000,
+    "low": 190000,
+    "high": 230000,
+    "unit": "W",
+    "basis": "estimate",
+    "source": "https://moduledge.com/blog/nvidia-vera-rubin",
+    "note": "NVIDIA has not published rack power. ModulEdge puts VR200 NVL72 at roughly 190 to 230 kW; midpoint used."
+  },
+  "peakPowerW": {
+    "value": 240000,
+    "low": 230000,
+    "high": 250000,
+    "unit": "W",
+    "basis": "estimate",
+    "note": "Gigabyte's VR NVL72 POD page lists rack power up to 240 kW (seen in search results; the page returned 403 when fetched). Consistent with 4 x 110 kW shelves run redundant (220 kW per side) plus headroom."
+  },
+  "weightKg": {
+    "value": 1800,
+    "low": 1600,
+    "high": 2000,
+    "unit": "kg",
+    "basis": "estimate",
+    "note": "Not published. Started from GB300 NVL72 at 1,580 kg, added the deeper and taller rack (1,200 x 2,300 mm vs 1,068 x 2,236 mm), the liquid-cooled busbar and about twice the coolant flow, and took out the tray fans. About +15%."
+  },
+  "widthMm": {
+    "value": 600,
+    "unit": "mm",
+    "basis": "press",
+    "source": "https://www.civo.com/unveiling/register",
+    "note": "Civo rack spec table: 600 x 1,200 x 2,300 mm."
+  },
+  "depthMm": {
+    "value": 1200,
+    "unit": "mm",
+    "basis": "press",
+    "source": "https://www.civo.com/unveiling/register"
+  },
+  "heightMm": {
+    "value": 2300,
+    "unit": "mm",
+    "basis": "press",
+    "source": "https://www.civo.com/unveiling/register"
+  },
+  "slotsWide": 1,
+  "feet": 4,
+  "maxLiquidFraction": {
+    "value": 0.95,
+    "low": 0.93,
+    "high": 0.98,
+    "unit": "fraction",
+    "basis": "estimate",
+    "source": "https://docs.nvidia.com/dgx/dgxvr-user-guide/hardware.html",
+    "note": "Compute and switch trays are fully liquid cooled (Civo: 100% direct liquid), but NVIDIA's guide says the power shelves use air-cooled PSUs. About 2 to 3% PSU loss plus the two management switches go to air."
+  },
+  "maxCoolantSupplyC": {
+    "value": 45,
+    "unit": "°C",
+    "basis": "vendor",
+    "source": "https://www.nvidia.com/en-us/data-center/vera-rubin-nvl72/",
+    "note": "NVIDIA lists inlet temperature 45 °C."
+  },
+  "supportedCooling": [
+    "dlc-1p"
+  ],
+  "supportedPower": [
+    "ac54",
+    "dc800"
+  ],
+  "scaleOutPorts": 72,
+  "portGbps": 1600,
+  "fp8Pflops": {
+    "value": 1260,
+    "unit": "PFLOPS",
+    "basis": "vendor",
+    "source": "https://www.nvidia.com/en-us/data-center/vera-rubin-nvl72/",
+    "note": "Dense FP8/FP6 training figure."
+  },
+  "trays": {
+    "compute": 18,
+    "switch": 9,
+    "power": 4
+  },
+  "capexUsd": {
+    "value": 7800000,
+    "low": 7800000,
+    "high": 9100000,
+    "unit": "USD",
+    "basis": "estimate",
+    "source": "https://www.pcgameshardware.de/Kuenstliche-Intelligenz-Hardware-279517/News/Nvidia-Vera-Rubin-NVL72-Preis-pro-Server-Rack-1536205/",
+    "note": "Morgan Stanley bill-of-materials estimate of about $7.8M per rack for hyperscalers (via PC Games Hardware). Later analyst figures driven by HBM4 prices run to about $9.1M."
+  },
+  "leadTimeWeeks": {
+    "value": 30,
+    "low": 26,
+    "high": 40,
+    "unit": "week",
+    "basis": "estimate",
+    "note": "Early access since September 2026, volume ramp in the second half of 2026 (ModulEdge); Cisco says availability dates are to be announced. Assumed 26 to 40 weeks for orders placed now."
+  }
+}
