@@ -1,6 +1,7 @@
 import type { Command, Plan } from '@twin/schema'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { loadBuiltins, snapshotCatalog } from '@twin/catalog'
 import { createDefaultPlan } from '../../../packages/catalog/src/defaultPlan'
 import type { ImportExport as ImportExportType } from '../src/io/ImportExport'
 import type { useTwinStore as UseTwinStore } from '../src/state/store'
@@ -63,7 +64,7 @@ describe('plan import and export', () => {
     expect(send).not.toHaveBeenCalled()
   })
 
-  it('export downloads plan JSON named <plan-name>.json', async () => {
+  it('export downloads the self-contained plan JSON (catalog entries copied in) named <plan-name>.json', async () => {
     const { plan } = setup(() => Promise.resolve())
     let blob: Blob | undefined
     const createObjectURL = vi.fn((b: Blob) => {
@@ -83,7 +84,10 @@ describe('plan import and export', () => {
     expect(clicked[0].download).toBe('Hall A.json')
     expect(clicked[0].href).toBe('blob:plan')
     expect(blob?.type).toBe('application/json')
-    expect(JSON.parse(await blob!.text())).toEqual(plan)
+    const exported = JSON.parse(await blob!.text()) as Plan
+    // The same document as the server's /api/plan/export: every catalog entry the plan uses is in the file.
+    expect(exported).toEqual(snapshotCatalog(plan, loadBuiltins().entries))
+    expect(Object.keys(exported.catalog)).toEqual(expect.arrayContaining([plan.site.climateId, plan.cooling.heatRejectionId, plan.rackGroups[0]!.rackTypeId]))
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:plan')
   })
 

@@ -1,4 +1,4 @@
-import { loadBuiltins } from '@twin/catalog'
+import { loadBuiltins, snapshotCatalog } from '@twin/catalog'
 import { applyCommand } from '@twin/commands'
 import { makeCatalogIndex } from '@twin/engine'
 import type { Command, Plan } from '@twin/schema'
@@ -91,6 +91,14 @@ async function importPlan(json: unknown, file: string, send: (c: Command) => Pro
   }
 }
 
+/**
+ * The plan with every catalog entry it uses copied in, so the file stands alone: the same document as the
+ * server's `GET /api/plan/export`, in both server and local mode.
+ */
+function selfContained(plan: Plan): Plan {
+  return snapshotCatalog(plan, loadBuiltins().entries)
+}
+
 /** Top-bar plan import and export. Import also takes catalog packs. */
 export function ImportExport() {
   const plan = useTwinStore((s) => s.plan)
@@ -130,7 +138,7 @@ export function ImportExport() {
         {busy ? 'Importing…' : 'Import'}
       </button>
       <input ref={fileRef} type="file" accept=".json,application/json" aria-label="Import file" hidden onChange={onFile} />
-      <button type="button" className="btn" disabled={!plan} onClick={() => plan && downloadJson(plan.name, plan)}>
+      <button type="button" className="btn" disabled={!plan} onClick={() => plan && downloadJson(plan.name, selfContained(plan))}>
         Export plan
       </button>
       {report && (
