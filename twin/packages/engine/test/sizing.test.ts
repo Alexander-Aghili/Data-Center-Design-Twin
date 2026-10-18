@@ -25,37 +25,45 @@ const item = (r: ReturnType<typeof run>, key: string) => r.equipment.find((e) =>
 const check = (r: ReturnType<typeof run>, id: string) => r.checks.find((c) => c.id === id)
 
 describe('CDU sizing', () => {
-  it('N+1: ceil(liquidW_row / capacity) + 1, smallest model that fits the row positions', () => {
-    // cdu.1200kw needs 2 + 1 = 3 units but cdu-E3 holds 2, so cdu.2000kw (1 + 1 = 2) is the smallest that fits.
+  it('N+1: max(ceil(heat / capacity), ceil(flow / max flow)) + 1, smallest model that fits the row positions', () => {
+    // 1.795 MW of PG25 at 10 K is 44.6 L/s. Kept at 80%: cdu.1200kw needs max(2, 3) + 1 = 4 units, more than
+    // cdu-E3's 3; cdu.2000kw needs max(2 for heat, 2 for flow) + 1 = 3. On heat alone it would have been 2.
     const result = run(makePlan([dlc]))
     expect(item(result, 'cdu:R3')).toEqual({
       key: 'cdu:R3',
       category: 'cdu',
       modelId: 'cdu.2000kw',
-      count: 2,
-      required: 2,
+      count: 3,
+      required: 3,
       positionIds: ['cdu-E3'],
       autoSized: true,
       loadW: dlcLoadW,
-      capacityW: 2_000_000,
-      objectIds: ['eq:cdu:R3:0', 'eq:cdu:R3:1'],
+      capacityW: 4_000_000,
+      objectIds: ['eq:cdu:R3:0', 'eq:cdu:R3:1', 'eq:cdu:R3:2'],
     })
     expect(check(result, 'cooling.cduPositions:R3')!.status).toBe('pass')
     const capacity = check(result, 'cooling.cduCapacity:cdu:R3')!
     expect(capacity.value).toBeCloseTo(dlcLoadW, 6)
-    expect(capacity.limit).toBe(2_000_000)
-    expect(capacity.utilization).toBeCloseTo(dlcLoadW / 2_000_000, 9)
+    expect(capacity.limit).toBe(4_000_000)
+    expect(capacity.status).toBe('pass')
+    expect(capacity.explanation).not.toMatch(/past their rating/)
   })
 
-  it('N adds nothing and 2N doubles', () => {
+  it('flow sets the count when it needs more units than heat (N: 3 × cdu.1200kw for 44.6 L/s, heat alone needs 2)', () => {
     const n = item(run(makePlan([dlc], { power: { ...makePlan([]).power, redundancy: 'N' } })), 'cdu:R3')!
-    expect([n.modelId, n.count]).toEqual(['cdu.1200kw', 2])
+    expect([n.modelId, n.count, n.required]).toEqual(['cdu.1200kw', 3, 3])
+  })
+
+  it('2N doubles the working units', () => {
+    // cdu.2000kw at full rating needs max(1 for heat, 2 for flow) = 2 working units, so 4 under 2N; cdu-E3 holds 3.
     const twoN = item(run(makePlan([dlc], { power: { ...makePlan([]).power, redundancy: '2N' } })), 'cdu:R3')!
-    expect([twoN.modelId, twoN.count, twoN.required]).toEqual(['cdu.2000kw', 2, 2])
+    expect([twoN.modelId, twoN.count, twoN.required]).toEqual(['cdu.2000kw', 3, 4])
   })
 
   it('cduPositions fails with advice naming the row and the free positions when positions run out', () => {
-    const result = run(makePlan([{ ...dlc, slots: 24 }]))
+    const plan = makePlan([{ ...dlc, slots: 24 }])
+    plan.hall.positions = plan.hall.positions.map((p) => (p.id === 'cdu-E3' ? { ...p, capacity: 2 } : p))
+    const result = run(plan)
     const cdu = item(result, 'cdu:R3')!
     expect([cdu.modelId, cdu.required, cdu.count]).toEqual(['cdu.2000kw', 3, 2])
     const positions = check(result, 'cooling.cduPositions:R3')!
@@ -70,9 +78,9 @@ describe('CDU sizing', () => {
   })
 
   it('a CDU flow above the rated flow raises the capacity check to at least a warning', () => {
-    const result = run(makePlan([dlc]))
+    const result = run(makePlan([dlc], { overrides: [{ key: 'cdu:R3', modelId: 'cdu.2000kw', count: 2 }] }))
     const capacity = check(result, 'cooling.cduCapacity:cdu:R3')!
-    // 1.7952 MW of PG25 at 10 K is 44.6 L/s against 40 L/s for one cdu.2000kw.
+    // 1.7952 MW of PG25 at 10 K is 44.6 L/s against 40 L/s for the one working cdu.2000kw.
     expect(capacity.status).toBe('warn')
     expect(capacity.explanation).toMatch(/L\/s/)
   })

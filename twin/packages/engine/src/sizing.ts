@@ -1,4 +1,5 @@
 import {
+  COOLANT,
   num,
   type Check,
   type EquipmentEntry,
@@ -91,6 +92,23 @@ function workingUnits(count: number, redundancy: Redundancy): number {
 /** Heat a rack puts into a water or coolant loop at the rack: its technical loop, else facility water (RDHx). */
 export function loopW(rack: RackResult): number {
   return rack.liquidW > 0 ? rack.liquidW : rack.facilityWaterW
+}
+
+/**
+ * A rack's loop fluid and design flow, ṁ = Q / (cp·ΔT), in L/s with the fluid's catalog cp and ρ. Two-phase loops
+ * (R-2p) boil near-isothermally, so the method's ΔT is the facility-water rise and the flow is facility water's.
+ */
+export function loopFlow(ctx: EvalContext, rack: RackResult): { twoPhase: boolean; designLps: number | null } | null {
+  const method = groupEntries(ctx, rack.groupId).method
+  const heatW = loopW(rack)
+  if (!method || heatW <= 0) return null
+  const coolant = method.coolantId ? ctx.catalog.get(method.coolantId, 'coolant') : undefined
+  const twoPhase = coolant?.twoPhase ?? false
+  const fluid = twoPhase ? ctx.catalog.get(COOLANT.WATER, 'coolant') : coolant
+  const cp = fluid ? num(fluid.cpJPerKgK) : null
+  const rho = fluid ? num(fluid.densityKgM3) : null
+  const deltaTK = num(method.deltaTK)
+  return { twoPhase, designLps: cp && rho && deltaTK ? (heatW / (cp * deltaTK) / rho) * 1000 : null }
 }
 
 /** R-pump: a method's own pump fraction counts only when it has no CDU (the CDU's pumps are counted instead). */
@@ -247,11 +265,17 @@ export interface CduFill extends Fill {
   rowId: string
 }
 
-/** CDUs per row = ceil(liquid heat / capacity) + redundancy, in the CDU positions that serve the row. */
+/**
+ * CDUs per row = max(ceil(liquid heat / capacity), ceil(design flow / max flow)) + redundancy, in the CDU positions
+ * that serve the row. A model without a known max flow is sized on heat.
+ */
 export function planCdus(ctx: EvalContext, racks: RackResult[]): CduFill[] {
   const load = new Map<string, number>()
+  const flow = new Map<string, number>()
   for (const r of racks) {
-    if (r.liquidW > 0 && groupEntries(ctx, r.groupId).method?.requiresCdu) load.set(r.rowId, (load.get(r.rowId) ?? 0) + r.liquidW)
+    if (r.liquidW <= 0 || !groupEntries(ctx, r.groupId).method?.requiresCdu) continue
+    load.set(r.rowId, (load.get(r.rowId) ?? 0) + r.liquidW)
+    flow.set(r.rowId, (flow.get(r.rowId) ?? 0) + (loopFlow(ctx, r)?.designLps ?? 0))
   }
   const candidates = equipmentCandidates(ctx, 'cdu', 'capacityW', (w) => w)
   const free = freeMap(ctx.plan)
@@ -259,12 +283,17 @@ export function planCdus(ctx: EvalContext, racks: RackResult[]): CduFill[] {
     .filter((row) => load.has(row.id) || ctx.plan.overrides.some((o) => o.key === `cdu:${row.id}`))
     .map((row) => {
       const loadW = load.get(row.id) ?? 0
+      const flowLps = flow.get(row.id) ?? 0
+      const units = (c: Candidate, h: number) => {
+        const maxFlow = param(c, 'maxFlowLps')
+        return Math.max(Math.ceil(loadW / (c.unit * h)), maxFlow ? Math.ceil(flowLps / (maxFlow * h)) : 0)
+      }
       const demand: Demand = {
         key: `cdu:${row.id}`,
         category: 'cdu',
         loadW,
         candidates,
-        units: (c, h) => Math.ceil(loadW / (c.unit * h)),
+        units,
         positions: ctx.plan.hall.positions.filter((p) => p.kind === 'cdu' && p.servesRows.includes(row.id)),
         redundancy: ctx.plan.power.redundancy,
       }

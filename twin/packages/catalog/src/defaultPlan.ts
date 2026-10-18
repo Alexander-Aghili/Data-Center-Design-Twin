@@ -21,8 +21,9 @@ const RACK_DEPTH = 1.2
 const ROW_END_X = ROW_X + SLOTS * SLOT_PITCH
 
 // Position capacities, in units each position holds, from the space it occupies.
-// CDU at a row end: the 3.6 m row pitch fits two ~1.2 m wide CDU cabinets with service clearance.
-const CDU_UNITS_PER_POSITION = 2
+// CDU at a row end: three 0.75 m × 1.2 m cabinets (CoolIT CHx2000 footprint, cdu.2000kw) in line east of the row,
+// 2.25 m plus service clearance, clear of the electrical room. A GB300 row needs 2 + 1 for its coolant flow.
+const CDU_UNITS_PER_POSITION = 3
 // CRAH on the west wall: 36 m / 4 positions = 9 m of wall each, ~2.2 m per CRAH with clearance → 4.
 const CRAH_UNITS_PER_POSITION = Math.floor(HALL_D / 4 / 2.2)
 // Plant yard north of the hall: 40 m × 12 m, ~40 m² per 1 MW-class chiller or dry cooler → 12.
