@@ -69,6 +69,8 @@ function Building({ plan }: { plan: Plan }) {
     }
     if (roof.current) {
       roof.current.visible = reveal > 0
+      // A fading roof would already shade the whole hall seen through it.
+      roof.current.castShadow = reveal >= 1
       roof.current.position.y = top + 0.15
     }
     if (roofEdges.current) roofEdges.current.visible = reveal >= ROOF_EDGES_AT
