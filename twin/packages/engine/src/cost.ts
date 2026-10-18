@@ -96,7 +96,7 @@ function plantItem(ctx: EvalContext, racks: RackResult[], equipment: SizedEquipm
   ]
 }
 
-function isPlant(ctx: EvalContext, eq: SizedEquipment): boolean {
+export function isPlant(ctx: EvalContext, eq: SizedEquipment): boolean {
   return eq.key === 'plant' || (eq.modelId !== null && ctx.catalog.get(eq.modelId, 'heatRejection') !== undefined)
 }
 
