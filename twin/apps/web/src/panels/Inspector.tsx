@@ -517,7 +517,8 @@ export function Inspector() {
   const dispatchView = useTwinStore((s) => s.dispatchView)
 
   const opener = useRef<HTMLElement | null>(null)
-  const open = selection !== null
+  // A rack group is selected from the rack bar, which shows its own panel; the drawer has nothing to add.
+  const open = selection !== null && selection.kind !== 'group'
 
   // Remember what had focus when the drawer opened, so closing can hand focus back.
   useEffect(() => {
@@ -536,7 +537,7 @@ export function Inspector() {
     return () => window.removeEventListener('keydown', onKey)
   }, [open, dispatchView])
 
-  if (!selection || !evaluation) return null
+  if (!open || !evaluation) return null
   const view = describe(selection, plan, evaluation)
   const close = () => closeDrawer(dispatchView, opener)
   const selectCheck = (id: string) => dispatchView({ type: 'select', target: { kind: 'check', id } })

@@ -45,6 +45,13 @@ describe('Inspector', () => {
     )
   })
 
+  it('ignores a rack group selection: the rack bar owns it, so no empty drawer opens and Escape leaves it alone', () => {
+    const { container } = select('group', 'g2')
+    expect(container.innerHTML).toBe('')
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(useTwinStore.getState().selection).toEqual({ kind: 'group', id: 'g2' })
+  })
+
   it('accepts the scene object id of a rack, tray or GPU as the selection id', () => {
     select('rack', 'rack:R3-07:tray:2')
     expect(screen.getByRole('heading', { name: 'R3-07' })).toBeTruthy()
