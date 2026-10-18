@@ -98,7 +98,7 @@ export function networkFabric(ctx: EvalContext, racks: RackResult[]): NetworkSli
   else if (portLimit === 0 && portsNeeded === 0) portUtilization = 0
   const portStatus = portLimit === 0 && portsNeeded > 0 ? 'fail' : utilizationStatus(portUtilization, rules)
 
-  const reach = (m: number | null) => (m === null ? 'an unknown reach' : `${fmt(m)} m`)
+  const reach = (m: number | null) => (m === null ? 'an unknown reach' : `${fmt(m)}\u00a0m`)
   const copperRuns = runs.dac + runs.aec
   let copperExplanation: string
   if (computeRacks === 0) {
@@ -106,7 +106,7 @@ export function networkFabric(ctx: EvalContext, racks: RackResult[]): NetworkSli
   } else if (links.length === 0) {
     copperExplanation = 'No leaf position exists, so no rack can be cabled.'
   } else {
-    const fiberPower = powerPerEnd.fiber === null ? 'an unknown power' : `${fmt(transceivers * powerPerEnd.fiber, 0)} W`
+    const fiberPower = powerPerEnd.fiber === null ? 'an unknown power' : `${fmt(transceivers * powerPerEnd.fiber, 0)}\u00a0W`
     copperExplanation =
       `${copperRuns} of ${links.length} racks reach their leaf on copper (${runs.dac} on DAC up to ${reach(dacReachM)}, ` +
       `${runs.aec} on AEC up to ${reach(aecReachM)}). ${runs.fiber} ${runs.fiber === 1 ? 'needs' : 'need'} optics: ` +

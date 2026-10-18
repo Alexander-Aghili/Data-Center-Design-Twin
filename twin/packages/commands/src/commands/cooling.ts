@@ -13,7 +13,7 @@ const setCoolingMethod = defineCommand({
   layer: 'cooling',
   title: 'Set cooling method',
   description:
-    'Sets the rack cooling method (catalog kind rackCooling, e.g. rackCooling.dlc-1p for single-phase direct-to-chip) for every rack in a group. The method category must be in the rack type\'s supportedCooling list, otherwise the command is rejected with the supported categories. CDUs and CRAHs are then auto-sized by the engine.',
+    'Sets the rack cooling method (catalog kind rackCooling, e.g. rackCooling.dlc-1p for single-phase direct-to-chip) for every rack in a group. The method category must be in the rack type\'s supportedCooling list, otherwise the command is rejected with the supported categories. The engine then sizes CDUs and CRAHs.',
   apply(draft, payload, ctx) {
     const group = requireGroup(draft, payload.groupId)
     const method = requireEntry(draft, ctx.catalog, payload.coolingMethodId, 'rackCooling', 'payload.coolingMethodId')
@@ -44,7 +44,7 @@ const setFacilitySupplyTemp = defineCommand({
     'Sets the facility water supply temperature in °C. Warmer water gives more free-cooling hours and lets dry coolers work, but must stay below what the racks accept after the CDU approach. Must be between 0 and 100 °C.',
   apply(draft, payload) {
     if (payload.celsius <= WATER_FREEZE_C || payload.celsius >= WATER_BOIL_C) {
-      throw new CommandError(`Facility supply temperature must be between ${WATER_FREEZE_C} and ${WATER_BOIL_C} °C (liquid water)`, 'payload.celsius')
+      throw new CommandError(`Facility supply temperature must be between ${WATER_FREEZE_C} and ${WATER_BOIL_C}\u00a0°C (liquid water)`, 'payload.celsius')
     }
     draft.cooling.facilitySupplyC = payload.celsius
   },
