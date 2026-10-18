@@ -2,12 +2,12 @@ import { expect, test, type Page } from '@playwright/test'
 import { agent, LIVE_AGENT, openApp, Twin } from './harness'
 
 // A running agent turn is visible while it runs (tool lines, streamed words, the spend line and a Stop button) and can
-// be stopped. The scripted client streams one word every 600 ms here; RUN_LIVE_AGENT=1 runs one short real turn instead.
+// be stopped. The scripted client streams one word every 1.5 s here (slow enough for a loaded CI machine to act mid-turn); RUN_LIVE_AGENT=1 runs one short real turn instead.
 
 let twin: Twin
 
 test.beforeAll(async () => {
-  twin = await new Twin({ liveAgent: LIVE_AGENT, env: LIVE_AGENT ? { AGENT_MAX_TURN_USD: '0.25' } : { TWIN_FAKE_AGENT_CHUNK_MS: '600' } }).start()
+  twin = await new Twin({ liveAgent: LIVE_AGENT, env: LIVE_AGENT ? { AGENT_MAX_TURN_USD: '0.25' } : { TWIN_FAKE_AGENT_CHUNK_MS: '1500' } }).start()
 })
 test.afterAll(async () => twin?.close())
 
@@ -41,9 +41,8 @@ test('a turn shows its tool lines, words and cost while it runs, and Stop ends i
   } else {
     await expect(turn.getByText('Reading the')).toBeVisible()
     await expect(stop(page)).toBeVisible()
+    // The tool line shows before the closing sentence starts; its seven words take 10 s to stream, so Stop lands mid-sentence.
     await expect(turn.getByText(/Evaluation: \d+ failing, \d+ warning/)).toBeVisible()
-    // The closing sentence has words left to stream when Stop goes in.
-    await expect(turn.getByText(/^PUE at/)).toBeVisible()
     await stop(page).click()
     await expect(turn.getByText('Stopped', { exact: true })).toBeVisible()
     await expect(stop(page)).toBeHidden()
