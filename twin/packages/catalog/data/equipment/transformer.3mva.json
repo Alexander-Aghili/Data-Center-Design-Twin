@@ -1,0 +1,54 @@
+{
+  "id": "transformer.3mva",
+  "kind": "equipment",
+  "name": "3 MVA pad-mount transformer",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "doe-10cfr431-196",
+      "url": "https://www.law.cornell.edu/cfr/text/10/431.196",
+      "title": "10 CFR 431.196 energy conservation standards for distribution transformers"
+    },
+    {
+      "id": "eepower-transformer-lead-times",
+      "url": "https://eepower.com/market-insights/transformer-supply-chain-woes-persist-as-energy-demand-grows/",
+      "title": "EEPower: transformer supply chain woes persist (Wood Mackenzie lead-time survey)"
+    }
+  ],
+  "summary": "Medium-voltage to 415 V liquid-immersed pad-mount transformer of 3 MVA; often on the critical path.",
+  "category": "transformer",
+  "params": {
+    "ratingVa": {
+      "value": 3000000,
+      "unit": "VA",
+      "basis": "estimate",
+      "note": "Class rating; a common unit substation size feeding about 2.5 MW of IT at 0.95 power factor with headroom."
+    },
+    "efficiency": {
+      "value": 0.995,
+      "low": 0.99,
+      "high": 0.996,
+      "unit": "1",
+      "basis": "textbook",
+      "source": "https://www.law.cornell.edu/cfr/text/10/431.196",
+      "note": "US DOE 2016 minimum for 2500 kVA three-phase liquid-immersed units is 99.53 % at 50 % load; full-load efficiency is somewhat lower."
+    },
+    "capexUsd": {
+      "value": 180000,
+      "low": 120000,
+      "high": 300000,
+      "unit": "USD",
+      "basis": "estimate",
+      "note": "Judgment: about 60 USD/kVA after the 2021–2024 price rises, equipment only."
+    },
+    "leadTimeWeeks": {
+      "value": 52,
+      "low": 30,
+      "high": 120,
+      "unit": "week",
+      "basis": "press",
+      "source": "https://eepower.com/market-insights/transformer-supply-chain-woes-persist-as-energy-demand-grows/",
+      "note": "Wood Mackenzie survey: distribution transformer lead times averaged about 30 weeks in Q2 2025, down from over 100 weeks in 2023, while three-phase pad-mount units kept rising; 52 weeks is a planning value."
+    }
+  }
+}

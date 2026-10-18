@@ -1,0 +1,54 @@
+{
+  "id": "crah.200kw",
+  "kind": "equipment",
+  "name": "200 kW chilled-water CRAH",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "vertiv-liebert-pcw",
+      "url": "https://www.vertiv.com/495655/globalassets/products/thermal-management/room-cooling/vertiv-liebert-pcw/vertiv-liebert-pcw_brochure.pdf",
+      "title": "Vertiv Liebert PCW brochure"
+    }
+  ],
+  "summary": "Perimeter chilled-water computer room air handler with EC fans, about 200 kW sensible.",
+  "category": "crah",
+  "params": {
+    "capacityW": {
+      "value": 200000,
+      "unit": "W",
+      "basis": "vendor",
+      "source": "https://www.vertiv.com/495655/globalassets/products/thermal-management/room-cooling/vertiv-liebert-pcw/vertiv-liebert-pcw_brochure.pdf",
+      "note": "Top of the Vertiv Liebert PCW range, which covers about 66–210 kW."
+    },
+    "airflowM3s": {
+      "value": 13.8,
+      "unit": "m³/s",
+      "basis": "calculated",
+      "note": "Q / (ρ·cp·ΔT) = 200 kW / (1.2 kg/m³ × 1005 J/(kg·K) × 12 K) = 13.8 m³/s."
+    },
+    "fanPowerW": {
+      "value": 11000,
+      "low": 7000,
+      "high": 16000,
+      "unit": "W",
+      "basis": "estimate",
+      "note": "Specific fan power of 0.8 kW per m³/s for EC fans at typical CRAH static pressure × 13.8 m³/s = 11 kW, about 5.5 % of capacity."
+    },
+    "capexUsd": {
+      "value": 80000,
+      "low": 55000,
+      "high": 110000,
+      "unit": "USD",
+      "basis": "estimate",
+      "note": "About 400 USD per kW (judgment for chilled-water CRAHs with EC fans and controls), equipment only."
+    },
+    "leadTimeWeeks": {
+      "value": 16,
+      "low": 10,
+      "high": 24,
+      "unit": "week",
+      "basis": "estimate",
+      "note": "Judgment: CRAHs are catalogue items with shorter queues than CDUs or chillers."
+    }
+  }
+}

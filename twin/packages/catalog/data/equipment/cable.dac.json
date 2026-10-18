@@ -1,0 +1,31 @@
+{
+  "id": "cable.dac",
+  "kind": "equipment",
+  "name": "800G passive copper cable (DAC)",
+  "asOf": "2026-10-18",
+  "summary": "Passive direct-attach copper cable for in-rack and adjacent-rack 800G links.",
+  "category": "cable",
+  "params": {
+    "reachM": {
+      "value": 2,
+      "high": 3,
+      "unit": "m",
+      "basis": "textbook",
+      "note": "IEEE 802.3ck 100 Gb/s-per-lane copper targets 2 m; some vendors ship 2.5–3 m with thicker gauge."
+    },
+    "powerWPerEnd": {
+      "value": 0.1,
+      "unit": "W",
+      "basis": "estimate",
+      "note": "Passive cable; only the identification EEPROM draws power."
+    },
+    "capexUsdPerM": {
+      "value": 60,
+      "low": 40,
+      "high": 100,
+      "unit": "USD/m",
+      "basis": "estimate",
+      "note": "Judgment: a 2 m 800G DAC sells for roughly 100–200 USD."
+    }
+  }
+}

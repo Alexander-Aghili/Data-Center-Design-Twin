@@ -1,0 +1,40 @@
+{
+  "id": "cable.aec",
+  "kind": "equipment",
+  "name": "800G active electrical cable (AEC)",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "credo-800g-aec",
+      "url": "https://convergedigest.com/credo-introduces-800g-aecs-with-7m-length/",
+      "title": "Converge Digest: Credo introduces 800G AECs with 7 m length"
+    }
+  ],
+  "summary": "Copper cable with retimers in each end, bridging the gap between DAC and optics up to about 7 m.",
+  "category": "cable",
+  "params": {
+    "reachM": {
+      "value": 7,
+      "unit": "m",
+      "basis": "press",
+      "source": "https://convergedigest.com/credo-introduces-800g-aecs-with-7m-length/",
+      "note": "Credo HiWire 800G AECs are offered up to 7 m."
+    },
+    "powerWPerEnd": {
+      "value": 10,
+      "low": 8,
+      "high": 12,
+      "unit": "W",
+      "basis": "estimate",
+      "note": "Credo 800G SPAN AEC product briefs list about 10 W typical per end; the brief URL was not reachable for citation."
+    },
+    "capexUsdPerM": {
+      "value": 100,
+      "low": 60,
+      "high": 160,
+      "unit": "USD/m",
+      "basis": "estimate",
+      "note": "Judgment: a 5 m 800G AEC sells for roughly 400–700 USD."
+    }
+  }
+}

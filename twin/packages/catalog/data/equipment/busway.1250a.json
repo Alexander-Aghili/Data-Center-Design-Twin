@@ -1,0 +1,46 @@
+{
+  "id": "busway.1250a",
+  "kind": "equipment",
+  "name": "1250 A overhead plug-in busway",
+  "asOf": "2026-10-18",
+  "summary": "Overhead plug-in busway rated 1250 A at 415 V three-phase, about 854 kW at a 0.95 power factor (√3 × V × I × PF).",
+  "category": "busway",
+  "params": {
+    "ratingA": {
+      "value": 1250,
+      "unit": "A",
+      "basis": "estimate",
+      "note": "Class rating; a standard busway frame size."
+    },
+    "voltageV": {
+      "value": 415,
+      "unit": "V",
+      "basis": "textbook",
+      "note": "415/240 V three-phase is the common data-hall distribution voltage in North American and European IT halls."
+    },
+    "powerFactor": {
+      "value": 0.95,
+      "low": 0.9,
+      "high": 0.99,
+      "unit": "1",
+      "basis": "estimate",
+      "note": "Server power supplies with active power-factor correction run at 0.95–0.99 above half load."
+    },
+    "capexUsdPerM": {
+      "value": 600,
+      "low": 400,
+      "high": 900,
+      "unit": "USD/m",
+      "basis": "estimate",
+      "note": "Judgment for copper plug-in busway installed overhead, including supports, excluding tap-off boxes."
+    },
+    "leadTimeWeeks": {
+      "value": 16,
+      "low": 10,
+      "high": 26,
+      "unit": "week",
+      "basis": "estimate",
+      "note": "Judgment: copper busway lead times stretched with data-center demand in 2024–2025."
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "id": "cable.fiber",
+  "kind": "equipment",
+  "name": "Single-mode fiber trunk",
+  "asOf": "2026-10-18",
+  "summary": "MPO single-mode fiber run between optics; the transceivers carry the power.",
+  "category": "cable",
+  "params": {
+    "reachM": {
+      "value": 500,
+      "unit": "m",
+      "basis": "textbook",
+      "note": "Limited by the attached 800G DR optics (500 m), not by the fiber."
+    },
+    "powerWPerEnd": {
+      "value": 0,
+      "unit": "W",
+      "basis": "textbook",
+      "note": "Passive glass draws no power; optic.800g carries the transceiver power at each end."
+    },
+    "capexUsdPerM": {
+      "value": 4,
+      "low": 2,
+      "high": 8,
+      "unit": "USD/m",
+      "basis": "estimate",
+      "note": "Judgment for MPO-12/16 single-mode trunk cable with connectors amortized over a typical 20–50 m run."
+    }
+  }
+}

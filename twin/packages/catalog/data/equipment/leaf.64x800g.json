@@ -1,0 +1,46 @@
+{
+  "id": "leaf.64x800g",
+  "kind": "equipment",
+  "name": "64 × 800G leaf switch",
+  "vendor": "NVIDIA",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "nvidia-sn5000-specs",
+      "url": "https://networking-docs.nvidia.com/sn5000hw/specifications",
+      "title": "NVIDIA Spectrum SN5000 hardware user manual: specifications"
+    }
+  ],
+  "summary": "Spectrum-X SN5600-class Ethernet switch with 64 OSFP 800G ports in 2U.",
+  "category": "leaf",
+  "params": {
+    "ports": {
+      "value": 64,
+      "unit": "ports",
+      "basis": "vendor",
+      "source": "https://networking-docs.nvidia.com/sn5000hw/specifications"
+    },
+    "portGbps": {
+      "value": 800,
+      "unit": "Gbit/s",
+      "basis": "vendor",
+      "source": "https://networking-docs.nvidia.com/sn5000hw/specifications"
+    },
+    "powerW": {
+      "value": 940,
+      "high": 2080,
+      "unit": "W",
+      "basis": "vendor",
+      "source": "https://networking-docs.nvidia.com/sn5000hw/specifications",
+      "note": "Typical with passive cables (ATIS); 2.08 kW typical with 64 optical modules. Optics are counted separately through optic.800g."
+    },
+    "capexUsd": {
+      "value": 55000,
+      "low": 40000,
+      "high": 75000,
+      "unit": "USD",
+      "basis": "estimate",
+      "note": "Judgment from reseller list prices for SN5600 systems, without optics or support."
+    }
+  }
+}
