@@ -2,17 +2,22 @@ import { expect, test, type Page } from '@playwright/test'
 import type { Evaluation, ServerMsg } from '@twin/schema'
 import {
   agent,
-  decisions,
   fieldGroup,
+  kpi,
+  layerTab,
   LIVE_AGENT,
+  importFile,
+  moreAction,
   openApp,
   openLayer,
-  pickCatalogEntry,
+  openRackGroup,
+  pickRackType,
+  rackTypeCards,
   recordServerMessages,
-  totals,
   totalsText,
   totalsValue,
   Twin,
+  verdict,
 } from './harness'
 
 // The spec's demo script, steps 1 to 8. The agent steps run against the scripted client (TWIN_FAKE_AGENT=1)
@@ -29,7 +34,6 @@ test.afterAll(async () => twin?.close())
 
 const thread = (page: Page) => agent(page).getByRole('log', { name: 'Agent messages' })
 const messages = (page: Page) => thread(page).getByRole('article')
-const layerButton = (page: Page, name: string) => decisions(page).getByRole('button', { name: new RegExp(`^${name},`) })
 
 /** Waits until a new agent message has appeared after `count` and the thread has stopped streaming. */
 async function nextAgentMessage(page: Page, count: number) {
@@ -59,18 +63,20 @@ test('demo script: GB300 swap, liquid-cooling proposal, ripple effects, floor fi
 
   await test.step('1. the default plan opens, every check passes and the agent is quiet', async () => {
     await openApp(page, twin)
-    await expect(totals(page).getByText(/^All \d+ checks pass$/)).toBeVisible()
+    await expect(verdict(page)).toHaveText('Pass: Buildable')
+    await expect(page.getByRole('button', { name: /^Issues/ })).toHaveCount(0)
     await expect(thread(page).getByText(/^Nothing to flag yet/)).toBeVisible()
     await expect(messages(page)).toHaveCount(0)
   })
 
-  await test.step('2. in Compute, rows 3 to 5 switch to GB300 NVL72: 28 kW to 132 kW per rack', async () => {
-    await openLayer(page, 'Compute')
-    const training = fieldGroup(page, 'Training block')
-    await expect(training).toContainText('R3, R4, R5')
-    await expect(training).toContainText('28 kW per rack')
-    await pickCatalogEntry(page, 'Training block', 'NVIDIA GB300 NVL72')
-    await expect(training).toContainText('132 kW per rack')
+  await test.step('2. from the rack bar, rows 3 to 5 switch to GB300 NVL72: 28 kW to 132 kW per rack', async () => {
+    const training = await openRackGroup(page, 'Training block')
+    await expect(training).toContainText('48 racks in R3, R4, R5')
+    await expect(rackTypeCards(training).and(page.getByRole('button', { pressed: true }))).toContainText(/Current.*28\s?kW/)
+    await pickRackType(page, 'Training block', /^NVIDIA GB300 NVL72/)
+    await expect(rackTypeCards(training).and(page.getByRole('button', { pressed: true }))).toContainText(/GB300 NVL72.*Current.*132\s?kW/)
+    await page.keyboard.press('Escape')
+    await expect(training).toBeHidden()
   })
 
   const warning = await test.step('3. the agent posts a red warning with a revision cloud and proposes liquid cooling', async () => {
@@ -96,10 +102,11 @@ test('demo script: GB300 swap, liquid-cooling proposal, ripple effects, floor fi
   })
 
   await test.step('5. the effects ripple out: floor, water, trim cooling and the grid cap', async () => {
-    await expect(layerButton(page, 'Layout')).toHaveAccessibleName(/failing/)
+    await expect(layerTab(page, 'Layout')).toHaveAccessibleName(/failing/)
     await expect(fieldGroup(page, 'Facility plant')).toContainText('Dry cooler')
     await expect(totalsValue(page, 'Water, peak day')).toHaveText(/^0\D/)
-    await expect(totalsValue(page, 'Hours over the grid cap')).not.toHaveText(/^0\s?h$/)
+    // Over the grid cap for some hours: the facility power card carries the check's status mark and word.
+    await expect(kpi(page, 'Facility power').getByRole('term')).toContainText(/^(Fail|Warning): /)
     const e = await serverEvaluation()
     expect(nonPassing(e, 'layout.floorBay').length).toBeGreaterThan(0)
     expect(e.headline.hoursOverCap).toBeGreaterThan(0)
@@ -109,7 +116,7 @@ test('demo script: GB300 swap, liquid-cooling proposal, ripple effects, floor fi
   await test.step('6. asked to fix the floor, the agent changes it through its tools and the camera follows', async () => {
     const viewsBefore = pushed.length
     await chat(page, 'Fix the floor, please.')
-    await expect(layerButton(page, 'Layout')).not.toHaveAccessibleName(/failing/)
+    await expect(layerTab(page, 'Layout')).not.toHaveAccessibleName(/failing/)
     expect(nonPassing(await serverEvaluation(), 'layout.floorBay')).toEqual([])
     const focus = pushed.slice(viewsBefore).find((m): m is Extract<ServerMsg, { t: 'view' }> => m.t === 'view' && m.action.type === 'focus')
     expect(focus, 'a focus view action reached the browser').toBeDefined()
@@ -135,13 +142,13 @@ test('demo script: GB300 swap, liquid-cooling proposal, ripple effects, floor fi
     const before = await totalsText(page)
     const evaluationBefore = await serverEvaluation()
     const download = page.waitForEvent('download')
-    await page.getByRole('button', { name: 'Export plan' }).click()
+    await moreAction(page, 'Export plan')
     const file = await (await download).path()
 
     await page.getByRole('button', { name: 'Undo' }).click()
     await expect.poll(() => totalsText(page)).not.toBe(before)
 
-    await page.getByLabel('Import file').setInputFiles(file)
+    await importFile(page, file)
     await expect(page.getByRole('status').filter({ hasText: 'Imported the plan Default hall.' })).toBeVisible()
     await expect.poll(() => totalsText(page)).toBe(before)
     expect(await serverEvaluation()).toEqual(evaluationBefore)

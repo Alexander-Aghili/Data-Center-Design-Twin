@@ -4,7 +4,7 @@ import { createServer as createNetServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { expect, type Page, type WebSocket as PlaywrightSocket } from '@playwright/test'
+import { expect, type FileChooser, type Locator, type Page, type WebSocket as PlaywrightSocket } from '@playwright/test'
 import type { ServerMsg } from '@twin/schema'
 import { createServer as createViteServer, type ViteDevServer } from 'vite'
 
@@ -137,35 +137,76 @@ export function recordServerMessages(page: Page): ServerMsg[] {
   return messages
 }
 
-/** Opens the app and waits until the plan totals are on screen. */
+/** Opens the app and waits until the summary's KPI cards are on screen. */
 export async function openApp(page: Page, twin: Twin): Promise<void> {
   await page.goto(twin.url)
-  await expect(totals(page).getByRole('table')).toBeVisible({ timeout: 30_000 })
+  await expect(kpi(page, 'Usable compute')).toBeVisible({ timeout: 30_000 })
 }
 
 export const totals = (page: Page) => page.getByRole('region', { name: 'Plan totals' })
 export const agent = (page: Page) => page.getByRole('region', { name: 'Design agent' })
-export const decisions = (page: Page) => page.getByRole('complementary', { name: 'Layers and decisions' })
+export const decisions = (page: Page) => page.getByRole('complementary', { name: 'Layer decisions' })
+export const rackBar = (page: Page) => page.getByRole('toolbar', { name: 'Rack groups' })
 
-/** The value cell of one row of the totals table, e.g. "IT load". */
-export const totalsValue = (page: Page, label: string) =>
-  totals(page).getByRole('row').filter({ has: page.getByRole('rowheader', { name: label, exact: true }) }).getByRole('cell')
+/** The summary's verdict line: "Buildable", "Buildable, 2 issues" or "Not buildable, 3 issues". */
+export const verdict = (page: Page) => totals(page).getByRole('status')
 
-/** Everything the totals panel says: the headline, the key numbers and the checks. */
+/** One KPI card of the summary, e.g. "Water, peak day": its label (a term) and its figures. */
+export const kpi = (page: Page, label: string) =>
+  totals(page).locator('.kpi').filter({ has: page.getByRole('term').filter({ hasText: label }) })
+
+/** The figure of one KPI card, e.g. "0 m³/day". */
+export const totalsValue = (page: Page, label: string) => kpi(page, label).getByRole('definition').first()
+
+/** Everything the summary says: the verdict, the four KPIs and the issue count. */
 export const totalsText = async (page: Page) => (await totals(page).innerText()).replace(/\s+/g, ' ').trim()
 
-/** Makes a layer active through the layer list (the button's name starts with the layer's name). */
+/** A layer tab in the top bar; its name starts with the layer's name ("Cooling, Mechanical engineer, 2 failing"). */
+export const layerTab = (page: Page, name: string) => page.getByRole('banner').getByRole('tab', { name: new RegExp(`^${name},`) })
+
+/** Makes a layer active through its tab in the top bar; the layer card then shows that layer's decisions. */
 export async function openLayer(page: Page, name: string): Promise<void> {
-  await decisions(page).getByRole('button', { name: new RegExp(`^${name},`) }).click()
-  await expect(decisions(page).getByRole('heading', { name: `${name} decisions` })).toBeVisible()
+  await layerTab(page, name).click()
+  await expect(layerTab(page, name)).toHaveAttribute('aria-selected', 'true')
+  await expect(decisions(page).getByRole('tabpanel', { name: new RegExp(`^${name},`) })).toBeVisible()
 }
 
-/** A titled field group in the decisions column, e.g. a rack group ("Training block") or "Facility plant". */
+/** Runs one item of the top bar's "More actions" menu (Catalog, Import, Export plan). */
+export async function moreAction(page: Page, item: string): Promise<void> {
+  await page.getByRole('banner').getByRole('button', { name: 'More actions' }).click()
+  await page.getByRole('group', { name: 'More actions' }).getByRole('button', { name: item }).click()
+}
+
+/** Imports a file the way a person does: ⋯, Import, then the file chooser. */
+export async function importFile(page: Page, file: Parameters<FileChooser['setFiles']>[0]): Promise<void> {
+  const chooser = page.waitForEvent('filechooser')
+  await moreAction(page, 'Import')
+  await (await chooser).setFiles(file)
+}
+
+/** A titled field group in the layer card, e.g. a rack group ("Training block") or "Facility plant". */
 export const fieldGroup = (page: Page, name: string) => decisions(page).getByRole('region', { name, exact: true })
 
-/** Picks a catalog entry with the one catalog picker of a field group. Picking closes the list, so it clicks rather than checks. */
-export async function pickCatalogEntry(page: Page, group: string, option: string | RegExp): Promise<void> {
-  const scope = fieldGroup(page, group)
-  await scope.getByRole('button', { name: 'Change' }).click()
-  await scope.getByRole('radiogroup').getByRole('radio', { name: option }).click()
+/**
+ * Opens a rack group's panel from the rack bar (the chip's name starts with the group's name) and returns it.
+ * Clicking the chip also flies the camera to the group's first rack.
+ */
+export async function openRackGroup(page: Page, group: string) {
+  const chip = rackBar(page).getByRole('button', { name: new RegExp(`^${group} `) })
+  if ((await chip.getAttribute('aria-expanded')) !== 'true') await chip.click()
+  const panel = page.getByRole('dialog', { name: group })
+  await expect(panel).toBeVisible()
+  return panel
+}
+
+/** The rack-type cards of a rack group panel; the group's current one is pressed. */
+export const rackTypeCards = (panel: Locator) => panel.getByRole('group', { name: 'Rack type' }).getByRole('button')
+
+/** Swaps a rack group's rack type through the rack bar: chip, then the rack type's card. Leaves the panel open. */
+export async function pickRackType(page: Page, group: string, rack: string | RegExp) {
+  const panel = await openRackGroup(page, group)
+  const card = rackTypeCards(panel).filter({ hasText: rack })
+  await card.click()
+  await expect(card).toHaveAttribute('aria-pressed', 'true')
+  return panel
 }

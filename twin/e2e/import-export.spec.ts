@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
 import { RACK } from '@twin/schema'
-import { openApp, totals, totalsText, Twin } from './harness'
+import { importFile, moreAction, openApp, totals, totalsText, Twin } from './harness'
 
 let twin: Twin
 
@@ -31,7 +31,7 @@ test('export then re-import gives the identical totals', async ({ page }) => {
   const evaluationBefore = await evaluation()
 
   const download = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'Export plan' }).click()
+  await moreAction(page, 'Export plan')
   const file = await (await download).path()
   const exported = JSON.parse(await readFile(file, 'utf8')) as { name: string }
   expect(exported.name).toBe('Default hall')
@@ -40,7 +40,7 @@ test('export then re-import gives the identical totals', async ({ page }) => {
   await sendCommand('setRackType', { groupId: 'g2', rackTypeId: RACK.GB300_NVL72 })
   await expect.poll(() => totalsText(page)).not.toBe(before)
 
-  await page.getByLabel('Import file').setInputFiles(file)
+  await importFile(page, file)
   await expect(page.getByRole('status').filter({ hasText: 'Imported the plan Default hall.' })).toBeVisible()
   await expect.poll(() => totalsText(page)).toBe(before)
   expect(await evaluation()).toEqual(evaluationBefore)
@@ -50,7 +50,7 @@ test('a malformed plan is rejected with paths and leaves the plan as it was', as
   await openApp(page, twin)
   const before = await totalsText(page)
 
-  await page.getByLabel('Import file').setInputFiles({
+  await importFile(page, {
     name: 'broken.json',
     mimeType: 'application/json',
     buffer: Buffer.from(JSON.stringify({ schemaVersion: 1, name: 'Broken', rackGroups: 'none' })),

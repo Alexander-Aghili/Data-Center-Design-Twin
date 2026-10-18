@@ -506,6 +506,7 @@ button {
 
 .scene-dock {
   bottom: var(--space-3);
+  container: scene-dock / inline-size;
   display: flex;
   align-items: flex-end;
   gap: var(--space-3);

@@ -21,7 +21,9 @@ export function RackTypeCard(props: {
   return (
     <button type="button" className={s.card} aria-pressed={picked} onClick={() => props.onPick(rack)}>
       <span className={s.cardTop}>
-        <span className={s.cardName}>{rack.name}</span>
+        <span className={s.cardName} title={rack.name}>
+          {rack.name}
+        </span>
         {picked && <span className={s.mark}>✓ {props.mark}</span>}
       </span>
       <span className={s.cardGpu}>{gpu ?? `${ROLE_LABEL[rack.role]} rack, no GPUs`}</span>

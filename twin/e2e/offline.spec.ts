@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { agent, openApp, openLayer, pickCatalogEntry, totalsText, totalsValue, Twin } from './harness'
+import { agent, openApp, pickRackType, totalsText, totalsValue, Twin } from './harness'
 
 let twin: Twin
 
@@ -24,11 +24,10 @@ test('with the server stopped the UI says so, local edits keep evaluating, and c
   // A fresh load with the server down runs the plan in the browser.
   await page.reload()
   await expect(page.getByRole('banner').getByRole('status')).toHaveText(/local mode/i, { timeout: 20_000 })
-  await expect(totalsValue(page, 'IT load')).toHaveText(/\d/)
+  await expect(totalsValue(page, 'Usable compute')).toHaveText(/\d/)
   const before = await totalsText(page)
 
-  await openLayer(page, 'Compute')
-  await pickCatalogEntry(page, 'Training block', 'NVIDIA GB300 NVL72')
+  await pickRackType(page, 'Training block', /^NVIDIA GB300 NVL72/)
   await expect.poll(() => totalsText(page)).not.toBe(before)
   await expect(page.getByRole('button', { name: 'Undo' })).toBeEnabled()
 
