@@ -1,7 +1,16 @@
 import { createDefaultPlan, loadBuiltins } from '@twin/catalog'
 import { applyCommand, applyCommands } from '@twin/commands'
-import { evaluate, makeCatalogIndex } from '@twin/engine'
-import { CommandError, type AgentEvent, type Builtins, type ClientMsg, type Command, type Plan, type ServerMsg } from '@twin/schema'
+import { evaluate, makeCatalogIndex, sameHourly } from '@twin/engine'
+import {
+  CommandError,
+  type AgentEvent,
+  type Builtins,
+  type ClientMsg,
+  type Command,
+  type HourlySeries,
+  type Plan,
+  type ServerMsg,
+} from '@twin/schema'
 import type { Backend, BackendStatus } from './backend'
 
 export const AGENT_NEEDS_SERVER = 'The design agent needs the server. Start it with npm run dev.'
@@ -17,6 +26,8 @@ export class LocalBackend implements Backend {
   private past: Entry[] = []
   private present: Entry
   private future: Entry[] = []
+  /** The hourly series last sent; a push leaves it out while it stays the same, like the server does. */
+  private hourly: { version: number; series: HourlySeries } | null = null
   private emit: (m: ServerMsg) => void = () => {}
   private readonly loadBuiltins: () => Promise<Builtins>
 
@@ -33,7 +44,7 @@ export class LocalBackend implements Backend {
       (builtins) => {
         this.builtins = builtins
         onStatus?.('local')
-        this.pushState()
+        this.pushState(true)
         this.emit({ t: 'thread', events: [this.agentError()] })
       },
       () => onStatus?.('offline'),
@@ -43,7 +54,7 @@ export class LocalBackend implements Backend {
   send(m: ClientMsg): void {
     switch (m.t) {
       case 'hello':
-        this.pushState()
+        this.pushState(true)
         return
       case 'command':
         this.runCommand(m.id, m.command)
@@ -104,14 +115,21 @@ export class LocalBackend implements Backend {
     this.pushState()
   }
 
-  private pushState(): void {
+  /** `fresh` sends the hourly series even when it has not changed. */
+  private pushState(fresh = false): void {
     if (!this.builtins) return
     const { plan, summary } = this.present
+    const { hourly, ...evaluation } = evaluate(plan, this.builtins)
+    const last = this.hourly
+    const changed = !last || !sameHourly(hourly, last.series)
+    const current = changed ? { version: (last?.version ?? 0) + 1, series: hourly } : last
+    this.hourly = current
     this.emit({
       t: 'state',
       plan,
-      evaluation: evaluate(plan, this.builtins),
+      evaluation: changed || fresh ? { ...evaluation, hourly } : evaluation,
       history: { canUndo: this.past.length > 0, canRedo: this.future.length > 0, last: summary },
+      hourlyVersion: current.version,
     })
   }
 
