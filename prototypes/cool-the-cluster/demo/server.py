@@ -320,9 +320,23 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=8000)
     args = ap.parse_args()
-    srv = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
-    print(f"cool-the-cluster demo on http://localhost:{args.port}")
-    srv.serve_forever()
+    for port in range(args.port, args.port + 20):
+        try:
+            srv = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+        except OSError:
+            try:  # is it this demo, already running?
+                import urllib.request
+                with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/search/status", timeout=1) as r:
+                    if "history" in json.loads(r.read()):
+                        print(f"cool-the-cluster demo is already running: open http://localhost:{port}")
+                        return
+            except Exception:
+                pass
+            continue
+        print(f"cool-the-cluster demo on http://localhost:{port}")
+        srv.serve_forever()
+        return
+    raise SystemExit(f"ports {args.port}-{args.port + 19} are all busy; pass --port")
 
 
 if __name__ == "__main__":
