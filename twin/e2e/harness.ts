@@ -54,7 +54,8 @@ export class Twin {
   private web: ViteDevServer | null = null
   private output = ''
 
-  constructor(private readonly opts: { liveAgent?: boolean } = {}) {}
+  /** `env` adds server environment variables, e.g. `TWIN_FAKE_AGENT_CHUNK_MS` or the `AGENT_*` limits. */
+  constructor(private readonly opts: { liveAgent?: boolean; env?: Record<string, string> } = {}) {}
 
   get url(): string {
     return `http://127.0.0.1:${this.webPort}/`
@@ -94,6 +95,7 @@ export class Twin {
       TWIN_DATA_DIR: this.dataDir,
       // The page's origin; the server refuses API calls and sockets from any other.
       TWIN_ALLOWED_ORIGINS: `http://127.0.0.1:${this.webPort}`,
+      ...this.opts.env,
     }
     if (this.opts.liveAgent) delete env.TWIN_FAKE_AGENT
     else env.TWIN_FAKE_AGENT = '1'

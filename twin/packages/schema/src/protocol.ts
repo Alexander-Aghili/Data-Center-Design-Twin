@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { AgentEventSchema } from './agent'
+import { AgentEventSchema, AgentStatusSchema } from './agent'
 import { CommandSchema } from './commands'
 import { EvaluationSchema, HourlySeriesSchema } from './evaluation'
 import { PlanSchema } from './plan'
@@ -19,6 +19,9 @@ export const ClientMsgSchema = z.discriminatedUnion('t', [
   z.object({ t: z.literal('redo') }),
   z.object({ t: z.literal('chat'), text: z.string().min(1) }),
   z.object({ t: z.literal('resetChat') }),
+  // aborts the agent turn now running
+  z.object({ t: z.literal('stopTurn') }),
+  z.object({ t: z.literal('agentSettings'), autoReview: z.boolean() }),
   z.object({ t: z.literal('proposal'), proposalId: z.string(), action: z.enum(['apply', 'dismiss']) }),
   z.object({ t: z.literal('view'), action: ViewActionSchema }),
 ])
@@ -45,6 +48,7 @@ export const ServerMsgSchema = z.discriminatedUnion('t', [
   z.object({ t: z.literal('agent'), event: AgentEventSchema }),
   z.object({ t: z.literal('view'), action: ViewActionSchema }),
   z.object({ t: z.literal('thread'), events: z.array(AgentEventSchema) }), // replay on connect
+  z.object({ t: z.literal('agentStatus'), status: AgentStatusSchema }), // on connect and whenever it changes
 ])
 export type ServerMsg = z.infer<typeof ServerMsgSchema>
 

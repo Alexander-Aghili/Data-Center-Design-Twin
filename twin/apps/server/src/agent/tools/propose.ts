@@ -3,7 +3,7 @@ import { applyCommand, formatIssues, listCommands, registry, type Registry } fro
 import { diffEvaluations, evaluate, makeCatalogIndex } from '@twin/engine'
 import type { Builtins, Command, EvalDiff, Evaluation, Plan, Proposal, ProposalStatus, Severity, ViewAction } from '@twin/schema'
 import type { PlanStore } from '../../contracts.js'
-import { compactDiff, defineTool, describeDiff, failure, success, type AgentTool } from './schema.js'
+import { checkSummary, compactDiff, defineTool, describeDiff, failure, success, type AgentTool } from './schema.js'
 import { sceneObjectIds, type TagCounter } from './view.js'
 
 /** What the tools need to try commands without touching the store. Injectable for tests. */
@@ -199,11 +199,14 @@ export function proposeTools(deps: {
     ),
     defineTool(
       'what_if',
-      'Evaluates commands against the current plan without applying them. Use it to compare options or check a fix before proposing it. Returns the change records and the full evaluation diff: headline deltas, checks that got worse or better with their causes, and cost, build time and water deltas.',
+      'Evaluates commands against the current plan without applying them. Use it to compare options or check a fix before proposing it. Returns the change records, the full evaluation diff (headline deltas, checks that got worse or better with their causes, and cost, build time and water deltas) and the check counts and worst problems the plan would then have.',
       (input) => {
         const preview = proposals.preview(input.commands)
         if (!preview.ok) return failure(preview.error)
-        return success({ summaries: preview.summaries, diff: preview.diff }, `What if: ${describeDiff(preview.diff)}`)
+        return success(
+          { summaries: preview.summaries, diff: preview.diff, checksAfter: checkSummary(preview.evaluation) },
+          `What if: ${describeDiff(preview.diff)}`,
+        )
       },
     ),
   ]

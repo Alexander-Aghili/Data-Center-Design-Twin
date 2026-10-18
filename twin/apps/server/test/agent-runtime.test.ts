@@ -15,6 +15,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createAnthropicClient, type AnthropicLike, type FinalMessage } from '../src/agent/client'
+import { DEFAULT_LIMITS } from '../src/agent/limits'
 import type { AgentTool, ToolOutcome } from '../src/agent/tools/index'
 import { createAgentRuntime } from '../src/agent/runtime'
 import { buildTools, ProposalBook } from '../src/agent/tools/index'
@@ -345,6 +346,8 @@ describe('agent runtime', () => {
   })
 
   describe('observations', () => {
+    /** Reviews without the minimum gap, for tests that need two in a row. */
+    const BACK_TO_BACK_REVIEWS = { ...DEFAULT_LIMITS, observationGapMs: 0 }
     const base = evaluation([check('cooling.rackHeatLimit:g2', 'pass'), check('power.ups:site', 'pass')])
 
     it('observation coalescing: 5 changes within 1.5 s make one observation turn', async () => {
@@ -405,7 +408,7 @@ describe('agent runtime', () => {
     it('a burst of user edits is diffed without the agent edits made inside the window', async () => {
       vi.useFakeTimers()
       const { client, requests } = fakeClient([reply('Rack heat got worse.'), reply('UPS got worse.')])
-      const rt = createAgentRuntime({ store: fakeStore(), tools: [], client, dataDir, diff: testDiff })
+      const rt = createAgentRuntime({ store: fakeStore(), tools: [], client, dataDir, diff: testDiff, limits: BACK_TO_BACK_REVIEWS })
       const rec = recorder(rt)
       const a = evaluation([check('cooling.rackHeatLimit:g2', 'warn'), check('power.ups:site', 'pass'), check('layout.floorBay:B4-4', 'pass')])
       const b = evaluation([check('cooling.rackHeatLimit:g2', 'warn'), check('power.ups:site', 'pass'), check('layout.floorBay:B4-4', 'fail')])
@@ -480,7 +483,7 @@ describe('agent runtime', () => {
     it('severity problem when any worsened check is fail', async () => {
       vi.useFakeTimers()
       const { client } = fakeClient([reply('UPS is close to its limit.'), reply('Rack heat now fails.')])
-      const rt = createAgentRuntime({ store: fakeStore(), tools: [], client, dataDir, diff: testDiff })
+      const rt = createAgentRuntime({ store: fakeStore(), tools: [], client, dataDir, diff: testDiff, limits: BACK_TO_BACK_REVIEWS })
       const rec = recorder(rt)
       rt.handleChange(change(base, evaluation([check('cooling.rackHeatLimit:g2', 'pass'), check('power.ups:site', 'warn')]), 'more load'))
       await vi.advanceTimersByTimeAsync(1600)

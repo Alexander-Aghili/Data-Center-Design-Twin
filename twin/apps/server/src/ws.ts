@@ -38,6 +38,13 @@ export function createHub(deps: { store: PlanStore; agent: AgentRuntime; log: Fa
 
   const threadMsg = (): ServerMsg => ({ t: 'thread', events: agent.threadEvents() })
 
+  /** The thread replay, then the agent's spend and state when there is an agent. */
+  function sendThread(socket: WebSocket): void {
+    send(socket, threadMsg())
+    const status = agent.status()
+    if (status) send(socket, { t: 'agentStatus', status })
+  }
+
   let hourly: { version: number; series: HourlySeries } = { version: 1, series: store.state().evaluation.hourly }
   /** The hourly version each client has. */
   const hourlySent = new WeakMap<WebSocket, number>()
@@ -102,13 +109,14 @@ export function createHub(deps: { store: PlanStore; agent: AgentRuntime; log: Fa
       flushState()
       broadcast({ t: 'view', action })
     }),
+    agent.onStatus((status) => broadcast({ t: 'agentStatus', status })),
   ]
 
   function handle(socket: WebSocket, msg: ClientMsg): void {
     switch (msg.t) {
       case 'hello':
         sendFreshState(socket)
-        send(socket, threadMsg())
+        sendThread(socket)
         return
       case 'command': {
         const result = store.dispatch(msg.command, 'user')
@@ -128,6 +136,12 @@ export function createHub(deps: { store: PlanStore; agent: AgentRuntime; log: Fa
       case 'resetChat':
         agent.resetConversation()
         broadcast(threadMsg())
+        return
+      case 'stopTurn':
+        agent.stopTurn()
+        return
+      case 'agentSettings':
+        agent.setAutoReview(msg.autoReview)
         return
       case 'proposal':
         if (msg.action === 'apply') agent.applyProposal(msg.proposalId)
@@ -174,7 +188,7 @@ export function createHub(deps: { store: PlanStore; agent: AgentRuntime; log: Fa
       socket.on('close', () => sockets.delete(socket))
       socket.on('error', (err) => log.warn({ err }, 'WebSocket error'))
       sendFreshState(socket)
-      send(socket, threadMsg())
+      sendThread(socket)
     },
     close() {
       if (pending) clearTimeout(pending.timer)

@@ -11,6 +11,7 @@ export type MessagePart =
   | { kind: 'link'; label: string; href: string }
   | { kind: 'proposal'; proposal: Proposal }
   | { kind: 'error'; message: string }
+  | { kind: 'notice'; message: string }
 
 /** Numbers one tool call returned, for grounding marks. */
 export interface GroundingSource {
@@ -69,6 +70,8 @@ export const AgentMessage = memo(function AgentMessage({ message, tag }: AgentMe
               return <ProposalCard key={part.proposal.id} proposal={part.proposal} />
             case 'error':
               return <ErrorLine key={i} message={part.message} />
+            case 'notice':
+              return <NoticeLine key={i} message={part.message} />
           }
         })}
         {streaming && parts[last]?.kind !== 'text' ? <Caret /> : null}
@@ -95,6 +98,11 @@ export function ErrorLine({ message }: { message: string }) {
       {message}
     </p>
   )
+}
+
+/** A line from the app rather than the model, such as a stopped turn. */
+export function NoticeLine({ message }: { message: string }) {
+  return <p className="ag-notice">{message}</p>
 }
 
 /** Only files this app serves under /api/ are linked. */

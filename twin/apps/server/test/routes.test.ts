@@ -4,6 +4,7 @@ import type { Plan } from '@twin/schema'
 import type { FastifyInstance } from 'fastify'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createScriptedClient } from '../src/agent/fakeClient'
+import { DEFAULT_LIMITS } from '../src/agent/limits'
 import { designAgentFactory } from '../src/agent/wire'
 import { createApp } from '../src/app'
 import type { AgentRuntime } from '../src/contracts'
@@ -269,6 +270,10 @@ describe('HTTP routes', () => {
           return { ok: true, result: `ran ${name}` }
         },
         listTools: () => tools,
+        stopTurn() {},
+        setAutoReview() {},
+        status: () => null,
+        onStatus: () => () => {},
       }),
     })
     apps.push(app)
@@ -283,8 +288,8 @@ describe('HTTP routes', () => {
     let runtime: AgentRuntime | null = null
     const app = await createApp({
       dataDir,
-      agentFactory: (store) => {
-        runtime = designAgentFactory({ dataDir, client: createScriptedClient(store) })(store)
+      agentFactory: (store, log) => {
+        runtime = designAgentFactory({ dataDir, limits: DEFAULT_LIMITS, client: createScriptedClient(store) })(store, log)
         return runtime
       },
     })

@@ -2,10 +2,8 @@ import { makeCatalogIndex } from '@twin/engine'
 import type { CatalogEntry, CatalogKind, Check, Evaluation, Plan, Status } from '@twin/schema'
 import type { PlanStore } from '../../contracts.js'
 import { KNOWLEDGE_SLUGS, readKnowledge, searchKnowledge } from '../../knowledge/index.js'
-import { compactCheck, defineTool, failure, success, type AgentTool } from './schema.js'
+import { checkSummary, defineTool, failure, success, type AgentTool } from './schema.js'
 
-const STATUS_ORDER: Record<Status, number> = { fail: 0, warn: 1, unknown: 2, pass: 3 }
-const MAX_PROBLEMS = 10
 const MAX_CATALOG_ROWS = 60
 // get_hourly's default step keeps a range near one week of hourly points.
 const DEFAULT_POINTS = 168
@@ -15,21 +13,17 @@ const sum = (values: number[]) => values.reduce((a, b) => a + b, 0)
 
 /** Headline, check counts and the worst problems: small enough to read every turn. */
 function summarizeEvaluation(e: Evaluation) {
-  const counts: Record<Status, number> = { fail: 0, warn: 0, unknown: 0, pass: 0 }
   const byKind: Record<string, Partial<Record<Status, number>>> = {}
   for (const c of e.checks) {
-    counts[c.status]++
     if (c.status === 'fail' || c.status === 'warn') {
       const kind = (byKind[c.kind] ??= {})
       kind[c.status] = (kind[c.status] ?? 0) + 1
     }
   }
-  const problems = e.checks
-    .filter((c) => c.status === 'fail' || c.status === 'warn')
-    .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || (b.utilization ?? 0) - (a.utilization ?? 0))
+  const { counts, problems, moreProblems } = checkSummary(e)
   return {
     headline: e.headline,
-    checks: { counts, problemsByKind: byKind, problems: problems.slice(0, MAX_PROBLEMS).map(compactCheck), moreProblems: Math.max(0, problems.length - MAX_PROBLEMS) },
+    checks: { counts, problemsByKind: byKind, problems, moreProblems },
     racks: {
       count: e.racks.length,
       itW: sum(e.racks.map((r) => r.powerW)),

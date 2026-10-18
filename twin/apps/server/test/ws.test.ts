@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events'
-import type { AgentEvent, ServerMsg, ViewAction } from '@twin/schema'
+import type { AgentEvent, AgentStatus, ServerMsg, ViewAction } from '@twin/schema'
 import Fastify, { type FastifyInstance } from 'fastify'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import WebSocket from 'ws'
@@ -61,8 +61,9 @@ class Client {
   }
 }
 
-function fakeAgent(thread: AgentEvent[] = []) {
+function fakeAgent(thread: AgentEvent[] = [], status: AgentStatus | null = null) {
   const eventListeners = new Set<(e: AgentEvent) => void>()
+  const statusListeners = new Set<(s: AgentStatus) => void>()
   const viewListeners = new Set<(a: ViewAction) => void>()
   const calls: string[] = []
   const changes: StoreChange[] = []
@@ -86,11 +87,19 @@ function fakeAgent(thread: AgentEvent[] = []) {
     threadEvents: () => [...thread],
     runTool: async () => ({ ok: false, error: 'unused' }),
     listTools: () => [],
+    stopTurn: () => calls.push('stop'),
+    setAutoReview: (on) => calls.push(`autoReview:${on}`),
+    status: () => status,
+    onStatus(cb) {
+      statusListeners.add(cb)
+      return () => statusListeners.delete(cb)
+    },
   }
   return {
     runtime,
     calls,
     changes,
+    setStatus: (s: AgentStatus) => statusListeners.forEach((cb) => cb(s)),
     emit: (e: AgentEvent) => eventListeners.forEach((cb) => cb(e)),
     view: (a: ViewAction) => viewListeners.forEach((cb) => cb(a)),
   }
@@ -204,6 +213,28 @@ describe('WebSocket hub', () => {
     a.send({ t: 'resetChat' })
     for (const client of [a, b]) expect(await client.next()).toEqual({ t: 'thread', events: [] })
     expect(agent.calls).toEqual(['chat:Cool row 3', 'apply:p1', 'dismiss:p2', 'reset'])
+  })
+
+  it('sends the agent status after the thread, broadcasts its changes, and routes stop and settings to the agent', async () => {
+    const idle: AgentStatus = { running: false, turnUsd: 0, todayUsd: 0.42, dailyBudgetUsd: 5, budgetSpent: false, autoReview: true }
+    const agent = fakeAgent([], idle)
+    const { port } = await start(agent.runtime)
+    const a = await (await connect(port)).ready()
+    expect(await a.next()).toEqual({ t: 'agentStatus', status: idle })
+    const b = await (await connect(port)).ready()
+    expect(await b.next()).toEqual({ t: 'agentStatus', status: idle })
+
+    const working = { ...idle, running: true, turnUsd: 0.03 }
+    agent.setStatus(working)
+    for (const client of [a, b]) expect(await client.next()).toEqual({ t: 'agentStatus', status: working })
+
+    a.send({ t: 'stopTurn' })
+    a.send({ t: 'agentSettings', autoReview: false })
+    a.send({ t: 'hello' })
+    expect((await a.next()).t).toBe('state')
+    expect((await a.next()).t).toBe('thread')
+    expect(await a.next()).toEqual({ t: 'agentStatus', status: idle })
+    expect(agent.calls).toEqual(['stop', 'autoReview:false'])
   })
 
   it('broadcasts agent events and view actions, forwards client view actions, and feeds store changes to the agent', async () => {

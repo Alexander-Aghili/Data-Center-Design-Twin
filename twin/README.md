@@ -84,7 +84,27 @@ Every number the agent states has to come from a tool result: the engine, the ca
 
 ### Cost
 
-The cached prefix (system prompt plus 56 tool schemas) is about 87,000 characters, roughly 25,000 tokens. `get_plan` now returns a compact plan of about 7 KB. It used to return 112 KB with the climate series. At the prices in `apps/server/test/agent-evals.test.ts` ($4 input, $20 output, $5 cache write and $0.20 cache read per million tokens), a chat turn with a few tool calls comes to roughly $0.10 once the cache is warm. The first turn of a conversation, or the first after five idle minutes, also writes the prefix to the cache and comes to about $0.25. Low-effort observation turns cost less. These are estimates from token counts. The last measured run, before `get_plan` was trimmed, averaged $0.36 per turn.
+The cached prefix (system prompt plus 56 tool schemas) is about 87,000 characters, roughly 25,000 tokens. `get_plan` now returns a compact plan of about 7 KB. It used to return 112 KB with the climate series. At the prices in `apps/server/test/agent-evals.test.ts` ($4 input, $20 output, $5 cache write and $0.20 cache read per million tokens), a chat turn with a few tool calls comes to roughly $0.10 once the cache is warm. The first turn of a conversation, or the first after five idle minutes, also writes the prefix to the cache and comes to about $0.25. Low-effort observation turns cost less. These are estimates from token counts. The last measured run, before `get_plan` was trimmed, averaged $0.36 per turn. Command and `what_if` results now carry the check counts and worst problems after the change, and the system prompt asks the agent not to re-read the plan or the evaluation to confirm a change.
+
+### Spending limits
+
+The server records the `usage` of every Claude API response (input, output, cache write and cache read tokens), prices it at the `claude-opus-5-5` rates above, adds it to the day's total in `.data/usage.json`, and logs each request's tokens and cost at info level. The agent panel shows today's spend against the daily budget and, while a turn runs, its cost so far next to a Stop button. Stop aborts the stream: the text so far stays, a "Stopped" line follows, and the conversation history stays valid.
+
+A turn ends with a plain message, such as "I stopped after 16 tool calls to save your API budget. Say continue to keep going.", when it reaches any per-turn cap. The request and cost caps are checked before each model request, and a tool call over the cap is answered as not run. When the day's spend reaches the budget, chat and automatic reviews stop until local midnight, and the thread says how much was spent and how to raise the limit.
+
+Automatic reviews of your edits (observation turns) are paid turns too. They wait at least the minimum gap after the previous one (edits made meanwhile merge into the next review), stop for the hour once the hourly count is reached, and stop when less than the reserve share of the daily budget is left. The "Automatic review" switch in the agent panel turns them off. The setting is kept in `.data/agent-settings.json`.
+
+Each limit can be set in the shell or in the repo-root `.env`; restart the server after changing one.
+
+| Variable | Default | What it limits |
+|---|---|---|
+| `AGENT_DAILY_BUDGET_USD` | `5` | API spend per local calendar day |
+| `AGENT_MAX_REQUESTS_PER_TURN` | `8` | Model requests in one turn |
+| `AGENT_MAX_TOOL_CALLS_PER_TURN` | `16` | Tool calls in one turn |
+| `AGENT_MAX_TURN_USD` | `0.75` | Spend of one turn |
+| `AGENT_REVIEW_MIN_GAP_S` | `120` | Seconds between automatic reviews |
+| `AGENT_REVIEWS_PER_HOUR` | `10` | Automatic reviews in any 60 minutes |
+| `AGENT_REVIEW_BUDGET_RESERVE` | `0.2` | Share of the daily budget kept for chat; reviews stop below it |
 
 ## Using the twin from Claude Code (MCP)
 
@@ -104,7 +124,7 @@ From `twin/`:
 |---|---|
 | `npm test` | Vitest for the packages, the server and MCP, and the web app (jsdom). Includes the golden, demo-cascade and performance tests in `packages/engine/test/`. |
 | `npm run typecheck` | `tsc -b` over every workspace. |
-| `npm run e2e` | Playwright: the demo script, import/export, offline mode and MCP. Each spec starts its own server and Vite on free ports with a throwaway data directory, and uses the scripted agent. Run `npx playwright install chromium` once first. |
+| `npm run e2e` | Playwright in Chromium and WebKit: the demo script, an agent turn watched while it runs and stopped, import/export, offline mode and MCP. Each spec starts its own server and Vite on free ports with a throwaway data directory, and uses the scripted agent (`TWIN_FAKE_AGENT_CHUNK_MS` paces its words). Run `npx playwright install chromium webkit` once first. |
 
 The live agent tests call the Claude API and are skipped unless `RUN_LIVE_AGENT=1` is set and the repo-root `.env` exists:
 
@@ -112,6 +132,7 @@ The live agent tests call the Claude API and are skipped unless `RUN_LIVE_AGENT=
 RUN_LIVE_AGENT=1 npx vitest run apps/server/test/agent-live.test.ts    # about $0.20
 RUN_LIVE_AGENT=1 npx vitest run apps/server/test/agent-evals.test.ts   # 7 behavior evals, prints its spend
 RUN_LIVE_AGENT=1 npm run e2e -- demo.spec.ts                           # the demo with the real agent, about $1
+RUN_LIVE_AGENT=1 npm run e2e -- agent-turn.spec.ts --project=webkit    # one short real turn in WebKit, capped at $0.25
 ```
 
 The eval run cost $2.50 before `get_plan` was trimmed and should cost less now. Set `AGENT_EVAL_LOG=<file>` to keep the transcripts.
