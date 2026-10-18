@@ -20,6 +20,7 @@ type Modules = {
   picking: typeof import('../src/scene/Picking')
   store: typeof import('../src/state/store')
   palette: typeof import('../src/scene/palette')
+  temperature: typeof import('../src/scene/overlays/Temperature')
 }
 let m: Modules
 
@@ -34,6 +35,7 @@ beforeAll(async () => {
     picking: await import('../src/scene/Picking'),
     store: await import('../src/state/store'),
     palette: await import('../src/scene/palette'),
+    temperature: await import('../src/scene/overlays/Temperature'),
   }
 })
 
@@ -144,6 +146,33 @@ describe('ghost tags', () => {
       ghost('rack:R3-00', 'changed', 'changed|cooling', () => 'Cooling: Direct-to-chip', 'R3', 12, 11.2),
     ])
     expect(tags.map((t) => t.lines)).toEqual([['Removed fan wall, 2 units', 'Model: chilled-water CRAH'], ['Cooling: Direct-to-chip, row 3']])
+  })
+})
+
+describe('temperature overlay', () => {
+  it('colors the heatsinks of a rack only when it is over its air limit', async () => {
+    const { evaluate } = await import('@twin/engine')
+    const plan = createDefaultPlan()
+    const evaluation = evaluate(plan, builtins)
+    const rackId = plan.placements[0]!.id
+    expect(m.temperature.exhaustColor(evaluation, rackId)).toBeNull()
+    const outlet = evaluation.racks.find((r) => r.placementId === rackId)!.airOutletC!
+    const over: Evaluation = {
+      ...evaluation,
+      checks: [
+        check({
+          id: 'cooling.rackHeatLimit:g1',
+          kind: 'cooling.rackHeatLimit',
+          subject: { kind: 'group', id: 'g1', objectIds: [`rack:${rackId}`] },
+          value: 132_000,
+          limit: 40_000,
+          utilization: 3.3,
+          status: 'fail',
+        }),
+      ],
+    }
+    const scale = { lo: Math.min(...evaluation.racks.map((r) => r.airInletC!)), hi: Math.max(...evaluation.racks.map((r) => r.airOutletC!)) }
+    expect(m.temperature.exhaustColor(over, rackId)).toBe(m.palette.tempColor(outlet, scale.lo, scale.hi))
   })
 })
 

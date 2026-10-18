@@ -210,16 +210,17 @@ function gpuBox(ctx: ShotContext, focus: Focus | null, rack: Box3): Box3 {
 }
 
 /**
- * What the gpu shot frames: the focused GPU with its neighbours, cold-plate hoses and the quick disconnects at the
- * tray's rear. That is the tray's full width, from the GPU's front edge back to the tray's rear, and from the tray
- * floor up to the GPU's top; the drive cage and bezel at the tray front stay out of frame.
+ * What the gpu shot frames: the focused GPU's row across the tray's full width, from the tray floor up to the GPU's
+ * top, plus the cold-plate hoses back to the quick disconnects at the tray's rear when the tray has them. The drive
+ * cage and bezel at the tray front stay out of frame.
  */
 function gpuSubject(ctx: ShotContext, focus: Focus | null, rack: RackFrame): Box3 {
   const gpu = gpuBox(ctx, focus, rack.box)
-  const tray = focusedTray(ctx, focus)?.box
-  if (!tray) return gpu
-  const [z0, z1] = rack.front > 0 ? [tray.min.z, gpu.max.z] : [gpu.min.z, tray.max.z]
-  return new Box3(new Vector3(tray.min.x, tray.min.y, z0), new Vector3(tray.max.x, Math.max(gpu.max.y, tray.min.y), z1))
+  const tray = focusedTray(ctx, focus)
+  if (!tray || !focus) return gpu
+  const hoses = registered(ctx.worldBox, `${objectIdForPlacement(focus.placementId)}:tray:${tray.index}:hoses`)
+  const z = hoses ? gpu.clone().union(hoses) : gpu
+  return new Box3(new Vector3(tray.box.min.x, tray.box.min.y, z.min.z), new Vector3(tray.box.max.x, Math.max(gpu.max.y, tray.box.min.y), z.max.z))
 }
 
 function siteBox(ctx: ShotContext): Box3 {

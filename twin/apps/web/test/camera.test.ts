@@ -170,10 +170,13 @@ describe('shotFor', () => {
     const worldBox = (id: string) => boxes[id] ?? null
     const tray = shotFor('tray', ctx({ focusId: 'R3-07', worldBox }))
     expect(tray.target[1]).toBeCloseTo(1.22)
-    // R3 faces north (−z): the gpu shot spans the tray's width, from the GPU's front edge back to the tray's rear
-    // (where the hoses meet the quick disconnects), and from the tray floor to the GPU's top.
+    // The gpu shot spans the tray's width and the GPU row, from the tray floor to the GPU's top.
     const gpu = shotFor('gpu', ctx({ focusId: 'rack:R3-07:tray:1:gpu:0', worldBox }))
-    expect(gpu.target).toEqual([10.2, 1.215, 9.1].map((v) => expect.closeTo(v, 5)))
+    expect(gpu.target).toEqual([10.2, 1.215, 9.05].map((v) => expect.closeTo(v, 5)))
+    // A cold-plate tray adds its hoses back to the quick disconnects at the tray's rear.
+    boxes['rack:R3-07:tray:1:hoses'] = new Box3(new Vector3(9.95, 1.21, 9.02), new Vector3(10.45, 1.23, 9.18))
+    const plated = shotFor('gpu', ctx({ focusId: 'rack:R3-07:tray:1:gpu:0', worldBox }))
+    expect(plated.target).toEqual([10.2, 1.215, 9.09].map((v) => expect.closeTo(v, 5)))
   })
 
   it('frames the populated rows and the units that serve them, not the empty hall floor', () => {

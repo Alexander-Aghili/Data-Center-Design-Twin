@@ -1,4 +1,4 @@
-import { CylinderGeometry, type BufferGeometry, type Group } from 'three'
+import { CylinderGeometry, type BufferGeometry, type Group, type Material } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { FINISH } from '../Lighting'
 import { useRegistered } from '../hooks'
@@ -104,6 +104,22 @@ function gpuGeometry(cooling: TrayCooling, s: number, trayH: number): BufferGeom
 const COLD_PLATE_MATERIALS = [FINISH.graphite, FINISH.graphite, FINISH.metal, FINISH.supply, FINISH.return]
 const HEATSINK_MATERIALS = [FINISH.graphite, FINISH.graphite, FINISH.metal]
 
+const heatsinkCache = new Map<string, Material[]>()
+
+/** Heatsink materials with the fins in `heat` (the rack's exhaust color), cached per color. */
+function heatsinkMaterials(heat: string | null): Material[] {
+  if (heat === null) return HEATSINK_MATERIALS
+  let materials = heatsinkCache.get(heat)
+  if (!materials) {
+    const fins = FINISH.metal.clone()
+    fins.color.set(heat)
+    fins.metalness = 0.2
+    materials = [FINISH.graphite, FINISH.graphite, fins]
+    heatsinkCache.set(heat, materials)
+  }
+  return materials
+}
+
 interface GpuProps {
   objectId: string
   x: number
@@ -111,16 +127,17 @@ interface GpuProps {
   size: number
   trayH: number
   cooling: TrayCooling
+  heat: string | null
 }
 
 /** One GPU module on a tray: a cold plate with quick disconnects, or an air heatsink. */
-export function Gpu({ objectId, x, z, size, trayH, cooling }: GpuProps) {
+export function Gpu({ objectId, x, z, size, trayH, cooling, heat }: GpuProps) {
   const ref = useRegistered<Group>(objectId, 'gpu')
   return (
     <group ref={ref} position={[x, 0, z]}>
       <mesh
         geometry={gpuGeometry(cooling, size, trayH)}
-        material={cooling === 'coldPlate' ? COLD_PLATE_MATERIALS : HEATSINK_MATERIALS}
+        material={cooling === 'coldPlate' ? COLD_PLATE_MATERIALS : heatsinkMaterials(heat)}
         castShadow
         receiveShadow
       />

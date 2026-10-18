@@ -5,6 +5,7 @@ import { Color, DoubleSide, Matrix4, MeshBasicMaterial, PlaneGeometry, Quaternio
 import type { Evaluation, Plan, RackResult } from '@twin/schema'
 import { useTwinStore } from '../../state/store'
 import { useRackOpenness } from '../camera/openness'
+import { objectIdForPlacement } from '../geometry'
 import { tempColor } from '../palette'
 import { rackGeometry, rowFaces, temperatureScale, type TempScale } from './flowPaths'
 
@@ -141,6 +142,25 @@ function Legend({ scale }: { scale: TempScale }) {
     )
   }, [scale, host])
   return null
+}
+
+// Checks that say a rack's air cooling cannot carry its heat.
+const AIR_LIMIT_CHECKS = new Set(['cooling.rackHeatLimit', 'cooling.airInletTemp'])
+
+/**
+ * Color of a rack's exhaust (outlet air) on the overlay's scale, for the heatsinks of the rack the camera opens, when
+ * a failing or warning air-limit check names the rack; null otherwise, so healthy racks keep bare metal.
+ */
+export function exhaustColor(evaluation: Evaluation | null, placementId: string): string | null {
+  const outlet = evaluation?.racks.find((r) => r.placementId === placementId)?.airOutletC ?? null
+  if (!evaluation || outlet === null) return null
+  const objectId = objectIdForPlacement(placementId)
+  const overLimit = evaluation.checks.some(
+    (c) => AIR_LIMIT_CHECKS.has(c.kind) && (c.status === 'fail' || c.status === 'warn') && c.subject.objectIds.includes(objectId),
+  )
+  if (!overLimit) return null
+  const scale = temperatureScale(evaluation)
+  return tempColor(outlet, scale.lo, scale.hi)
 }
 
 /** Racks and aisles colored on a sequential scale from the computed inlet and outlet air temperatures. */

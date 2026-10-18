@@ -15,6 +15,7 @@ import { useTwinStore } from '../../state/store'
 import { objectIdForPlacement, rackSize, slotWorld } from '../geometry'
 import { FINISH, PERF_TILE_M } from '../Lighting'
 import { useRegistered } from '../hooks'
+import { exhaustColor } from '../overlays/Temperature'
 import { Shelf, Tray, type TrayCooling } from './Tray'
 
 // Built-in catalog by id; plan snapshot entries win over these, as in the engine.
@@ -280,9 +281,10 @@ interface RackBodyProps {
   openness: number
   tray: number | null
   interior: boolean
+  heat: string | null
 }
 
-function RackBody({ plan, placement, openness, tray, interior }: RackBodyProps) {
+function RackBody({ plan, placement, openness, tray, interior, heat }: RackBodyProps) {
   const group = plan.rackGroups.find((g) => g.id === placement.groupId)
   const model = useMemo(
     () => rackModel(plan, group?.rackTypeId ?? '', group?.coolingMethodId ?? ''),
@@ -343,6 +345,7 @@ function RackBody({ plan, placement, openness, tray, interior }: RackBodyProps) 
                 d={model.trayDepth}
                 gpus={model.gpusPerTray}
                 cooling={model.cooling}
+                heat={heat}
               />
             </group>
           ))
@@ -361,10 +364,16 @@ interface RackProps {
   interior?: boolean
 }
 
+/** Under the temperature overlay, the open rack's air heatsinks take its exhaust color, as its rear panel does. */
+function useHeatsinkColor(placementId: string, interior: boolean): string | null {
+  return useTwinStore((s) => (interior && s.overlay === 'temperature' ? exhaustColor(s.evaluation, placementId) : null))
+}
+
 /** One cabinet at its slot, built from catalog dimensions, with its trays and GPUs registered by id. */
 export function Rack({ placementId, openness, tray = null, interior = true }: RackProps) {
   const plan = useTwinStore((s) => s.plan)
+  const heat = useHeatsinkColor(placementId, interior)
   const placement = plan?.placements.find((p) => p.id === placementId)
   if (!plan || !placement) return null
-  return <RackBody plan={plan} placement={placement} openness={openness} tray={tray} interior={interior} />
+  return <RackBody plan={plan} placement={placement} openness={openness} tray={tray} interior={interior} heat={heat} />
 }
