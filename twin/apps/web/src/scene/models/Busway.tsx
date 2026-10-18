@@ -8,7 +8,7 @@ import { catalogEntry, rackModel } from './Rack'
 /** Busway duct cross-section (about 150 × 200 mm for 1250–2500 A plug-in busway) and its height above the racks. */
 const DUCT = { w: 0.15, h: 0.2 }
 const CLEARANCE = 0.45
-const TAP = { w: 0.12, h: 0.16, d: 0.1 }
+const TAP = { w: 0.09, h: 0.1, d: 0.08 }
 
 /** Overhead plug-in busway along a row: the duct and one tap-off box above each rack. */
 export function Busway({ unit, plan }: { unit: EquipmentUnit; plan: Plan }) {

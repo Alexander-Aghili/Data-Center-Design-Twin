@@ -1,6 +1,6 @@
 import { useFrame } from '@react-three/fiber'
+import { loadBuiltins } from '@twin/catalog'
 import {
-  CatalogEntrySchema,
   type CatalogEntry,
   type CatalogEntryOfKind,
   type CatalogKind,
@@ -17,21 +17,13 @@ import { FINISH, PERF_TILE_M } from '../Lighting'
 import { useRegistered } from '../Scene'
 import { Shelf, Tray, type TrayCooling } from './Tray'
 
-// Built-in entries the scene needs for shapes (rack dimensions and trays, cooling form, plant type). Climate files are
-// left out: they are large and carry no geometry. Plan snapshot entries win over these, as in the engine.
-const BUILTIN = new Map<string, CatalogEntry>()
-const files = import.meta.glob('../../../../../packages/catalog/data/{racks,rack-cooling,heat-rejection,equipment}/*.json', {
-  eager: true,
-  import: 'default',
-})
-for (const raw of Object.values(files)) {
-  const parsed = CatalogEntrySchema.safeParse(raw)
-  if (parsed.success) BUILTIN.set(parsed.data.id, parsed.data)
-}
+// Built-in catalog by id; plan snapshot entries win over these, as in the engine.
+let builtinById: Map<string, CatalogEntry> | null = null
 
 /** Catalog entry by id and kind: the plan's snapshot first, then the built-in data. */
 export function catalogEntry<K extends CatalogKind>(plan: Plan, id: string, kind: K): CatalogEntryOfKind<K> | undefined {
-  const entry = plan.catalog[id] ?? BUILTIN.get(id)
+  builtinById ??= new Map(loadBuiltins().entries.map((e) => [e.id, e]))
+  const entry = plan.catalog[id] ?? builtinById.get(id)
   return entry?.kind === kind ? (entry as CatalogEntryOfKind<K>) : undefined
 }
 
@@ -55,7 +47,9 @@ const SLIDE_FRACTION = 0.62
 /** The front door swings to 110°. */
 const DOOR_MAX_RAD = (110 * Math.PI) / 180
 /** Time constant of the open/close easing, in seconds. */
-const EASE_S = 0.28
+const EASE_S = 0.12
+/** With a focus tray, the other compute trays ease out only this fraction of the slide. */
+const NUDGE = 0.06
 
 export interface TraySlot {
   kind: 'compute' | 'switch' | 'power'
@@ -131,8 +125,12 @@ export function doorAngle(openness: number): number {
   return smoothstep(openness / 0.45) * DOOR_MAX_RAD
 }
 
-/** Fraction of the full slide for compute tray `k` of `n`: trays follow the door top to bottom. */
-export function traySlide(openness: number, k: number, n: number): number {
+/**
+ * Fraction of the full slide for compute tray `k` of `n`. With a focus tray only that one comes out (the others
+ * nudge), so the trays above never cover its GPUs; without one the trays follow the door top to bottom.
+ */
+export function traySlide(openness: number, k: number, n: number, focus: number | null = null): number {
+  if (focus !== null) return smoothstep((openness - 0.3) / 0.5) * (k === focus ? 1 : NUDGE)
   const delay = n > 1 ? (0.3 * k) / (n - 1) : 0
   return smoothstep((openness - 0.3 - delay) / 0.4)
 }
@@ -270,10 +268,11 @@ interface RackBodyProps {
   plan: Plan
   placement: Placement
   openness: number
+  tray: number | null
   interior: boolean
 }
 
-function RackBody({ plan, placement, openness, interior }: RackBodyProps) {
+function RackBody({ plan, placement, openness, tray, interior }: RackBodyProps) {
   const group = plan.rackGroups.find((g) => g.id === placement.groupId)
   const model = useMemo(
     () => rackModel(plan, group?.rackTypeId ?? '', group?.coolingMethodId ?? ''),
@@ -295,7 +294,7 @@ function RackBody({ plan, placement, openness, interior }: RackBodyProps) {
   const apply = (o: number) => {
     if (door.current) door.current.rotation.y = -doorAngle(o)
     slides.current.forEach((g, k) => {
-      if (g) g.position.z = -traySlide(o, k, computeTrays.length) * slideDepth
+      if (g) g.position.z = -traySlide(o, k, computeTrays.length, tray) * slideDepth
     })
   }
 
@@ -341,14 +340,20 @@ function RackBody({ plan, placement, openness, interior }: RackBodyProps) {
   )
 }
 
-/**
- * One cabinet at its slot, built from catalog dimensions. `openness` 0..1 swings the front door, then slides the
- * compute trays out top to bottom; the model eases toward a changed value. `interior` false draws only the shell
- * (the hall's closed racks), so trays and GPUs exist only where someone can see them.
- */
-export function Rack({ placementId, openness, interior = true }: { placementId: string; openness: number; interior?: boolean }) {
+interface RackProps {
+  placementId: string
+  /** 0 closed; the door swings over the first 45%, then trays slide. The model eases toward a changed value. */
+  openness: number
+  /** Compute tray the camera pushes into: only it slides out fully. Null slides all trays out top to bottom. */
+  tray?: number | null
+  /** False draws only the shell (the hall's closed racks), so trays and GPUs exist only where someone can see them. */
+  interior?: boolean
+}
+
+/** One cabinet at its slot, built from catalog dimensions, with its trays and GPUs registered by id. */
+export function Rack({ placementId, openness, tray = null, interior = true }: RackProps) {
   const plan = useTwinStore((s) => s.plan)
   const placement = plan?.placements.find((p) => p.id === placementId)
   if (!plan || !placement) return null
-  return <RackBody plan={plan} placement={placement} openness={openness} interior={interior} />
+  return <RackBody plan={plan} placement={placement} openness={openness} tray={tray} interior={interior} />
 }

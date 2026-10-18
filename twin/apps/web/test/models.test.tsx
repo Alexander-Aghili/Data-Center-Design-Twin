@@ -89,6 +89,33 @@ describe('procedural models', () => {
     expect(inside.containsBox(open)).toBe(false)
   })
 
+  it('a focus tray slides out alone so the trays above stay clear of its GPUs', async () => {
+    useTwinStore.setState({ plan: nvl72Plan(), evaluation: null })
+    renderer = await ReactThreeTestRenderer.create(<Rack placementId="R3-02" openness={1} tray={5} />)
+    renderer.scene.instance.updateMatrixWorld(true)
+    const registry = useSceneRegistry.getState()
+    const chassis = registry.worldBox('rack:R3-02:chassis')!.expandByScalar(1e-6)
+    const outside = Array.from({ length: 18 }, (_, i) => i).filter((i) => !chassis.containsBox(registry.worldBox(`rack:R3-02:tray:${i}`)!))
+    expect(outside).toEqual([5])
+  })
+
+  it('places equipment from Evaluation.equipment at its positions', async () => {
+    const { evaluate } = await import('@twin/engine')
+    const { loadBuiltins } = await import('@twin/catalog')
+    const { equipmentUnits } = await import('../src/scene/models/Hall')
+    const plan = nvl72Plan()
+    const evaluation = evaluate(plan, loadBuiltins())
+    const units = equipmentUnits(plan, evaluation)
+    const expected = evaluation.equipment.filter((e) => !['optic', 'cable'].includes(e.category))
+    for (const e of expected) {
+      const drawn = units.filter((u) => u.key === e.key)
+      expect(drawn.map((u) => u.objectId), e.key).toEqual(e.objectIds)
+    }
+    const cdu = units.find((u) => u.kind === 'cdu')!
+    const position = plan.hall.positions.find((p) => p.id === evaluation.equipment.find((e) => e.key === cdu.key)!.positionIds[0])!
+    expect(Math.abs(cdu.z - position.z)).toBeLessThan(1e-9)
+  })
+
   it('Hall renders one mesh per placement (instanced for >40)', async () => {
     const countRacks = () => ids().filter((id) => /^rack:R\d-\d\d$/.test(id)).length
     const instanced = (root: Object3D) => {

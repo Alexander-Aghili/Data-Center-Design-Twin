@@ -1,6 +1,7 @@
 import { num, type Evaluation, type Plan, type SizedEquipment } from '@twin/schema'
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import { BoxGeometry, Object3D, type Group, type InstancedMesh } from 'three'
+import { selectOpenness, useRackOpenness } from '../camera/openness'
 import { objectIdForEquipment, objectIdForPlacement, slotWorld } from '../geometry'
 import { FINISH, LOUVER_TILE_M } from '../Lighting'
 import { useRegistered } from '../Scene'
@@ -143,11 +144,6 @@ export function equipmentUnits(plan: Plan, evaluation: Evaluation | null): Equip
   return units
 }
 
-export interface OpenRack {
-  placementId: string
-  openness: number
-}
-
 const proxyGeometry = new BoxGeometry(1, 1, 1)
 
 /** Invisible stand-in that gives an instanced rack its id, world box and pick target. */
@@ -235,19 +231,27 @@ function Cabinet({ unit }: { unit: EquipmentUnit }) {
 interface HallProps {
   plan: Plan
   units: EquipmentUnit[]
-  openRack: OpenRack | null
+  /** The rack the camera rig opens (`useRackOpenness`); drawn in full with trays and GPUs. */
+  openRack: string | null
+}
+
+/** The open rack, driven by the camera rig's openness slice. */
+function RigRack({ placementId }: { placementId: string }) {
+  const openness = useRackOpenness(selectOpenness(placementId))
+  const tray = useRackOpenness((s) => (s.placementId === placementId ? s.tray : null))
+  return <Rack placementId={placementId} openness={openness} tray={tray} />
 }
 
 /** Racks in their slots (instanced when there are many), the one open rack, and the equipment inside the hall. */
 export function Hall({ plan, units, openRack }: HallProps) {
   const instanced = plan.placements.length > INSTANCE_THRESHOLD
-  const open = openRack && plan.placements.some((p) => p.id === openRack.placementId) ? openRack : null
+  const open = openRack && plan.placements.some((p) => p.id === openRack) ? openRack : null
 
   const batches = useMemo(() => {
     if (!instanced) return []
     const byType = new Map<string, InstancedRacksProps>()
     for (const p of plan.placements) {
-      if (p.id === open?.placementId) continue
+      if (p.id === open) continue
       const group = plan.rackGroups.find((g) => g.id === p.groupId)
       if (!group) continue
       const slotsWide = catalogEntry(plan, group.rackTypeId, 'rack')?.slotsWide ?? 1
@@ -258,16 +262,16 @@ export function Hall({ plan, units, openRack }: HallProps) {
       byType.set(key, batch)
     }
     return [...byType.entries()]
-  }, [plan, instanced, open?.placementId])
+  }, [plan, instanced, open])
 
   return (
     <group>
       {instanced
         ? batches.map(([key, batch]) => <InstancedRacks key={key} {...batch} />)
         : plan.placements
-            .filter((p) => p.id !== open?.placementId)
+            .filter((p) => p.id !== open)
             .map((p) => <Rack key={p.id} placementId={p.id} openness={0} interior={false} />)}
-      {open ? <Rack key={`open-${open.placementId}`} placementId={open.placementId} openness={open.openness} /> : null}
+      {open ? <RigRack key={`open-${open}`} placementId={open} /> : null}
       {units.map((u) => {
         switch (u.kind) {
           case 'cdu':
