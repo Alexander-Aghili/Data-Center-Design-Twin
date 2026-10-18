@@ -1,22 +1,126 @@
 .panel {
-  padding: var(--space-5) var(--space-4) var(--space-5);
+  padding: var(--space-4) var(--space-4) var(--space-5);
 }
 
-.heading {
+.head {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
   gap: var(--space-2);
   margin-bottom: var(--space-1);
 }
 
-.owner {
-  font-weight: 400;
+.heading {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  line-height: 1.25;
 }
 
-.layerNotes {
-  margin-top: var(--space-4);
-  border-top: 1px solid var(--ink);
+.owner {
+  flex: 1;
+  font-size: var(--text-sm);
+  color: var(--graphite);
+}
+
+.head > button {
+  align-self: center;
+}
+
+/*
+ * Button colors from the shared action tokens. The shell defines them globally; the fallbacks keep the
+ * card right until then (king blue for the one primary action, baby blue for secondary ones).
+ */
+.panel :global(.btn--primary) {
+  background: var(--action, #1f4ed8);
+  border-color: var(--action, #1f4ed8);
+  color: #fff;
+}
+
+.panel :global(.btn--primary:hover:enabled) {
+  background: var(--action-hover, #183fb0);
+  border-color: var(--action-hover, #183fb0);
+}
+
+.panel :global(.btn--secondary) {
+  background: var(--action-soft, #e3eeff);
+  border-color: var(--action-soft, #e3eeff);
+  color: var(--action-soft-ink, #1a3e9e);
+  font-weight: 500;
+}
+
+.panel :global(.btn--secondary:hover:enabled) {
+  border-color: var(--action-ring, #8db4ff);
+}
+
+.panel :global(.btn--primary:disabled),
+.panel :global(.btn--secondary:disabled) {
+  background: var(--clay-mid);
+  border-color: var(--clay-mid);
+  color: var(--graphite);
+}
+
+.panel :global(.btn:focus-visible) {
+  outline: 2px solid var(--action, #1f4ed8);
+  outline-offset: 2px;
+}
+
+.lede {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--graphite);
+  line-height: 1.45;
+}
+
+/* Rack groups at a glance (Compute): read only, the rack bar does the editing. */
+.groups {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.groupCard {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  border: var(--rule);
+  border-radius: var(--radius-control);
+  background: var(--clay-light);
+}
+
+.groupName {
+  font-weight: 600;
+}
+
+.groupLine {
+  font-size: var(--text-sm);
+  color: var(--graphite);
+  line-height: 1.4;
+}
+
+/* Fill a row in one click (Layout). */
+.quick {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+.quickField {
+  display: grid;
+  gap: 3px;
+  font-size: var(--text-sm);
+  color: var(--graphite);
+}
+
+.quick :global(.input) {
+  width: 100%;
+  min-width: 0;
+}
+
+.quick :global(.btn) {
+  grid-column: 1 / -1;
+  justify-content: center;
 }
 
 .aside {
@@ -161,8 +265,8 @@
 }
 
 .slot[data-state='selected'] {
-  border-color: var(--ink);
-  background: var(--ink);
+  border-color: var(--action, #1f4ed8);
+  background: var(--action, #1f4ed8);
 }
 
 .zones {
@@ -203,14 +307,14 @@
 }
 
 .chip input:checked + span {
-  border-color: var(--ink);
-  background: var(--ink);
+  border-color: var(--action, #1f4ed8);
+  background: var(--action, #1f4ed8);
   color: var(--clay-light);
   font-weight: 500;
 }
 
 .chip input:focus-visible + span {
-  outline: 2px solid var(--supply);
+  outline: 2px solid var(--action, #1f4ed8);
   outline-offset: 1px;
 }
 

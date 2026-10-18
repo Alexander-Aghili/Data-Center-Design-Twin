@@ -37,8 +37,8 @@
 }
 
 .toggle input:checked + .track {
-  background: var(--ink);
-  border-color: var(--ink);
+  background: var(--action, #1f4ed8);
+  border-color: var(--action, #1f4ed8);
 }
 
 .toggle input:checked + .track::after {
@@ -47,7 +47,7 @@
 }
 
 .toggle input:focus-visible + .track {
-  outline: 2px solid var(--supply);
+  outline: 2px solid var(--action, #1f4ed8);
   outline-offset: 2px;
 }
 

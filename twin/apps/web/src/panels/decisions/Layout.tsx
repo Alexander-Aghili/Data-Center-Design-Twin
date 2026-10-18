@@ -3,6 +3,7 @@ import type { CatalogIndex, EquipmentPosition, Plan, Row } from '@twin/schema'
 import { useTwinStore } from '../../state/store'
 import { useCatalog } from '../fields/CatalogPicker'
 import { Field, useField } from '../fields/Field'
+import { MoreSettings } from '../fields/MoreSettings'
 import { Select } from '../fields/Select'
 import s from './decisions.module.css'
 
@@ -41,6 +42,78 @@ function fillProblem(slots: (string | null)[], rowId: string, fromText: string, 
 }
 
 const firstFree = (slots: (string | null)[]) => Math.max(0, slots.indexOf(null))
+
+/** The longest free run of a row, as where it starts and how many `w`-slot racks fit in it. */
+function roomIn(slots: (string | null)[], w: number): { from: number; count: number } {
+  let best = { from: 0, count: 0 }
+  for (let k = 0; k < slots.length; ) {
+    if (slots[k] !== null) {
+      k++
+      continue
+    }
+    let run = 0
+    while (k + run < slots.length && slots[k + run] === null) run++
+    const count = Math.floor(run / w)
+    if (count > best.count) best = { from: k, count }
+    k += run
+  }
+  return best
+}
+
+/** One-click placement: fills the largest free stretch of a row with racks of one group. */
+function FillRow({ plan, catalog }: { plan: Plan; catalog: CatalogIndex }) {
+  const send = useTwinStore((st) => st.send)
+  const { run } = useField()
+  const id = useId()
+  const [groupId, setGroupId] = useState(plan.rackGroups[0]?.id ?? '')
+  const w = slotsWide(plan, catalog, groupId)
+  const rooms = plan.hall.rows.map((r) => ({ row: r, room: roomIn(occupancy(plan, catalog, r), w) }))
+  // null follows the first row with room, also after a row fills up.
+  const [picked, setRowId] = useState<string | null>(null)
+  const rowId = picked ?? (rooms.find((r) => r.room.count > 0) ?? rooms[0])?.row.id ?? ''
+  const room = rooms.find((r) => r.row.id === rowId)?.room ?? { from: 0, count: 0 }
+  const group = plan.rackGroups.find((g) => g.id === groupId)
+  const ready = Boolean(group) && room.count > 0
+  const label = !group ? 'Create a rack group first' : room.count === 0 ? `${rowId} is full` : `Fill ${rowId} with ${room.count} ${room.count === 1 ? 'rack' : 'racks'}`
+
+  return (
+    <form
+      className={s.quick}
+      aria-label="Fill a row"
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (!ready) return
+        const placed = send({ type: 'fillRow', payload: { groupId, rowId, from: room.from, count: room.count } })
+        run(placed)
+        placed.then(() => setRowId(null), () => {})
+      }}
+    >
+      <div className={s.quickField}>
+        <label htmlFor={`${id}-group`}>Group</label>
+        <select id={`${id}-group`} className="input" value={groupId} onChange={(e) => setGroupId(e.currentTarget.value)}>
+          {plan.rackGroups.map((g) => (
+            <option key={g.id} value={g.id}>
+              {g.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className={s.quickField}>
+        <label htmlFor={`${id}-row`}>Row</label>
+        <select id={`${id}-row`} className="input" value={rowId} onChange={(e) => setRowId(e.currentTarget.value)}>
+          {rooms.map(({ row, room: r }) => (
+            <option key={row.id} value={row.id}>
+              {row.id}, {r.count === 0 ? 'full' : `room for ${r.count}`}
+            </option>
+          ))}
+        </select>
+      </div>
+      <button type="submit" className="btn btn--primary" disabled={!ready}>
+        {label}
+      </button>
+    </form>
+  )
+}
 
 function SlotStrip(props: { slots: (string | null)[]; selected?: string }) {
   return (
@@ -252,7 +325,7 @@ export function LayoutDecisions({ plan }: { plan: Plan }) {
   const catalog = useCatalog()
   return (
     <>
-      <Field label="Containment" target="decision:cooling.containment">
+      <Field label="Aisle containment" target="decision:cooling.containment">
         <Select
           value={plan.cooling.containment}
           options={[
@@ -268,13 +341,18 @@ export function LayoutDecisions({ plan }: { plan: Plan }) {
         target="decision:placements"
         hint={selection?.kind === 'rack' ? undefined : 'Select a rack in the scene to move or remove it.'}
       >
-        <Rows plan={plan} catalog={catalog} />
-        <PlaceRacks plan={plan} catalog={catalog} />
+        <FillRow plan={plan} catalog={catalog} />
         {selection?.kind === 'rack' && <MoveRack key={selection.id} plan={plan} placementId={selection.id} />}
       </Field>
-      <Field label="Cooling zones" target="decision:hall.positions.cooling" hint="Rows each CDU or CRAH position serves.">
-        <ZoneEditor plan={plan} kinds={['cdu', 'crah']} />
-      </Field>
+      <MoreSettings>
+        <Field label="Rows and slots">
+          <Rows plan={plan} catalog={catalog} />
+          <PlaceRacks plan={plan} catalog={catalog} />
+        </Field>
+        <Field label="Cooling zones" target="decision:hall.positions.cooling" hint="Rows each CDU or CRAH position serves.">
+          <ZoneEditor plan={plan} kinds={['cdu', 'crah']} />
+        </Field>
+      </MoreSettings>
     </>
   )
 }

@@ -3,6 +3,8 @@ import type { CatalogIndex, Plan, RackEntry, RackGroup } from '@twin/schema'
 import { useTwinStore } from '../../state/store'
 import { CatalogPicker, useCatalog, type Assessment } from '../fields/CatalogPicker'
 import { errorMessage, Field, FieldGroup } from '../fields/Field'
+import { MoreSettings } from '../fields/MoreSettings'
+import { fmtPower } from '../../format'
 import { coolingAccepted } from './Cooling'
 import s from './decisions.module.css'
 
@@ -165,14 +167,44 @@ function NewGroup({ catalog }: { catalog: CatalogIndex }) {
   )
 }
 
+/** One group at a glance: what rack it runs, how it is cooled and where it stands. */
+function GroupSummary({ plan, group, catalog }: { plan: Plan; group: RackGroup; catalog: CatalogIndex }) {
+  const rack = catalog.get(group.rackTypeId, 'rack')
+  const method = catalog.get(group.coolingMethodId, 'rackCooling')
+  const load = rack?.nominalPowerW.value
+  const spec = [rack && rack.gpuCount > 0 ? `${rack.gpuCount} GPUs` : null, load ? `${fmtPower(load)} per rack` : null, method?.name]
+  return (
+    <li className={s.groupCard}>
+      <span className={s.groupName}>{group.name}</span>
+      <span className={s.groupLine}>{rack?.name ?? group.rackTypeId}</span>
+      <span className={s.groupLine}>{spec.filter(Boolean).join(' · ')}</span>
+      <span className={s.groupLine}>{placedSummary(plan, group.id)}</span>
+    </li>
+  )
+}
+
 export function ComputeDecisions({ plan }: { plan: Plan }) {
   const catalog = useCatalog()
   return (
     <>
-      {plan.rackGroups.map((g) => (
-        <GroupCompute key={g.id} plan={plan} group={g} catalog={catalog} />
-      ))}
-      <NewGroup catalog={catalog} />
+      <p className={s.lede}>
+        Swap racks and GPUs in the rack bar at the bottom of the scene. Click a group there to pick its rack type and cooling.
+      </p>
+      {plan.rackGroups.length > 0 ? (
+        <ul className={s.groups} aria-label="Rack groups">
+          {plan.rackGroups.map((g) => (
+            <GroupSummary key={g.id} plan={plan} group={g} catalog={catalog} />
+          ))}
+        </ul>
+      ) : (
+        <p className={s.lede}>No rack groups yet.</p>
+      )}
+      <MoreSettings>
+        {plan.rackGroups.map((g) => (
+          <GroupCompute key={g.id} plan={plan} group={g} catalog={catalog} />
+        ))}
+        <NewGroup catalog={catalog} />
+      </MoreSettings>
     </>
   )
 }

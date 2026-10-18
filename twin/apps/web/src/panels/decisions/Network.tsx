@@ -1,6 +1,7 @@
 import { NETWORK_OVERSUBSCRIPTION_RANGE, type Plan } from '@twin/schema'
 import { useTwinStore } from '../../state/store'
 import { Field } from '../fields/Field'
+import { MoreSettings } from '../fields/MoreSettings'
 import { NumberInput } from '../fields/Number'
 import { Select } from '../fields/Select'
 import { ZoneEditor } from './Layout'
@@ -9,7 +10,7 @@ export function NetworkDecisions({ plan }: { plan: Plan }) {
   const send = useTwinStore((st) => st.send)
   return (
     <>
-      <Field label="Fabric" target="decision:network.fabric">
+      <Field label="Network fabric" target="decision:network.fabric">
         <Select
           value={plan.network.fabric}
           options={[
@@ -20,9 +21,9 @@ export function NetworkDecisions({ plan }: { plan: Plan }) {
         />
       </Field>
       <Field
-        label="Oversubscription"
+        label="Leaf oversubscription"
         target="decision:network.oversubscription"
-        hint={'Downlink to uplink bandwidth at each leaf, from 1:1 (non-blocking) to 8:1.'}
+        hint="Downlink to uplink bandwidth at each leaf, from 1:1 (non-blocking) to 8:1."
       >
         <NumberInput
           value={plan.network.oversubscription}
@@ -32,9 +33,11 @@ export function NetworkDecisions({ plan }: { plan: Plan }) {
           onCommit={(ratio) => send({ type: 'setNetworkOversubscription', payload: { ratio } })}
         />
       </Field>
-      <Field label="Leaf placement" target="decision:hall.positions.leaf" hint="Rows each leaf position serves. Distance sets copper or optics.">
-        <ZoneEditor plan={plan} kinds={['leaf']} />
-      </Field>
+      <MoreSettings>
+        <Field label="Leaf placement" target="decision:hall.positions.leaf" hint="Rows each leaf position serves. Distance sets copper or optics.">
+          <ZoneEditor plan={plan} kinds={['leaf']} />
+        </Field>
+      </MoreSettings>
     </>
   )
 }

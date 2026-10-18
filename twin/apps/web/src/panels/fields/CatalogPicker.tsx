@@ -107,6 +107,8 @@ function climateFacts(e: ClimateEntry): Fact[] {
 
 type PickerEntry = CatalogEntryOfKind<PickerKind>
 
+const describedBy = (...ids: (string | null)[]) => ids.filter(Boolean).join(' ') || undefined
+
 function factsOf(e: PickerEntry): Fact[] {
   switch (e.kind) {
     case 'rackCooling':
@@ -147,13 +149,16 @@ export interface Assessment {
   caution?: string
 }
 
-function Facts(props: { id?: string; facts: Fact[] }) {
+/** The facts of an entry: every one with its basis when `full`, else only the deciding number. */
+function Facts(props: { id?: string; facts: Fact[]; full: boolean }) {
+  const shown = props.full ? props.facts : props.facts.slice(0, 1)
+  if (shown.length === 0) return null
   return (
-    <span id={props.id} className={s.facts}>
-      {props.facts.map((f) => (
-        <span key={f.text} className={s.fact} data-basis={f.basis} title={f.title}>
+    <span id={props.id} className={props.full ? s.facts : s.headline}>
+      {shown.map((f) => (
+        <span key={f.text} className={s.fact} data-basis={props.full ? f.basis : undefined} title={f.title}>
           <span>{f.text}</span>
-          {f.basis && <span className={s.basis}>{BASIS_LABEL[f.basis]}</span>}
+          {props.full && f.basis && <span className={s.basis}>{BASIS_LABEL[f.basis]}</span>}
         </span>
       ))}
     </span>
@@ -179,8 +184,8 @@ type PickerProps = { [K in PickerKind]: { kind: K; assess?: (entry: CatalogEntry
 }
 
 /**
- * Chooses a catalog entry. Each option lists the numbers that decide the choice, each with its basis,
- * and options this context can't take are disabled with the reason.
+ * Chooses a catalog entry. Each option shows the number that decides the choice; "Details" opens the
+ * full spec sheet with each fact's basis. Options this context can't take are disabled with the reason.
  */
 export function CatalogPicker(props: PickerProps) {
   const catalog = useCatalog()
@@ -188,6 +193,7 @@ export function CatalogPicker(props: PickerProps) {
   const labelledBy = props.labelledBy ?? a11y['aria-labelledby']
   const id = useId()
   const [open, setOpen] = useState(false)
+  const [details, setDetails] = useState(false)
   const options = useMemo(
     () =>
       catalog
@@ -207,22 +213,38 @@ export function CatalogPicker(props: PickerProps) {
       <div className={s.current}>
         <div className={s.currentText}>
           <span className={s.name}>{current?.name ?? `Unknown entry ${props.value}`}</span>
-          {current && !open && <Facts facts={factsOf(current)} />}
+          {current && !open && <Facts id={`${id}-facts`} facts={factsOf(current)} full={details} />}
           {current && <Verdict assessment={assess(current)} />}
         </div>
-        <button
-          type="button"
-          id={`${id}-change`}
-          className={s.change}
-          aria-labelledby={`${id}-change ${labelledBy}`}
-          aria-invalid={a11y['aria-invalid']}
-          aria-describedby={a11y['aria-describedby']}
-          aria-expanded={open}
-          aria-controls={listId}
-          onClick={() => setOpen((v) => !v)}
-        >
-          {open ? 'Close' : 'Change'}
-        </button>
+        <div className={s.buttons}>
+          <button
+            type="button"
+            id={`${id}-details`}
+            className={s.details}
+            aria-labelledby={`${id}-details ${labelledBy}`}
+            aria-expanded={details}
+            onClick={() => setDetails((v) => !v)}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <circle cx="7" cy="7" r="6" />
+              <path d="M7 6.2 V10 M7 4 V4.2" />
+            </svg>
+            <span>Details</span>
+          </button>
+          <button
+            type="button"
+            id={`${id}-change`}
+            className={`btn btn--secondary ${s.change}`}
+            aria-labelledby={`${id}-change ${labelledBy}`}
+            aria-invalid={a11y['aria-invalid']}
+            aria-describedby={a11y['aria-describedby']}
+            aria-expanded={open}
+            aria-controls={listId}
+            onClick={() => setOpen((v) => !v)}
+          >
+            {open ? 'Close' : 'Change'}
+          </button>
+        </div>
       </div>
       {open && (
         <div id={listId} role="radiogroup" {...a11y} aria-labelledby={labelledBy} className={s.options}>
@@ -238,7 +260,7 @@ export function CatalogPicker(props: PickerProps) {
                   checked={e.id === props.value}
                   disabled={Boolean(verdict.blocked)}
                   aria-labelledby={`${optionId}-name`}
-                  aria-describedby={verdict.blocked || verdict.caution ? `${optionId}-facts ${optionId}-verdict` : `${optionId}-facts`}
+                  aria-describedby={describedBy(factsOf(e).length > 0 ? `${optionId}-facts` : null, verdict.blocked || verdict.caution ? `${optionId}-verdict` : null)}
                   onChange={() => {
                     run(props.onChange(e.id))
                     setOpen(false)
@@ -252,7 +274,7 @@ export function CatalogPicker(props: PickerProps) {
                     </span>
                     {status && <span className={s[status.level]}>{status.text}</span>}
                   </span>
-                  <Facts id={`${optionId}-facts`} facts={factsOf(e)} />
+                  <Facts id={`${optionId}-facts`} facts={factsOf(e)} full={details} />
                   <Verdict id={`${optionId}-verdict`} assessment={verdict} />
                 </span>
               </label>

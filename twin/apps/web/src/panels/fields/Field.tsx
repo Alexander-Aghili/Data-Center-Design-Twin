@@ -3,6 +3,7 @@ import type { Note } from '@twin/schema'
 import { useTwinStore } from '../../state/store'
 import { NoteBadge } from '../notes/NoteBadge'
 import { NoteEditor, NoteList } from '../notes/NoteEditor'
+import { useTrackTarget } from './MoreSettings'
 import s from './Field.module.css'
 
 /** Props that name a control by the field's label and tie it to the field's error. */
@@ -52,7 +53,8 @@ function useNotes(target: string): Note[] {
 }
 
 /** Note badge, the notes themselves and the editor, for one note target. */
-function useNoted(target: string, subject: string) {
+export function useNoted(target: string, subject: string) {
+  useTrackTarget(target)
   const notes = useNotes(target)
   const [editing, setEditing] = useState(false)
   const editorId = useId()
@@ -72,11 +74,14 @@ function useNoted(target: string, subject: string) {
   return { badge, body }
 }
 
-/** One decision: label, note badge, the control, an optional hint, errors and notes. */
-export function Field(props: { label: string; target: string; hint?: ReactNode; children?: ReactNode }) {
+/**
+ * One decision: label, note badge, the control, an optional hint, errors and notes.
+ * Without a `target` it is a plain labelled control with no notes of its own.
+ */
+export function Field(props: { label: string; target?: string; hint?: ReactNode; children?: ReactNode }) {
   const id = useId()
   const [error, setError] = useState<string | null>(null)
-  const { badge, body } = useNoted(props.target, props.label)
+  const { badge, body } = useNoted(props.target ?? '', props.label)
   const errorId = `${id}-error`
   const ctx = useMemo<FieldContextValue>(
     () => ({
@@ -97,7 +102,7 @@ export function Field(props: { label: string; target: string; hint?: ReactNode; 
         <span id={ctx.labelId} className={s.label}>
           {props.label}
         </span>
-        {badge}
+        {props.target && badge}
       </div>
       <FieldContext value={ctx}>{props.children}</FieldContext>
       {props.hint && <div className={s.hint}>{props.hint}</div>}
@@ -106,7 +111,7 @@ export function Field(props: { label: string; target: string; hint?: ReactNode; 
           ✕ {error}
         </p>
       )}
-      {body}
+      {props.target && body}
     </div>
   )
 }

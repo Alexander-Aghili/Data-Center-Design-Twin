@@ -3,6 +3,7 @@ import type { Plan } from '@twin/schema'
 import { useTwinStore } from '../../state/store'
 import { CatalogPicker } from '../fields/CatalogPicker'
 import { Field, ReadOnly } from '../fields/Field'
+import { MoreSettings } from '../fields/MoreSettings'
 import { fmtValue } from '../../format'
 import { NumberInput } from '../fields/Number'
 import { Select } from '../fields/Select'
@@ -56,48 +57,50 @@ export function SiteDecisions({ plan }: { plan: Plan }) {
           onChange={(value) => send({ type: 'setSiteInput', payload: { field: 'climateId', value } })}
         />
       </Field>
-      <Field label="Grid capacity" target="decision:site.gridCapacityW">
+      <Field label="Grid power available" target="decision:site.gridCapacityW">
         <NumberInput value={plan.site.gridCapacityW} unit="MW" scale={1e6} above={0} onCommit={setSite('gridCapacityW')} />
       </Field>
       <Field label="Water allowance" target="decision:site.waterAllowanceM3PerDay">
         <NumberInput value={plan.site.waterAllowanceM3PerDay} unit="m³ per day" min={0} onCommit={setSite('waterAllowanceM3PerDay')} />
       </Field>
-      <Field label="Value of compute" target="decision:site.valueOfComputeUsdPerGpuHour" hint="Prices each week of build-out as lost GPU hours.">
-        <NumberInput
-          value={plan.site.valueOfComputeUsdPerGpuHour}
-          unit="USD per GPU hour"
-          min={0}
-          onCommit={setSite('valueOfComputeUsdPerGpuHour')}
-        />
-      </Field>
-      <ReadOnly label="Hall">
-        {fmtValue(hall.widthM, 'm')} × {fmtValue(hall.depthM, 'm')}, ceiling {fmtValue(hall.ceilingM, 'm')}
-      </ReadOnly>
-      <Field label="Floor" target="decision:hall.floor.type">
-        <Select
-          value={hall.floor.type}
-          options={[
-            { value: 'raised', label: 'Raised floor' },
-            { value: 'slab', label: 'Slab' },
-          ]}
-          onChange={(type) => send({ type: 'setFloor', payload: { type } })}
-        />
-      </Field>
-      <Field
-        label="Floor rating, all bays"
-        target="decision:hall.bays.ratingKnM2"
-        hint={low === high ? undefined : `Bays range from ${fmtValue(low, 'kN/m²')} to ${fmtValue(high, 'kN/m²')}. A new value sets every bay.`}
-      >
-        <NumberInput
-          value={low}
-          unit="kN/m²"
-          above={0}
-          onCommit={(ratingKnM2) => send({ type: 'setFloor', payload: { type: hall.floor.type, ratingKnM2 } })}
-        />
-      </Field>
-      <Field label="One bay" target={`decision:hall.bays.${bayId}.ratingKnM2`} hint="Pick a bay here or in the scene.">
-        <BayRating plan={plan} bayId={bayId} onBay={setPickedBay} />
-      </Field>
+      <MoreSettings>
+        <Field label="Value of compute" target="decision:site.valueOfComputeUsdPerGpuHour" hint="Puts a price on each week of build-out, as lost GPU hours.">
+          <NumberInput
+            value={plan.site.valueOfComputeUsdPerGpuHour}
+            unit="USD per GPU hour"
+            min={0}
+            onCommit={setSite('valueOfComputeUsdPerGpuHour')}
+          />
+        </Field>
+        <ReadOnly label="Hall">
+          {fmtValue(hall.widthM, 'm')} × {fmtValue(hall.depthM, 'm')}, ceiling {fmtValue(hall.ceilingM, 'm')}
+        </ReadOnly>
+        <Field label="Floor type" target="decision:hall.floor.type">
+          <Select
+            value={hall.floor.type}
+            options={[
+              { value: 'raised', label: 'Raised floor' },
+              { value: 'slab', label: 'Slab' },
+            ]}
+            onChange={(type) => send({ type: 'setFloor', payload: { type } })}
+          />
+        </Field>
+        <Field
+          label="Floor rating, all bays"
+          target="decision:hall.bays.ratingKnM2"
+          hint={low === high ? undefined : `Bays range from ${fmtValue(low, 'kN/m²')} to ${fmtValue(high, 'kN/m²')}. A new value sets every bay.`}
+        >
+          <NumberInput
+            value={low}
+            unit="kN/m²"
+            above={0}
+            onCommit={(ratingKnM2) => send({ type: 'setFloor', payload: { type: hall.floor.type, ratingKnM2 } })}
+          />
+        </Field>
+        <Field label="Floor rating, one bay" target={`decision:hall.bays.${bayId}.ratingKnM2`} hint="Pick a bay here or in the scene.">
+          <BayRating plan={plan} bayId={bayId} onBay={setPickedBay} />
+        </Field>
+      </MoreSettings>
     </>
   )
 }
