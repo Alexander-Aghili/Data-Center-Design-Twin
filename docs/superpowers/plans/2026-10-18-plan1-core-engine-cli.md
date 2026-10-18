@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A Python package `dctwin` that loads a hall and a catalog, records attributed edits in a branchable journal, evaluates the design with exact power, liquid, air, structural and network solvers including N-1 failures, and exposes all of it through a `dctwin` command line with JSON output.
+**Goal:** A Python package `dctwin` that loads a hall and a catalog, records attributed edits in a branchable journal, evaluates the design with exact power, liquid, air, structural and network solvers including N-1 failures, and exposes all of it through a `dctwin` command line with JSON output, ending in a self-contained HTML report that shows the hall and what the twin found.
 
 **Architecture:** Pure evaluation: `replay(project, branch) -> DesignState`, then `evaluate(state) -> Result`. Solvers run in the fixed order network → liquid → air → power → structural → rollups, because each later one consumes loads the earlier ones produce. Every physical number is a `Quantity` carrying provenance; arithmetic goes through `derive()` so labels propagate and unknowns never become zero.
 
@@ -631,7 +631,7 @@ def test_matrix_is_swappable(): ...  # a stub InfluenceMatrix's numbers flow int
 Method:
 - Rack load = `it_loads[id]` if present else effective rack `peak_power_w`.
 - Input compatibility check `rack:<id>:power-input` (one per rack type present, subject lists ids): Fail if `presets.power_input` ∉ `supported_power_input`.
-- Rack shelves check `rack:<type>:shelves`: peak vs `power_shelves · shelf_rating_w`; worst = `(shelves − 1) · shelf_rating_w`, failure "loss of one power shelf".
+- Rack shelves check `rack:<type>:shelves`: peak vs `power_shelves · shelf_rating_w`; worst = `(shelves − 1) · shelf_rating_w`, failure "loss of one power shelf". Racks with `power_shelves = 0` (network and storage racks fed by AC PDUs) get no shelf check; their load still counts on the busway.
 - Busway runs: each row has `busway_runs_per_row` runs per feed (A, B); racks split into contiguous slot ranges of equal slot count; run capacity = busway `capacity_w × derate`. 2N and N+1 both give each run an A and B busway. Normal per-feed load = ½ of the run's racks; worst = all of it ("loss of feed B" for the A run, and vice versa). Check id `busway:<row>:<run>:<A|B>`.
 - 2N: chain A and chain B each carry critical load (IT + `cdu_pumps`) in the worst case. Per chain: UPS modules (AC) or rectifiers (DC) count = `ceil(critical / capacity)`, capped by the chain's `_max` limit; switchgear and transformers count = `ceil(upstream / (capacity × derate))`, capped; upstream = critical / UPS efficiency (+ mechanical load on chain A and B halves). Normal = half of the load; worst = all of it ("loss of feed A/B").
 - N+1: one shared chain. Count = `ceil(load / capacity) + spares[category]`, capped by `_max`; normal = load / (n · cap); worst = load / ((n − 1) · cap) ("loss of one UPS module", etc.).
@@ -779,7 +779,69 @@ def test_corrupt_project_file_message(run_raw, tmp_path):
 
 ---
 
+### Task 14: `dctwin report` — visual HTML report
+
+**Files:**
+- Create: `core/src/dctwin/report/__init__.py`, `core/src/dctwin/report/floorplan.py` (SVG drawing), `core/src/dctwin/report/charts.py` (SVG charts), `core/src/dctwin/report/html.py` (page assembly, inline CSS), `core/src/dctwin/report/style.css` (packaged resource)
+- Modify: `core/src/dctwin/cli.py` (add `report`)
+- Test: `core/tests/test_report.py`
+
+**Interfaces:**
+- Consumes: `DesignState`, `Result`, `Comparison`, `Branch.journal`, `Hall` geometry, `rack_rect`.
+- Produces:
+  - `floorplan_svg(state: DesignState, result: Result, overlay: Literal["layout","power","liquid","structural","network"], width_px: int = 960) -> str` — a top-down SVG at a fixed scale. It draws hall outline, bays (shaded by utilization on `structural`), columns, rows and slots, racks to scale labeled with a short type code, system outlines, CDUs and AHUs at their positions, and trays (colored by dominant media on `network`). Every element carries `data-id` for the web viewer. Status markers use shapes (✕ fail, ! warning, ? unknown) plus a text label, never color alone.
+  - `power_breakdown_svg(result) -> str` — one horizontal stacked bar: IT, cooling (CDU pumps, air handlers, heat rejection), conversion losses, in kW with values labeled.
+  - `report_html(state, result, branch: Branch, title: str) -> str` and `compare_html(state_a, result_a, state_b, result_b, comparison: Comparison) -> str` — sections in the design's order: verdict, floor plan, domain plans (4 small multiples), facility summary, headroom table, failure scenarios, provenance, design history. The output is one file with inline CSS and SVG, no scripts required, light/dark via `prefers-color-scheme`, and print styles.
+  - CLI: `dctwin report [--out PATH] [--title T]`, default `report-<branch>.html`; `dctwin report --compare A B [--out PATH]`; `--json` prints `{"path": ...}`.
+
+Before writing chart or color code, load the `dataviz` skill and follow its palette and mark rules. Charts are hand-rolled SVG, with no charting library dependency.
+
+- [ ] **Step 1: Write failing tests**
+
+```python
+def test_floorplan_draws_every_rack(golden):
+    svg = floorplan_svg(golden.state, golden.result, "layout")
+    ET.fromstring(svg)  # well-formed
+    for pid in golden.state.placements:
+        assert f'data-id="{pid}"' in svg
+
+def test_failures_marked_with_shape_and_text(golden):
+    svg = floorplan_svg(golden.state, golden.result, "structural")
+    failing = [c for c in golden.result.checks if c.id.startswith("slab:") and c.status is Status.FAIL]
+    assert failing and all(f'data-check="{c.id}"' in svg for c in failing)
+    assert "Fail" in svg  # text label alongside the shape
+
+def test_report_sections_in_order(golden):
+    html = report_html(golden.state, golden.result, golden.branch, "Hall B")
+    order = ["Verdict", "Floor plan", "Domain plans", "Facility summary", "Headroom", "Failure scenarios", "Provenance", "Design history"]
+    idx = [html.index(f">{h}<") for h in order]
+    assert idx == sorted(idx)
+
+def test_report_is_self_contained(golden):
+    html = report_html(golden.state, golden.result, golden.branch, "Hall B")
+    assert "<script src" not in html and "<link" not in html and "http://" not in html.split("Provenance")[0]
+
+def test_history_names_authors(golden):
+    assert "layout" in report_html(golden.state, golden.result, golden.branch, "Hall B")
+
+def test_empty_hall_report(empty):
+    html = report_html(empty.state, empty.result, empty.branch, "Empty")
+    assert "no IT load" in html  # PUE unknown explained, no crash
+
+def test_compare_shows_only_changed_checks(run): ...
+def test_cli_writes_file(run, tmp_path):
+    out = run("report", "--out", str(tmp_path / "r.html"), "--json")
+    assert Path(out["path"]).stat().st_size > 10_000
+```
+
+- [ ] **Step 2: Run** `uv run pytest tests/test_report.py -v`. Expected: FAIL.
+- [ ] **Step 3: Implement** floorplan, charts, html, and the CLI command.
+- [ ] **Step 4: Run** the full suite. Expected: all tests pass. Generate `report-main.html` from the golden project and open it in a browser for visual review: in light and dark mode, check that the plan is legible at 960 px, labels don't collide, and the print preview fits A4/Letter.
+- [ ] **Step 5: Commit** `feat(core): self-contained HTML design report with floor plans`.
+
+---
+
 ## Self-review notes
 
-- Spec coverage: catalog (T2–3), hall (T4), journal/branches/attribution/catalog snapshot (T5), provenance (T1, T6), surrogate seam (T6, T9), network (T7), liquid + heat rejection (T8), air (T9), structural + influence matrix (T10), power incl. 2N/N+1/DC/compat (T11), rollups/scenarios/deltas/compare/perf (T12), CLI (T13). API, web, design desk → Plans 2 and 3.
+- Spec coverage: catalog (T2–3), hall (T4), journal/branches/attribution/catalog snapshot (T5), provenance (T1, T6), surrogate seam (T6, T9), network (T7), liquid + heat rejection (T8), air (T9), structural + influence matrix (T10), power incl. 2N/N+1/DC/compat (T11), rollups/scenarios/deltas/compare/perf (T12), CLI (T13), visual report (T14). API, web, design desk → Plans 2 and 3.
 - Deviation recorded: the design says the engine uses "the largest suitable catalog model"; this plan uses the preset model per category, whose default is the largest-capacity entry, so the user can change it.

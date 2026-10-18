@@ -23,6 +23,7 @@ Early. What exists today:
 - **Exact solvers, under a second.** Power chain (2N or N+1, 54 V busbar or 800 V DC), liquid loop and CDUs, heat rejection, air handlers, slab bay and point loads, and the network fabric with cable routing, copper vs optics and base latency.
 - **N-1 failures as first-class checks.** Loss of a CDU, a power feed, a UPS module, a power shelf, a dry cooler or chiller, an air handler, or a spine switch.
 - **Branches and an attributed journal.** Every edit records who made it (a person or a named agent); branches can be compared side by side.
+- **Reports people can read without the tool.** `dctwin report` writes one self-contained HTML file per design: a to-scale floor plan, power/liquid/structural/network plans, facility summary, ranked headroom, failure scenarios, provenance and who changed what. A comparison mode puts two designs side by side.
 - **CFD and ML surrogates later.** Room airflow is a Phase 2 surrogate behind an interface that already exists; until then air-temperature checks report "not modeled".
 
 ## The design desk

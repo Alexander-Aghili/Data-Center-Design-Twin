@@ -24,7 +24,8 @@ A designer can:
 5. Click any rack, component or number to see its inputs, computed values, headroom and provenance.
 6. Pin an auto-sized item and see the engine design around it; undo; save and reopen.
 7. Branch the design and compare two branches side by side (checks, IT load, PUE, cable totals).
-8. Start the design desk on the sample brief from the Sculptured board, watch its edits appear live in the twin, and finish with at least two candidate branches, each carrying the checker's verdict and a written report.
+8. Produce a self-contained HTML report for any branch, or a comparison of two, that shows someone who never opens the tool what the hall looks like and what the twin found.
+9. Start the design desk on the sample brief from the Sculptured board, watch its edits appear live in the twin, and finish with at least two candidate branches, each carrying the checker's verdict and a written report.
 
 ## Goals
 
@@ -161,6 +162,30 @@ N-1 scenarios, each by removing one component and re-solving the affected domain
 - Branch picker; compare view of two branches (checks side by side, rollup deltas).
 - Journal panel showing who made each edit (user or agent name), with live updates from the event stream.
 - Stable layout under all updates; presets panel; undo/redo; open/save.
+
+## Visualization and reports
+
+The last step of every design is a report people can read without the tool: what the data center looks like and what the twin found. `dctwin report` writes one self-contained HTML file (no server, works offline, prints to PDF from the browser, light and dark), and the web viewer shows the same report in a Report tab.
+
+A report for one branch contains, top to bottom:
+
+1. **Verdict.** One sentence with the counts of Pass, Warning, Fail and Unknown checks. The top failures follow, with their advice.
+2. **Floor plan.** A top-down drawing of the hall:
+   - racks drawn to scale and labeled by type, with systems outlined;
+   - CDUs, air handlers, trays and columns;
+   - failing items marked with a status shape and text, not color alone.
+3. **Domain plans.** Small copies of the floor plan, one per domain:
+   - power: busway run loading;
+   - liquid: CDU loading;
+   - structural: bay utilization against rating;
+   - network: cable media, copper vs optics.
+4. **Facility summary.** IT load, facility load, PUE, total weight, accelerator count and cable totals. A chart breaks facility power into IT, cooling and conversion losses.
+5. **Headroom.** The ranked check table: normal, worst N-1 case, failure name, advice and provenance.
+6. **Failure scenarios.** For each N-1 scenario, its worst status and the checks it breaks.
+7. **Provenance.** The share of results by weakest label, plus the unknown or estimated inputs that most limit confidence, each with its source link.
+8. **Design history.** Journal entries with their authors, showing which agent or person made each change.
+
+`dctwin report --compare A B` writes a comparison report instead. It shows the two floor plans side by side, check differences (only the checks whose status changed) and rollup deltas. The design desk's report writer attaches one report per candidate branch and a comparison report to `RUN/report.md`.
 
 ## The design desk (Sculptured team)
 
