@@ -126,4 +126,25 @@ describe('scripted fake client', () => {
     expect(events.filter((e) => e.kind === 'toolCall')).toEqual([])
     expect(textOf(id)).not.toBe('')
   })
+
+  it('paces its words when given a delay, and stops when aborted (TWIN_FAKE_AGENT_CHUNK_MS, for the Stop end-to-end test)', async () => {
+    const client = createScriptedClient(store, { chunkMs: 20 })
+    const abort = new AbortController()
+    const stream = client.beta.messages.stream(
+      { model: 'claude-opus-5-5', max_tokens: 100, messages: [{ role: 'user', content: 'What is the PUE?' }] },
+      { signal: abort.signal },
+    )
+    const started = Date.now()
+    const words: string[] = []
+    await expect(
+      (async () => {
+        for await (const event of stream) {
+          if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') words.push(event.delta.text)
+          if (words.length === 2) abort.abort()
+        }
+      })(),
+    ).rejects.toThrow(/abort/i)
+    expect(words).toEqual(['Reading ', 'the '])
+    expect(Date.now() - started).toBeGreaterThanOrEqual(30)
+  })
 })

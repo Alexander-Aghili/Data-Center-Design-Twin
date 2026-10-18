@@ -11,13 +11,17 @@ import { loadApiKey } from './env'
 /** Plan, conversation and generated briefs: `twin/.data/` (git-ignored), or `TWIN_DATA_DIR` (end-to-end tests). */
 const dataDir = process.env.TWIN_DATA_DIR ?? fileURLToPath(new URL('../../../.data/', import.meta.url))
 
-/** `TWIN_FAKE_AGENT=1` runs the agent on the scripted client instead of the Claude API (end-to-end tests, demos without a key). */
+/**
+ * `TWIN_FAKE_AGENT=1` runs the agent on the scripted client instead of the Claude API (end-to-end tests, demos without a
+ * key); `TWIN_FAKE_AGENT_CHUNK_MS` makes it stream one word per that many milliseconds.
+ */
 const fakeAgent = process.env.TWIN_FAKE_AGENT === '1'
+const fakeChunkMs = Number(process.env.TWIN_FAKE_AGENT_CHUNK_MS ?? 0)
 const hasApiKey = !fakeAgent && loadApiKey()
 /** Spending caps: the defaults, or `AGENT_*` variables from the shell or the repo-root .env (loaded just above). */
 const limits = limitsFromEnv(process.env)
 const agentFactory = fakeAgent
-  ? (store: PlanStore, log: SpendLog) => designAgentFactory({ dataDir, limits, client: createScriptedClient(store) })(store, log)
+  ? (store: PlanStore, log: SpendLog) => designAgentFactory({ dataDir, limits, client: createScriptedClient(store, { chunkMs: fakeChunkMs }) })(store, log)
   : hasApiKey
     ? designAgentFactory({ dataDir, limits })
     : undefined

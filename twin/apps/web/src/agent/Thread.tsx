@@ -2,14 +2,16 @@ import type { AgentEvent, Annotation } from '@twin/schema'
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import { useTwinStore } from '../state/store'
 import './agent.css'
+import { SpendLine } from './AgentControls'
 import { ChatInput } from './ChatInput'
-import { AgentMessage, ErrorLine, UserMessage, type AgentMessageModel } from './Message'
+import { AgentMessage, ErrorLine, NoticeLine, UserMessage, type AgentMessageModel } from './Message'
 import type { ToolCallPart } from './ToolCallLine'
 
 type ThreadItem =
   | { kind: 'agent'; message: AgentMessageModel }
   | { kind: 'user'; id: string; text: string }
   | { kind: 'error'; id: string; message: string }
+  | { kind: 'notice'; id: string; message: string }
 
 /** Folds the event stream into messages: text deltas join, tool results attach to their calls. */
 function buildItems(events: AgentEvent[]): ThreadItem[] {
@@ -72,6 +74,10 @@ function buildItems(events: AgentEvent[]): ThreadItem[] {
         } else {
           items.push({ kind: 'error', id: `error-${i}`, message: e.message })
         }
+        return
+      case 'notice':
+        if (e.messageId) messageFor(e.messageId).parts.push({ kind: 'notice', message: e.message })
+        else items.push({ kind: 'notice', id: `notice-${i}`, message: e.message })
         return
       case 'userMessage':
         items.push({ kind: 'user', id: e.messageId, text: e.text })
@@ -138,10 +144,13 @@ export function Thread() {
                 return <UserMessage key={item.id} text={item.text} />
               case 'error':
                 return <ErrorLine key={item.id} message={item.message} />
+              case 'notice':
+                return <NoticeLine key={item.id} message={item.message} />
             }
           })
         )}
       </div>
+      <SpendLine />
       <ChatInput />
     </div>
   )

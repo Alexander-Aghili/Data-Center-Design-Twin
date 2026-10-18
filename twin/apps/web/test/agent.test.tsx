@@ -1,4 +1,4 @@
-import type { AgentEvent, Proposal } from '@twin/schema'
+import type { AgentEvent, AgentStatus, Proposal } from '@twin/schema'
 import { fmtFlow, fmtMass, fmtMoney, fmtPct, fmtPower, fmtWeeks } from '../src/format'
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
@@ -40,6 +40,8 @@ function setup(thread: AgentEvent[], over: Partial<TwinState> = {}) {
     dismissProposal: vi.fn(),
     dispatchView: vi.fn(),
     resetChat: vi.fn(),
+    stopTurn: vi.fn(),
+    setAutoReview: vi.fn(),
   }
   const proposals: Record<string, Proposal> = {}
   for (const e of thread) if (e.kind === 'proposal') proposals[e.proposal.id] = e.proposal
@@ -50,6 +52,7 @@ function setup(thread: AgentEvent[], over: Partial<TwinState> = {}) {
     proposals,
     annotations: [],
     previewProposalId: null,
+    agentStatus: null,
     ...actions,
     ...over,
   })
@@ -219,6 +222,63 @@ describe('agent thread', () => {
     act(() => useTwinStore.setState({ connection: 'offline' }))
     expect(input.disabled).toBe(true)
     expect(input.placeholder).toBe('Offline. Reconnecting to the server…')
+  })
+
+  describe('spend and control', () => {
+    const idle: AgentStatus = { running: false, turnUsd: 0.08, todayUsd: 0.42, dailyBudgetUsd: 5, budgetSpent: false, autoReview: true }
+    const spend = () => screen.getByRole('status', { name: 'API spend' })
+
+    it("shows today's spend against the budget and the last turn's cost", () => {
+      setup([], { agentStatus: idle })
+      expect(spend().textContent).toBe('Spent $0.42 of $5.00 today. Last turn $0.08.')
+      expect(screen.queryByRole('button', { name: 'Stop' })).toBeNull()
+    })
+
+    it('while a turn runs it says so with the live cost, and Stop stops it', () => {
+      const actions = setup([], { agentStatus: { ...idle, running: true, turnUsd: 0.031 } })
+      expect(spend().textContent).toBe('Working, $0.03 so far. Spent $0.42 of $5.00 today.')
+      // Stop takes the switch's place while the turn runs.
+      expect(screen.queryByRole('switch', { name: 'Automatic review' })).toBeNull()
+      fireEvent.click(screen.getByRole('button', { name: 'Stop' }))
+      expect(actions.stopTurn).toHaveBeenCalledTimes(1)
+      act(() => useTwinStore.setState({ agentStatus: idle }))
+      expect(screen.queryByRole('button', { name: 'Stop' })).toBeNull()
+    })
+
+    it('the automatic review switch shows and changes the setting', () => {
+      const actions = setup([], { agentStatus: idle })
+      const toggle = screen.getByRole('switch', { name: 'Automatic review' }) as HTMLInputElement
+      expect(toggle.checked).toBe(true)
+      fireEvent.click(toggle)
+      expect(actions.setAutoReview).toHaveBeenCalledWith(false)
+    })
+
+    it('a spent daily budget disables chat and says why', () => {
+      setup([], { agentStatus: { ...idle, todayUsd: 5.02, budgetSpent: true } })
+      const input = screen.getByRole('textbox', { name: 'Message the design agent' }) as HTMLTextAreaElement
+      expect(input.disabled).toBe(true)
+      expect(input.placeholder).toBe("Today's API budget is spent")
+    })
+
+    it('without an agent status (no API key, local mode) there is no spend line or switch', () => {
+      setup([])
+      expect(screen.queryByRole('status', { name: 'API spend' })).toBeNull()
+      expect(screen.queryByRole('switch', { name: 'Automatic review' })).toBeNull()
+    })
+
+    it('notices render as plain lines, inside their message or on their own', () => {
+      setup([
+        { kind: 'messageStart', messageId: 'm1', trigger: 'chat', severity: 'info' },
+        { kind: 'textDelta', messageId: 'm1', text: 'The rear doors' },
+        { kind: 'notice', messageId: 'm1', message: 'Stopped' },
+        { kind: 'messageEnd', messageId: 'm1' },
+        { kind: 'notice', message: 'I stopped after 16 tool calls to save your API budget. Say continue to keep going.' },
+      ])
+      const msg = document.querySelector<HTMLElement>('[data-message-id="m1"]')!
+      expect(within(msg).getByText('Stopped').className).toBe('ag-notice')
+      expect(screen.getByText(/I stopped after 16 tool calls/).className).toBe('ag-notice')
+      expect(document.querySelector('.ag-error')).toBeNull()
+    })
   })
 
   it('markdown subset: paragraphs, bold, inline code, lists only', () => {

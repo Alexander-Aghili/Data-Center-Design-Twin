@@ -43,6 +43,18 @@ const proposal: Proposal = {
 }
 
 describe('twin store', () => {
+  it('keeps the agent status from the server and sends stop and the review setting', () => {
+    const backend = new FakeBackend()
+    const store = createTwinStore({ backend })
+    expect(store.getState().agentStatus).toBeNull()
+    const status = { running: true, turnUsd: 0.02, todayUsd: 1.1, dailyBudgetUsd: 5, budgetSpent: false, autoReview: true }
+    backend.onMsg({ t: 'agentStatus', status })
+    expect(store.getState().agentStatus).toEqual(status)
+    store.getState().stopTurn()
+    store.getState().setAutoReview(false)
+    expect(backend.sent).toEqual([{ t: 'stopTurn' }, { t: 'agentSettings', autoReview: false }])
+  })
+
   it('send resolves on an ok commandResult and rejects with the error otherwise', async () => {
     const backend = new FakeBackend()
     const store = createTwinStore({ backend })

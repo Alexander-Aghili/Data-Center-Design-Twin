@@ -73,6 +73,8 @@ export class LocalBackend implements Backend {
         this.emit({ t: 'thread', events: [this.agentError()] })
         return
       case 'view':
+      case 'stopTurn':
+      case 'agentSettings':
         return
     }
   }

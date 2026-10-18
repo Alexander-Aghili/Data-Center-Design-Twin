@@ -1,3 +1,4 @@
+import Anthropic from '@anthropic-ai/sdk'
 import type {
   BetaContentBlock,
   BetaMessageParam,
@@ -120,17 +121,36 @@ function replyTo(store: PlanStore, messages: BetaMessageParam[]): Reply {
   return { text: 'Reading the evaluation.', tools: [{ name: 'get_evaluation', input: { detail: 'summary' } }] }
 }
 
+/** Waits `ms`, or rejects as the SDK does when `signal` aborts first. */
+function pause(ms: number, signal: AbortSignal | undefined): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const aborted = () => {
+      clearTimeout(timer)
+      reject(new Anthropic.APIUserAbortError())
+    }
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', aborted)
+      resolve()
+    }, ms)
+    if (signal?.aborted) aborted()
+    else signal?.addEventListener('abort', aborted, { once: true })
+  })
+}
+
 /**
  * A scripted stand-in for the Claude API, selected with `TWIN_FAKE_AGENT=1` (end-to-end tests and demos
  * without a key). It answers the demo script from the plan store with real tool calls, so everything after
- * the model (tools, proposals, view actions, the thread) runs for real.
+ * the model (tools, proposals, view actions, the thread) runs for real. `chunkMs` paces the streamed words
+ * like a real model, so a test can watch a turn while it runs and stop it.
  */
-export function createScriptedClient(store: PlanStore): AnthropicLike {
+export function createScriptedClient(store: PlanStore, opts: { chunkMs?: number } = {}): AnthropicLike {
+  const chunkMs = opts.chunkMs ?? 0
   let calls = 0
   return {
     beta: {
       messages: {
-        stream(params) {
+        stream(params, options) {
+          const signal = options?.signal
           const reply = replyTo(store, params.messages)
           const content: BetaContentBlock[] = [
             { type: 'text', text: reply.text, citations: null },
@@ -140,6 +160,7 @@ export function createScriptedClient(store: PlanStore): AnthropicLike {
           return {
             async *[Symbol.asyncIterator](): AsyncGenerator<BetaRawMessageStreamEvent> {
               for (const chunk of reply.text.match(/\S+\s*/g) ?? []) {
+                if (chunkMs > 0) await pause(chunkMs, signal)
                 yield { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: chunk } }
               }
             },

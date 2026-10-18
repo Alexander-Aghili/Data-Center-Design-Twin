@@ -1,6 +1,7 @@
 import {
   LAYER_DEFAULTS,
   type AgentEvent,
+  type AgentStatus,
   type Annotation,
   type Command,
   type Evaluation,
@@ -29,6 +30,8 @@ export interface TwinState {
   selection: { kind: string; id: string } | null
   annotations: Annotation[]
   thread: AgentEvent[]
+  /** What the agent is doing and has spent; null without a server agent (no API key, local mode). */
+  agentStatus: AgentStatus | null
   proposals: Record<string, Proposal>
   previewProposalId: string | null
   /** Counts applied cooling changes; the scene refills the liquid network from the plant each time it rises. */
@@ -45,6 +48,10 @@ export interface TwinState {
   dismissProposal(id: string): void
   /** Starts a new agent conversation (offered after importing or starting a new plan). */
   resetChat(): void
+  /** Aborts the agent turn now running. */
+  stopTurn(): void
+  /** Turns the agent's automatic review of the person's edits on or off. */
+  setAutoReview(on: boolean): void
   /** Local view change; also used for server-pushed view actions. */
   dispatchView(a: ViewAction): void
 }
@@ -139,6 +146,7 @@ export function createTwinStore({ backend, fallback }: TwinStoreOptions): UseBou
       selection: null,
       annotations: [],
       thread: [],
+      agentStatus: null,
       proposals: {},
       previewProposalId: null,
       pipeFill: 0,
@@ -173,6 +181,8 @@ export function createTwinStore({ backend, fallback }: TwinStoreOptions): UseBou
       applyProposal: (proposalId) => post({ t: 'proposal', proposalId, action: 'apply' }),
       dismissProposal: (proposalId) => post({ t: 'proposal', proposalId, action: 'dismiss' }),
       resetChat: () => post({ t: 'resetChat' }),
+      stopTurn: () => post({ t: 'stopTurn' }),
+      setAutoReview: (autoReview) => post({ t: 'agentSettings', autoReview }),
       dispatchView: (a) => set(reduceView(get(), a)),
     }
   })
@@ -222,6 +232,9 @@ export function createTwinStore({ backend, fallback }: TwinStoreOptions): UseBou
       case 'view':
         s.dispatchView(m.action)
         return
+      case 'agentStatus':
+        store.setState({ agentStatus: m.status })
+        return
     }
   }
 
@@ -241,7 +254,8 @@ export function createTwinStore({ backend, fallback }: TwinStoreOptions): UseBou
           attach(next)
           return
         }
-        store.setState({ connection: status })
+        // An agent status from a server that is gone would say it is still working.
+        store.setState(status === 'online' ? { connection: status } : { connection: status, agentStatus: null })
       },
     )
   }
