@@ -538,7 +538,7 @@ describe('agent runtime', () => {
       id: 'p1',
       title: 'Liquid-cool rows 3 to 5',
       rationale: 'Air cannot carry 132 kW per rack.',
-      commands: [{ type: 'setCoolingMethod', payload: { groupId: 'g2', methodId: 'cooling.dlc-single' } }],
+      commands: [{ type: 'setCoolingMethod', payload: { groupId: 'g2', coolingMethodId: 'cooling.dlc-single' } }],
       respectsNotes: ['note-1'],
       violatesNotes: [],
       diff: testDiff(evaluation([]), evaluation([])),
