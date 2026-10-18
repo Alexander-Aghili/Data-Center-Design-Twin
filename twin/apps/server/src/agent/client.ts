@@ -16,7 +16,7 @@ const SDK_MAX_RETRIES = 4
 /** The part of a finished message the loop reads. */
 export type FinalMessage = Pick<BetaMessage, 'content' | 'stop_reason' | 'stop_details'>
 
-export interface MessageStreamLike extends AsyncIterable<BetaRawMessageStreamEvent> {
+interface MessageStreamLike extends AsyncIterable<BetaRawMessageStreamEvent> {
   finalMessage(): Promise<FinalMessage>
 }
 

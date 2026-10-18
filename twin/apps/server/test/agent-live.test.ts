@@ -1,30 +1,20 @@
-import type { AgentEvent, Command, Evaluation, Plan, ViewAction } from '@twin/schema'
+import type { AgentEvent, Command, ViewAction } from '@twin/schema'
 import { existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import type { RuntimeTool } from '../src/agent/loop'
-import { createAgentRuntime, type ProposalControl } from '../src/agent/runtime'
+import { createAgentRuntime } from '../src/agent/runtime'
+import { buildTools, ProposalBook } from '../src/agent/tools/index'
 import type { PlanStore } from '../src/contracts'
 
 // Live Claude API test (~$0.20). Runs only with RUN_LIVE_AGENT=1 and a key in the repo-root .env.
 const ENV_FILE = '/Users/linushabetha/Data-Center-Design-Twin/.env'
 const LIVE = process.env.RUN_LIVE_AGENT === '1' && existsSync(ENV_FILE)
 
-// The plan store (Task 12) and the tools (Task 13) are built on parallel branches. They are loaded by
-// path at run time so this file type-checks before they are merged; the shapes below are their contracts.
+// The plan store (Task 12) is built on a parallel branch. It is loaded by path at run time so this file
+// type-checks before it is merged; the shape below is its contract.
 interface StoreModule {
   createPlanStore(opts: { dataDir: string }): PlanStore
-}
-interface ToolsModule {
-  ProposalBook: new (store: PlanStore) => ProposalControl
-  buildTools(deps: {
-    store: PlanStore
-    emitView: (a: ViewAction) => void
-    proposals: ProposalControl
-    brief: (plan: Plan, evaluation: Evaluation, target: 'openfoam', agentNotes?: string) => string
-    dataDir: string
-  }): RuntimeTool[]
 }
 const load = <T,>(specifier: string) => import(/* @vite-ignore */ specifier) as Promise<T>
 
@@ -38,7 +28,6 @@ describe.skipIf(!LIVE)('agent live', () => {
     const dataDir = mkdtempSync(join(tmpdir(), 'agent-live-'))
     try {
       const { createPlanStore } = await load<StoreModule>('../src/store')
-      const { ProposalBook, buildTools } = await load<ToolsModule>('../src/agent/tools/index')
       const store = createPlanStore({ dataDir })
       const viewListeners = new Set<(a: ViewAction) => void>()
       const proposals = new ProposalBook(store)

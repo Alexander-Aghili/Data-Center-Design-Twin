@@ -14,7 +14,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createAnthropicClient, type AnthropicLike, type FinalMessage } from '../src/agent/client'
-import type { RuntimeTool, ToolOutcome } from '../src/agent/loop'
+import type { AgentTool, ToolOutcome } from '../src/agent/tools/index'
 import { createAgentRuntime } from '../src/agent/runtime'
 import type { AgentRuntime, PlanStore, StoreChange } from '../src/contracts'
 
@@ -131,12 +131,12 @@ function fakeStore(): PlanStore & { setPlan(p: Plan): void } {
   }
 }
 
-function tool(name: string, run: (input: unknown) => Promise<ToolOutcome>): RuntimeTool & { calls: unknown[] } {
+function tool(name: string, run: (input: unknown) => Promise<ToolOutcome>): AgentTool & { calls: unknown[] } {
   const calls: unknown[] = []
   return {
     name,
     description: `The ${name} tool.`,
-    inputSchema: { type: 'object', properties: {} },
+    inputSchema: { $schema: 'https://json-schema.org/draft/2020-12/schema', type: 'object', properties: {} },
     calls,
     run: (input) => {
       calls.push(input)
@@ -228,6 +228,12 @@ describe('agent runtime', () => {
     expect(params.tool_choice).toBeUndefined()
     expect(Array.isArray(params.system) && params.system.at(-1)?.cache_control).toEqual({ type: 'ephemeral' })
     expect(params.tools?.at(-1)).toMatchObject({ name: 'get_evaluation', cache_control: { type: 'ephemeral' } })
+    // zod's JSON Schema output carries $schema; the API tool definition leaves it out
+    expect(params.tools?.map((t) => ('input_schema' in t ? t.input_schema : null))).toEqual([
+      { type: 'object', properties: {} },
+      { type: 'object', properties: {} },
+    ])
+    expect(params.tools?.every((t) => 'eager_input_streaming' in t && t.eager_input_streaming)).toBe(true)
     expect(params.messages).toEqual([{ role: 'user', content: 'hi' }])
   })
 
@@ -330,7 +336,8 @@ describe('agent runtime', () => {
       const rt = createAgentRuntime({ store: fakeStore(), tools: [], client, dataDir, diff: testDiff })
       const rec = recorder(rt)
       rt.handleChange(change(base, evaluation(base.checks, 1.31), 'small tweak'))
-      rt.handleChange(change(base, evaluation(base.checks, 1.3), 'agent edit', 'agent'))
+      // the agent's own edits (tools, applied proposals) never trigger an observation
+      rt.handleChange(change(base, evaluation([check('cooling.rackHeatLimit:g2', 'fail')], 1.6), 'applied proposal', 'agent'))
       await vi.advanceTimersByTimeAsync(3000)
       expect(requests).toHaveLength(0)
       expect(rec.events).toHaveLength(0)

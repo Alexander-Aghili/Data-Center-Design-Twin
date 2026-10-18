@@ -5,8 +5,9 @@ import { join } from 'node:path'
 import type { AgentRuntime, PlanStore, StoreChange, ToolRunResult } from '../contracts'
 import { AGENT_MODEL, createAnthropicClient, type AnthropicLike } from './client'
 import { Conversation, type Effort } from './conversation'
-import { runTurn, toolParams, type RuntimeTool } from './loop'
+import { errorText, runTurn, toolParams } from './loop'
 import { ChangeCoalescer, formatAppEvent, isWorthObserving, severityOf, type MergedChanges } from './observe'
+import type { AgentTool } from './tools/index'
 
 /** Task 13's `ProposalBook`, as far as applying and dismissing go. */
 export interface ProposalControl {
@@ -21,7 +22,7 @@ export interface ViewSource {
 
 export interface AgentRuntimeDeps {
   store: PlanStore
-  tools: RuntimeTool[]
+  tools: AgentTool[]
   client?: AnthropicLike
   model?: string
   /** `conversation.json` lives here; without it the conversation is kept in memory only. */
@@ -58,7 +59,7 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
     try {
       conv.save()
     } catch (err) {
-      emit({ kind: 'error', message: `Could not save the conversation: ${err instanceof Error ? err.message : String(err)}` })
+      emit({ kind: 'error', message: `Could not save the conversation: ${errorText(err)}` })
     }
   }
 
@@ -105,7 +106,7 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
       // A stale proposal was not applied; the summary says why.
       if (proposal.status === 'stale' && summary) emit({ kind: 'error', message: summary })
     } catch (err) {
-      emit({ kind: 'error', message: err instanceof Error ? err.message : String(err) })
+      emit({ kind: 'error', message: errorText(err) })
     }
     save(conversation)
   }
@@ -155,7 +156,7 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
         const outcome = await tool.run(input)
         return outcome.ok ? { ok: true, result: outcome.content } : { ok: false, error: outcome.error }
       } catch (err) {
-        return { ok: false, error: err instanceof Error ? err.message : String(err) }
+        return { ok: false, error: errorText(err) }
       }
     },
 

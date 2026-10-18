@@ -2,7 +2,7 @@ import type { Check, EvalDiff, Evaluation, Headline, Severity } from '@twin/sche
 import type { StoreChange } from '../contracts'
 
 /** Edits closer together than this make one observation turn. */
-export const OBSERVATION_DEBOUNCE_MS = 1500
+const OBSERVATION_DEBOUNCE_MS = 1500
 /** Relative headline move that is worth a remark even when no check got worse. */
 const HEADLINE_THRESHOLD = 0.02
 /** `worstHour` is an hour index, not a magnitude, so moving it says nothing on its own. */

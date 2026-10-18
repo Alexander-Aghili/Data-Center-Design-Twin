@@ -6,24 +6,11 @@ import type {
   BetaToolResultBlockParam,
   BetaToolUseBlock,
 } from '@anthropic-ai/sdk/resources/beta/messages/messages'
-import type { AgentEvent, Proposal, Severity } from '@twin/schema'
-import { SYSTEM_PROMPT } from './prompt/system'
+import type { AgentEvent, Severity } from '@twin/schema'
 import type { AnthropicLike, FinalMessage } from './client'
 import { BASE_EFFORT, type Conversation } from './conversation'
-
-/** Side events a tool asks the runtime to emit into the thread (Task 13's `ToolEvent`). */
-type ToolEvent = { kind: 'link'; label: string; href: string } | { kind: 'proposal'; proposal: Proposal }
-
-/** What a tool returns (Task 13's `ToolOutcome`). */
-export type ToolOutcome = { ok: true; content: string; summary: string; events?: ToolEvent[] } | { ok: false; error: string }
-
-/** The shape of Task 13's `AgentTool` that the loop consumes. */
-export interface RuntimeTool {
-  name: string
-  description: string
-  inputSchema: object
-  run(input: unknown): Promise<ToolOutcome>
-}
+import { SYSTEM_PROMPT } from './prompt/system'
+import { toolResultNumbers, type AgentTool, type ToolOutcome } from './tools/index'
 
 const MAX_TOKENS = 16000
 /** Model calls allowed in one turn before the loop gives up, so a confused turn cannot run up cost. */
@@ -32,28 +19,35 @@ const MAX_STEPS = 20
 const RATE_LIMIT_RETRIES = 2
 /** Re-issues of a request whose streamed tool input could not be parsed as JSON at all. */
 const JSON_RETRIES = 2
-const MAX_NUMBERS = 200
 const BETAS = [
   'server-side-fallback-2026-07-01', // fallbacks: 'default'
   'mid-conversation-output-config-2026-07-01', // per-message effort
   'thinking-display-updates-2026-08-18', // progress notes between tool calls
 ] as const
 
-export const MESSAGES = {
+const MESSAGES = {
   refusal: 'Claude declined this request. Rephrase it, or start a new conversation if it keeps happening.',
   tooManySteps: `The agent stopped after ${MAX_STEPS} steps in one turn. Ask again to continue.`,
   truncatedInput: 'This tool input was cut off at max_tokens and was not run. Send a shorter input.',
 }
 
-/** Tool definitions as sent to the API: fixed order, eager input streaming, a cache breakpoint on the last one. */
-export function toolParams(tools: RuntimeTool[]): BetaTool[] {
+/**
+ * Tool definitions as sent to the API: fixed order, eager input streaming, a cache breakpoint on the
+ * last one, and no `$schema` key (zod's JSON Schema output adds it; the API's input_schema has no use for it).
+ */
+export function toolParams(tools: AgentTool[]): BetaTool[] {
   return tools.map((t, i) => ({
     name: t.name,
     description: t.description,
-    input_schema: { ...t.inputSchema, type: 'object' as const },
+    input_schema: { ...withoutSchemaKey(t.inputSchema), type: 'object' as const },
     eager_input_streaming: true,
     ...(i === tools.length - 1 ? { cache_control: { type: 'ephemeral' as const } } : {}),
   }))
+}
+
+function withoutSchemaKey(schema: object): object {
+  const { $schema: _, ...rest } = schema as { $schema?: unknown }
+  return rest
 }
 
 function request(model: string, tools: BetaTool[], conversation: Conversation): BetaMessageStreamParams {
@@ -71,8 +65,10 @@ function request(model: string, tools: BetaTool[], conversation: Conversation): 
   }
 }
 
+export const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err))
+
 /** A plain-language message for an API or runtime failure. */
-export function describeError(err: unknown): string {
+function describeError(err: unknown): string {
   if (err instanceof Anthropic.AuthenticationError) return 'The Claude API rejected the key. Check .env.'
   if (err instanceof Anthropic.PermissionDeniedError) return 'The API key in .env has no access to this model. Check its workspace in the Claude Console.'
   if (err instanceof Anthropic.RateLimitError) return 'Rate limited by the Claude API. Try again in a minute.'
@@ -83,7 +79,7 @@ export function describeError(err: unknown): string {
       ? 'The Claude API is having trouble right now. Try again shortly.'
       : `The Claude API returned an error (${err.status ?? 'no status'}).`
   }
-  return `The agent stopped on an error: ${err instanceof Error ? err.message : String(err)}`
+  return `The agent stopped on an error: ${errorText(err)}`
 }
 
 function retryAfterSeconds(err: InstanceType<typeof Anthropic.RateLimitError>, attempt: number): number {
@@ -93,29 +89,6 @@ function retryAfterSeconds(err: InstanceType<typeof Anthropic.RateLimitError>, a
 }
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
-
-/** Numeric values in a tool result, for the thread's grounding marks. */
-function numbersIn(content: string): number[] {
-  const found: number[] = []
-  const walk = (v: unknown): void => {
-    if (found.length >= MAX_NUMBERS) return
-    if (typeof v === 'number' && Number.isFinite(v)) found.push(v)
-    else if (Array.isArray(v)) v.forEach(walk)
-    else if (v && typeof v === 'object') Object.values(v).forEach(walk)
-  }
-  const parsed = parseJson(content)
-  if (parsed === undefined) return (content.match(/-?\d+(?:\.\d+)?/g) ?? []).slice(0, MAX_NUMBERS).map(Number)
-  walk(parsed)
-  return found
-}
-
-function parseJson(content: string): unknown {
-  try {
-    return JSON.parse(content)
-  } catch {
-    return undefined
-  }
-}
 
 /**
  * The content blocks to keep in history. After a mid-output server-side fallback, thinking and
@@ -137,7 +110,7 @@ const callSummary = (input: unknown) => {
 export interface TurnContext {
   client: AnthropicLike
   model: string
-  tools: RuntimeTool[]
+  tools: AgentTool[]
   toolParams: BetaTool[]
   conversation: Conversation
   messageId: string
@@ -223,13 +196,13 @@ async function runTool(ctx: TurnContext, out: TurnOutput, block: BetaToolUseBloc
   try {
     outcome = tool ? await tool.run(block.input) : { ok: false, error: `Unknown tool "${block.name}".` }
   } catch (err) {
-    outcome = { ok: false, error: err instanceof Error ? err.message : String(err) }
+    outcome = { ok: false, error: errorText(err) }
   }
   if (!outcome.ok) {
     ctx.emit({ kind: 'toolResult', callId: block.id, ok: false, summary: outcome.error, numbers: [] })
     return { type: 'tool_result', tool_use_id: block.id, is_error: true, content: outcome.error }
   }
-  ctx.emit({ kind: 'toolResult', callId: block.id, ok: true, summary: outcome.summary, numbers: numbersIn(outcome.content) })
+  ctx.emit({ kind: 'toolResult', callId: block.id, ok: true, summary: outcome.summary, numbers: toolResultNumbers(outcome.content) })
   for (const e of outcome.events ?? []) ctx.emit({ ...e, messageId: ctx.messageId })
   return { type: 'tool_result', tool_use_id: block.id, content: outcome.content }
 }
