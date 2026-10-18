@@ -470,7 +470,8 @@ function buswayAmpsPerW(e: EquipmentEntry | undefined): number | null {
 /**
  * UPS modules, busways per row and transformers, with the loads the power checks use (Task 7), so that
  * auto-sized units pass them: racks at catalog peak plus optics; UPS = IT peak / distribution efficiency;
- * busway design current = row peak × peak-to-average / (√3·V·pf) / oversubscription allowance; transformers =
+ * busway design current = row peak / (√3·V·pf) / oversubscription allowance (rack peak already is the electrical
+ * peak, so no peak-to-average factor); transformers =
  * facility power at the worst cooling hour, in VA at the busway power factor.
  */
 function electricalFills(ctx: EvalContext, racks: RackResult[], coolingItems: SizedEquipment[]): Fill[] {
@@ -483,15 +484,10 @@ function electricalFills(ctx: EvalContext, racks: RackResult[], coolingItems: Si
   if (rackPeak <= 0) return []
   const opticsW = networkFabric(ctx, racks).network.opticsW
   const itPeakW = rackPeak + (Number.isFinite(opticsW) ? opticsW : 0)
-  const free = freeMap(ctx.plan)
   const electrical = ctx.plan.hall.positions.filter((p) => p.kind === 'electrical')
-
   const upsLoad = itPeakW / (rule(ctx, 'distributionEfficiency') ?? 1)
   const upsCandidates = equipmentCandidates(ctx, 'ups', 'moduleW', (w) => w)
-  const ups = fill(ctx, { key: 'ups', category: 'ups', loadW: upsLoad, candidates: upsCandidates, units: (c, h) => Math.ceil(upsLoad / (c.unit * h)), positions: electrical, redundancy }, free)
 
-  const purposeRule = { training: 'peakToAverageTraining', inference: 'peakToAverageInference', mixed: 'peakToAverageMixed' } as const
-  const peakToAverage = rule(ctx, purposeRule[ctx.plan.workload.purpose]) ?? 1
   const allowance = ctx.plan.power.oversubscription
   const buswayCandidates = equipmentCandidates(ctx, 'busway', 'ratingA', (a, e) => {
     const k = buswayAmpsPerW(e)
@@ -500,8 +496,8 @@ function electricalFills(ctx: EvalContext, racks: RackResult[], coolingItems: Si
   const busways = ctx.plan.hall.rows.flatMap((row) => {
     const rowPeak = sumBy(racks.filter((r) => r.rowId === row.id), peakOf)
     if (rowPeak <= 0) return []
-    const units = (c: Candidate, h: number) => Math.ceil((rowPeak * (buswayAmpsPerW(c.entry) ?? 0) * peakToAverage) / allowance / (c.unit * h))
-    return [fill(ctx, { key: `busway:${row.id}`, category: 'busway', loadW: rowPeak, candidates: buswayCandidates, units, positions: null, redundancy }, free)]
+    const units = (c: Candidate, h: number) => Math.ceil((rowPeak * (buswayAmpsPerW(c.entry) ?? 0)) / allowance / (c.unit * h))
+    return [fill(ctx, { key: `busway:${row.id}`, category: 'busway', loadW: rowPeak, candidates: buswayCandidates, units, positions: null, redundancy }, new Map())]
   })
 
   const pf = param(busways[0]?.model ?? buswayCandidates[0] ?? null, 'powerFactor') ?? 1
@@ -510,11 +506,24 @@ function electricalFills(ctx: EvalContext, racks: RackResult[], coolingItems: Si
   const chain = (rule(ctx, 'upsEfficiency') ?? 1) * (rule(ctx, 'transformerEfficiency') ?? 1) * (rule(ctx, 'distributionEfficiency') ?? 1)
   const transformerW = ((itPeakW + coolingWorst + misc * itPeakW) / chain) * (rule(ctx, 'transformerEfficiency') ?? 1)
   const transformerCandidates = equipmentCandidates(ctx, 'transformer', 'ratingVa', (va) => va * pf)
-  const transformer = fill(
-    ctx,
-    { key: 'transformer', category: 'transformer', loadW: transformerW, candidates: transformerCandidates, units: (c, h) => Math.ceil(transformerW / pf / (c.unit * h)), positions: electrical, redundancy },
-    free,
-  )
+
+  // UPS modules and transformers share the electrical positions. The UPS is placed first; if its headroom
+  // would leave the transformers short, it is sized at full capacity instead.
+  const upsAndTransformers = (upsHeadroom: boolean) => {
+    const free = freeMap(ctx.plan)
+    const upsUnits = (c: Candidate, h: number) => Math.ceil(upsLoad / (c.unit * (upsHeadroom ? h : 1)))
+    const ups = fill(ctx, { key: 'ups', category: 'ups', loadW: upsLoad, candidates: upsCandidates, units: upsUnits, positions: electrical, redundancy }, free)
+    const transformerUnits = (c: Candidate, h: number) => Math.ceil(transformerW / pf / (c.unit * h))
+    const transformer = fill(
+      ctx,
+      { key: 'transformer', category: 'transformer', loadW: transformerW, candidates: transformerCandidates, units: transformerUnits, positions: electrical, redundancy },
+      free,
+    )
+    return { ups, transformer }
+  }
+  const short = (f: Fill) => f.item.count < f.item.required
+  const withHeadroom = upsAndTransformers(true)
+  const { ups, transformer } = short(withHeadroom.transformer) ? upsAndTransformers(false) : withHeadroom
   return [ups, ...busways, transformer]
 }
 

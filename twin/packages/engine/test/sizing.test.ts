@@ -6,6 +6,7 @@ import { evaluate } from '../src/evaluate'
 import { networkFabric } from '../src/network'
 import { sizeEquipment } from '../src/sizing'
 import { airRack, builtinEntries, gb300, makeCtx, makePlan, makeRacks, rules } from './coolingFixture'
+import { builtins, demoPlan } from './integrationFixture'
 
 const dlc = { id: 'g2', rackTypeId: gb300.id, coolingMethodId: RACK_COOLING.DLC_1P, rows: ['R3'], slots: 16 }
 const airHall = { id: 'g1', rackTypeId: airRack.id, coolingMethodId: RACK_COOLING.AIR_CONTAINED, rows: ['R1', 'R2', 'R3', 'R4', 'R5'], slots: 16 }
@@ -142,9 +143,32 @@ describe('plant, electrical and network sizing', () => {
     const ctx = makeCtx(makePlan([airHall]))
     const opticsW = networkFabric(ctx, makeRacks(ctx)).network.opticsW
     expect(item(result, 'ups')!.loadW).toBeCloseTo((2_400_000 + opticsW) / 0.98, 6)
-    // Row R1: 480 kW peak at 415 V and pf 0.95 is 703 A, × 1.3 (mixed) = 914 A: one 1250 A busway (73%) plus a spare.
+    // Row R1: 480 kW peak at 415 V and pf 0.95 is 703 A: one 1250 A busway (56%) plus a spare.
     expect(item(result, 'busway:R1')).toMatchObject({ modelId: 'busway.1250a', count: 2, loadW: 480_000 })
     expect(item(result, 'transformer')).toMatchObject({ modelId: 'transformer.3mva', positionIds: ['elec-1'] })
+  })
+
+  it('busway design current is the row peak current with no peak-to-average factor, as the power check uses', () => {
+    // 20 racks × 30 kW peak = 600 kW is 879 A: one 1250 A feed within 80%, plus a spare. A × 1.3 factor would give
+    // 1,142 A and two working feeds.
+    const result = run(makePlan([{ ...airHall, rows: ['R1'], slots: 20 }]))
+    expect(item(result, 'busway:R1')).toMatchObject({ modelId: 'busway.1250a', count: 2, required: 2 })
+  })
+
+  it('gives up UPS headroom before it starves the transformers of electrical positions', () => {
+    // GB300 demo hall: UPS 8.71 MW needs 18 + 1 modules at full load or 22 + 1 at 80%; transformers 12.4 MVA need
+    // 5 + 1 at full or 6 + 1 at 80%. In 26 units, 23 headroom UPS modules would leave room for only 3 transformers.
+    const base = demoPlan()
+    const plan: Plan = {
+      ...base,
+      hall: { ...base.hall, positions: base.hall.positions.map((p) => (p.kind === 'electrical' ? { ...p, capacity: 26 } : p)) },
+    }
+    const ev = evaluate(plan, builtins)
+    const units = (key: string) => ev.equipment.find((e) => e.key === key)!
+    expect(units('ups')).toMatchObject({ count: 19, required: 19 })
+    expect(units('transformer')).toMatchObject({ count: 7, required: 7 })
+    expect(ev.checks.find((c) => c.id === 'power.transformer:transformer')!.status).not.toBe('fail')
+    expect(ev.checks.find((c) => c.id === 'power.ups:ups')!.status).not.toBe('fail')
   })
 
   it('leaves per leaf position: downlinks plus downlinks / oversubscription, capped by the position capacity', () => {
