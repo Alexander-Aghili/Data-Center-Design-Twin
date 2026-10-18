@@ -1,4 +1,16 @@
-import { num, type Bay, type BayLoad, type Check, type Metric, type Plan, type RackResult, type Rules, type SizedEquipment, type Status } from '@twin/schema'
+import {
+  num,
+  type Bay,
+  type BayLoad,
+  type Check,
+  type Metric,
+  type Plan,
+  type RackResult,
+  type Row,
+  type Rules,
+  type SizedEquipment,
+  type Status,
+} from '@twin/schema'
 import type { EvalContext } from './context'
 
 export interface FloorResult {
@@ -51,6 +63,11 @@ function groupWeights(ctx: EvalContext): Map<string, GroupWeight> {
   return out
 }
 
+/** Center of a rack's footprint in hall meters (x east, z south); matches the web's `slotWorld`. */
+export function rackCenter(row: Row, slot: number, slotsWide: number): { x: number; z: number } {
+  return { x: row.x + (slot + slotsWide / 2) * row.slotPitchM, z: row.z + row.rackDepthM / 2 }
+}
+
 function bayAt(plan: Plan, x: number, z: number): Bay | undefined {
   return plan.hall.bays.find((b) => x >= b.x && x < b.x + b.w && z >= b.z && z < b.z + b.d)
 }
@@ -82,7 +99,8 @@ export function floorLoads(ctx: EvalContext, racks: RackResult[], equipment: Siz
     const row = plan.hall.rows.find((candidate) => candidate.id === r.rowId)
     const weight = weights.get(r.groupId)
     if (!row || !weight) continue
-    const bay = bayAt(plan, row.x + (r.slot + weight.slotsWide / 2) * row.slotPitchM, row.z + row.rackDepthM / 2)
+    const center = rackCenter(row, r.slot, weight.slotsWide)
+    const bay = bayAt(plan, center.x, center.z)
     const group = groupBays.get(r.groupId) ?? { bays: new Set<Bay>(), objectIds: [] }
     group.objectIds.push(r.objectId)
     groupBays.set(r.groupId, group)
