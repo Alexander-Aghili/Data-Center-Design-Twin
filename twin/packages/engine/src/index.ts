@@ -1,0 +1,5 @@
+export type { EvalSlices } from './assemble'
+export { makeCatalogIndex, type CatalogIndex, type EvalContext } from './context'
+export { diffEvaluations } from './diff'
+export { emptyEvaluation } from './empty'
+export { evaluate } from './evaluate'

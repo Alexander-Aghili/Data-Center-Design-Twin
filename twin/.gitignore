@@ -1,0 +1,9 @@
+node_modules/
+.data/
+.tsbuild/
+*.tsbuildinfo
+test-results/
+playwright-report/
+e2e/screens/*
+!e2e/screens/final/
+dist/
