@@ -1,6 +1,6 @@
-import { createDefaultPlan } from '@twin/catalog'
+import { createDefaultPlan, loadBuiltins, snapshotCatalog } from '@twin/catalog'
+import { evaluate } from '@twin/engine'
 import {
-  EquipmentEntrySchema,
   RACK,
   type Check,
   type Evaluation,
@@ -10,19 +10,19 @@ import {
   type SizedEquipment,
 } from '@twin/schema'
 import { describe, expect, it } from 'vitest'
-import crah200 from '../../../packages/catalog/data/equipment/crah.200kw.json' with { type: 'json' }
-import rules from '../../../packages/catalog/data/rules.json' with { type: 'json' }
 import { generateBrief } from '../src/brief/openfoam.js'
 
 // ---------------------------------------------------------------------------
 // Hand-made fixture for the default plan (the engine lands in parallel).
 // ---------------------------------------------------------------------------
 
-const RHO = rules.airDensity.value
-const CP = rules.airCp.value
+const builtins = loadBuiltins()
+const RHO = builtins.rules.airDensity.value!
+const CP = builtins.rules.airCp.value!
 const SUPPLY_C = 24
 const DELTA_T = 15
 const WORST_HOUR = 4935
+const GRID_HOUR = 5100
 const CRAH_CAPACITY_W = 200_000
 
 const rackEntry: RackEntry = {
@@ -55,7 +55,7 @@ const rackEntry: RackEntry = {
 
 function fixturePlan(): Plan {
   const plan = createDefaultPlan()
-  const crah = EquipmentEntrySchema.parse(crah200)
+  const crah = builtins.entries.find((e) => e.id === 'crah.200kw')!
   plan.catalog = { [rackEntry.id]: rackEntry, [crah.id]: crah }
   return plan
 }
@@ -142,7 +142,7 @@ function fixtureEvaluation(plan: Plan): Evaluation {
       placedPflops: 5760,
       gpuCount: 1280,
       hoursOverCap: 0,
-      worstHour: WORST_HOUR,
+      worstHour: GRID_HOUR,
       buildable: true,
       pueAnnual: 1.32,
       pueWorst: 1.51,
@@ -167,7 +167,7 @@ function fixtureEvaluation(plan: Plan): Evaluation {
       outdoorC: Array.from({ length: hours }, (_, h) => (h === WORST_HOUR ? 41.7 : 20)),
       wetBulbC: Array.from({ length: hours }, (_, h) => (h === WORST_HOUR ? 24.3 : 15)),
       itW,
-      coolingW: Array.from({ length: hours }, () => 0),
+      coolingW: Array.from({ length: hours }, (_, h) => (h === WORST_HOUR ? 900_000 : 400_000)),
       facilityW: Array.from({ length: hours }, () => 0),
       pue: Array.from({ length: hours }, () => null),
       waterM3: Array.from({ length: hours }, () => 0),
@@ -266,13 +266,62 @@ describe('generateBrief (OpenFOAM)', () => {
       expect(row['App load (W)']).toBe(String(eq.loadW))
     }
     const solver = section(md, 'Solver setup')
-    expect(solver).toContain(`rho0 ${RHO};`)
-    expect(solver).toContain(`Cp ${CP};`)
-    // Worst hour: IT at that hour over the placed IT load scales the rack heat.
+    expect(solver).toContain(`rho0 ${RHO.toFixed(3)};`)
+    expect(solver).toContain(`Cp ${CP.toFixed(0)};`)
+  })
+
+  it('worst-hour run uses the cooling worst hour and names the grid headline hour', () => {
     const runs = section(md, 'Runs to make')
-    expect(runs).toContain(`hour ${WORST_HOUR}`)
+    expect(runs).toContain(`hour ${WORST_HOUR} of the weather year`)
+    expect(runs).toContain('highest cooling power')
+    expect(runs).toContain(`headline worst hour (hour ${GRID_HOUR})`)
     expect(runs).toContain('41.7 °C')
+    // IT at that hour over the placed IT load scales the rack heat.
     expect(runs).toContain('× 1.100')
+  })
+
+  it('counts each rack in exactly one CRAH zone', () => {
+    const overlapping = fixturePlan()
+    const w2 = overlapping.hall.positions.find((p) => p.id === 'crah-W2')!
+    w2.servesRows = ['R2', ...w2.servesRows]
+    const out = generateBrief(overlapping, evaluation, 'openfoam')
+    const zones = tableAfter(section(out, 'Results to compare with the app'), '| CRAH zone')
+    expect(zones.reduce((n, z) => n + Number(z['Racks served']), 0)).toBe(evaluation.racks.length)
+    const crah = tableAfter(section(out, 'Boundary conditions'), '| CRAH zone')
+    const zoneFlow = crah.reduce((f, z) => f + Number(z['Zone supply flow (m³/s)']), 0)
+    const total = evaluation.racks.reduce((f, r) => f + airflow(r.airW, DELTA_T), 0)
+    expect(zoneFlow).toBeCloseTo(total, 2)
+  })
+
+  it('prints check values at their own precision', () => {
+    const ratio: Check = { ...evaluation.checks[0]!, kind: 'cooling.rackHeatLimit', title: 'Ratio check', value: 0.9, limit: 1, unit: 'fraction' }
+    const out = generateBrief(plan, { ...evaluation, checks: [ratio] }, 'openfoam')
+    expect(section(out, 'Results to compare with the app')).toContain('| Ratio check | pass | 0.9 | 1 | fraction |')
+  })
+
+  it('falls back to the app room-air ΔT and an assumed supply temperature when racks carry no air temperatures', () => {
+    const bare: Evaluation = {
+      ...evaluation,
+      racks: evaluation.racks.map((r) => ({ ...r, airInletC: null, airOutletC: null })),
+      metrics: [{ id: 'cooling.airDeltaTK', layer: 'cooling', label: 'Room air ΔT', value: DELTA_T, unit: 'K', basis: 'calculated', inputs: [] }],
+    }
+    const out = generateBrief(plan, bare, 'openfoam')
+    const rows = tableAfter(section(out, 'Heat sources'), '| Rack | Group')
+    const first = evaluation.racks[0]!
+    expect(rows[0]).toMatchObject({ 'Airflow (m³/s)': airflow(first.airW, DELTA_T).toFixed(3), 'Inlet (°C)': '18.0', 'Outlet (°C)': '33.0' })
+    expect(section(out, 'Boundary conditions')).toContain('The app does not compute a supply air temperature. This brief assumes 18.0 °C')
+    expect(section(out, 'Caveats')).toContain("this brief's assumption")
+  })
+
+  it('works on the real engine output for the default plan', () => {
+    const real = snapshotCatalog(createDefaultPlan(), builtins.entries)
+    const out = generateBrief(real, evaluate(real, builtins), 'openfoam')
+    expect(out).not.toMatch(/NaN|Infinity|undefined/)
+    const rows = tableAfter(section(out, 'Heat sources'), '| Rack | Group')
+    expect(rows).toHaveLength(real.placements.length)
+    for (const row of rows) expect(row['Airflow (m³/s)']).toMatch(/^\d+\.\d{3}$/)
+    // Auto-sized CRAH models resolve from the built-in catalog when the plan snapshot lacks them.
+    for (const zone of tableAfter(section(out, 'Boundary conditions'), '| CRAH zone')) expect(zone['Rated per unit (m³/s)']).not.toBe('—')
   })
 
   it('sections in order', () => {
