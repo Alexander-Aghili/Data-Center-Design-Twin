@@ -1,15 +1,22 @@
-/* Visual direction (approved): engineering-drawing paper, white clay models, color only where physics happens. */
+/*
+ * Design tokens. Engineering-drawing paper, white clay models, color only where physics happens.
+ * Physics colors (supply, return, heat, ok, warning) mark things; text stays ink or graphite.
+ * Contrast on --panel: ink 15.1, graphite 5.5, heat 4.4, ok 3.7, warning 3.3 (marks need 3:1).
+ */
 :root {
   /* surfaces */
   --paper: #e6ebec;
   --panel: #f3f5f5;
+  --panel-raised: #fafbfb;
   --canvas: #eef2f2;
   --floor: #d9e0e2;
+  --hover: #e8eced;
 
   /* ink */
   --ink: #172026;
   --graphite: #59656c;
   --hairline: #c6cfd3;
+  --ink-inverse: #ffffff;
 
   /* physics */
   --supply: #2d6cdf;
@@ -17,22 +24,35 @@
   --heat: #d23b2a;
   --ok: #2f8f5b;
   --warning: #b7791f;
+  --unknown: #59656c;
+
+  /* status marks on an ink background (the active layer row): 7.3 and 8.7 contrast */
+  --heat-on-ink: #ff8b7e;
+  --warning-on-ink: #e5b45a;
+  --graphite-on-ink: #aeb8bd;
 
   /* rack clay */
   --clay-light: #fbfcfc;
   --clay-mid: #e3e8ea;
   --clay-dark: #cdd5d8;
 
-  /* type: Archivo variable; width axis condensed for labels, normal for text; tabular figures */
+  /* type: Archivo variable; width axis condensed for labels and display, normal for text */
   --font: 'Archivo Variable', system-ui, sans-serif;
-  --stretch-label: 78%;
+  --stretch-display: 78%;
+  --stretch-label: 86%;
   --stretch-text: 100%;
   --text-xs: 11px;
   --text-sm: 12px;
   --text-md: 13px;
   --text-lg: 16px;
   --text-xl: 22px;
-  --text-hero: 34px;
+  --text-hero: 44px;
+  --leading-tight: 1.15;
+  --leading: 1.45;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
 
   /* space and lines */
   --space-1: 4px;
@@ -40,15 +60,23 @@
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 24px;
+  --space-6: 32px;
   --rule: 1px solid var(--hairline);
   --radius: 2px;
+  --radius-control: 5px;
+  --focus-ring: 2px solid var(--supply);
 
-  /* layout */
+  /* layout (design target 1440×900) */
+  --topbar-h: 44px;
   --col-left: 300px;
   --col-right: 360px;
   --strip-h: 168px;
 
-  /* motion */
+  /* layering inside the center column */
+  --z-overlay: 10;
+  --z-drawer: 20;
+
+  /* motion: only in answer to a person's action */
   --ease: cubic-bezier(0.2, 0, 0, 1);
   --dur-fast: 120ms;
   --dur: 240ms;
@@ -59,32 +87,4 @@
     --dur-fast: 0ms;
     --dur: 0ms;
   }
-}
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-html,
-body,
-#root {
-  height: 100%;
-  margin: 0;
-}
-
-body {
-  background: var(--paper);
-  color: var(--ink);
-  font-family: var(--font);
-  font-size: var(--text-md);
-  font-stretch: var(--stretch-text);
-  font-variant-numeric: tabular-nums;
-  -webkit-font-smoothing: antialiased;
-}
-
-:focus-visible {
-  outline: 2px solid var(--supply);
-  outline-offset: 2px;
 }
