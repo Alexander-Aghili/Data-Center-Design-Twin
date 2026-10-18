@@ -170,7 +170,7 @@ export function proposeTools(deps: {
   return [
     defineTool(
       'propose_change',
-      'Suggests a change as a proposal card the person can preview, apply or dismiss; nothing changes until they apply it. Use it for every change you start on your own, such as a fix for a failing check, and list the notes it respects or violates. The result has the proposal id and the evaluation diff it would cause. Pass annotate to mark the affected objects in 3D.',
+      'Suggests a change as a proposal card the person can preview, apply or dismiss; nothing changes until they apply it. Use it for every change you start on your own, such as a fix for a failing check, and list the notes it respects or violates. Settle the fix with what_if first and make one proposal per problem. The result has the proposal id and the evaluation diff it would cause. Pass annotate to mark the affected objects in 3D.',
       (input) => {
         const preview = proposals.preview(input.commands)
         if (!preview.ok) return failure(preview.error)

@@ -158,7 +158,7 @@ function NewGroup({ catalog }: { catalog: CatalogIndex }) {
       )}
       <div className={s.actions}>
         <button type="submit" className="btn btn--primary">
-          Add group
+          Create group
         </button>
       </div>
     </form>

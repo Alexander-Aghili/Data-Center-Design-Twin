@@ -1,6 +1,6 @@
 # Compute layer
 
-The compute layer picks the GPU or rack type for each rack group and the number of racks. It is the decision that ripples furthest: rack power sets cooling, weight sets floor load, and the sum sets grid use.
+The compute layer picks the GPU or rack type for each rack group and the number of racks. It reaches more layers than any other decision: rack power sets cooling, weight sets floor load, and the sum sets grid use.
 
 ## What it is
 

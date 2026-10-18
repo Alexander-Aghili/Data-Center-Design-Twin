@@ -44,7 +44,7 @@ How racks are arranged and where services run: hot and cold aisles, containment,
 
 - Heavy liquid racks placed on a raised floor specified for air racks.
 - Containment roofs blocking sprinkler coverage or overhead service access.
-- CAC in a hall where the rest of the room becomes the hot aisle, cooking non-contained equipment.
+- CAC in a hall where the rest of the room becomes the hot aisle, overheating equipment outside the containment.
 - Pipes, busways and cable trays all routed in the same overhead zone with no clearance plan.
 
 ## Sources

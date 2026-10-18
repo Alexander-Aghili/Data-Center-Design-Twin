@@ -218,7 +218,7 @@ describe('agent thread', () => {
 
     act(() => useTwinStore.setState({ connection: 'offline' }))
     expect(input.disabled).toBe(true)
-    expect(input.placeholder).toBe('Offline. Reconnecting to the server')
+    expect(input.placeholder).toBe('Offline. Reconnecting to the server…')
   })
 
   it('markdown subset: paragraphs, bold, inline code, lists only', () => {

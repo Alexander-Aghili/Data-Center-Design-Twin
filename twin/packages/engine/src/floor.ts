@@ -162,7 +162,7 @@ export function floorLoads(ctx: EvalContext, racks: RackResult[], equipment: Siz
       explanation:
         value === null
           ? `A rack or unit in bay ${bay.id} has no weight in the catalog, so its load is unknown.`
-          : `${t.rackCount} racks (${fmt(t.rackKg, 0)} kg) and ${fmt(t.equipmentKg, 0)} kg of equipment on ${fmt(bay.w * bay.d, 2)} m² give ${fmt(value, 2)} kN/m² against a ${fmt(bay.ratingKnM2, 2)} kN/m² rating.`,
+          : `${t.rackCount} racks (${fmt(t.rackKg, 0)}\u00a0kg) and ${fmt(t.equipmentKg, 0)}\u00a0kg of equipment on ${fmt(bay.w * bay.d, 2)}\u00a0m² give ${fmt(value, 2)}\u00a0kN/m² against a ${fmt(bay.ratingKnM2, 2)}\u00a0kN/m² rating.`,
       causes: [],
       ...(status === 'fail' && {
         advice: 'Leave slots empty to spread the racks over more bays, choose a lighter rack or cooling method, or strengthen the floor.',
@@ -183,9 +183,9 @@ export function floorLoads(ctx: EvalContext, racks: RackResult[], equipment: Siz
     if (weight.weightKg === null || weight.feet === null || value === null) {
       explanation = `${weight.label} has no known weight, so the load per foot is unknown.`
     } else if (limit === null) {
-      explanation = `${weight.label} puts ${fmt(value, 2)} kN on each of ${weight.feet} feet, but none of its racks stands on a rated bay.`
+      explanation = `${weight.label} puts ${fmt(value, 2)}\u00a0kN on each of ${weight.feet} feet, but none of its racks stands on a rated bay.`
     } else {
-      explanation = `${weight.label}: ${fmt(weight.weightKg, 0)} kg on ${weight.feet} feet puts ${fmt(value, 2)} kN on each foot against a ${fmt(limit, 2)} kN limit.`
+      explanation = `${weight.label}: ${fmt(weight.weightKg, 0)}\u00a0kg on ${weight.feet} feet puts ${fmt(value, 2)}\u00a0kN on each foot against a ${fmt(limit, 2)}\u00a0kN limit.`
     }
     checks.push({
       id: `layout.pointLoad:${groupId}`,

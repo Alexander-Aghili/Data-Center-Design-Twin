@@ -1,6 +1,6 @@
 # Liquid cooling operations: CDUs, loops, filtration, balancing and leaks
 
-How a liquid-cooled hall is run day to day, with the lessons from Jane Street's Texas GPU hall (4,032 GPUs in 56 racks, retrofitted for liquid cooling) as told on Dwarkesh Patel's tour [1][2].
+How a liquid-cooled hall is run day to day, with Jane Street's Texas GPU hall (4,032 GPUs in 56 racks, retrofitted for liquid cooling) as the worked example [1][2].
 
 ## What it is
 
@@ -17,25 +17,24 @@ This file applies to every hall with cold plates or rear doors (see `cooling/dir
 
 ## Textbook numbers
 
-- Filtration: CDU vendors fit 25 µm filters on the technical side. Nidec's in-row CDU lists 25 µm secondary and 110 µm primary filtration; a CDU built on Google's Deschutes design lists 25 µm secondary, 500 µm primary and 0.2 µm side-stream polishing [3]. Vertiv offers 25 or 50 µm with differential-pressure monitoring that flags filters for cleaning [4].
+- Filtration: CDU vendors fit 25 µm filters on the technical side. Nidec's in-row CDU adds 110 µm on the primary side; a CDU built on Google's Deschutes design adds 500 µm primary and 0.2 µm side-stream polishing [3]. Vertiv offers 25 or 50 µm with differential-pressure monitoring [4].
 - CDU approach: about 4 °C between facility supply and technical supply for Vertiv's 2,300 kW unit, with technical supply held within ±1 °C [5].
-- OCP's PG25 guideline asks fluid makers to filter at 50 µm or finer before delivery, 25 µm preferred, and recommends sidestream filtration (5 to 15% of loop flow through a filter continuously) for systems above 250 gallons (about 950 L) [7].
-- Glycol share: PG25 held at 24.5 to 27.5% by volume is described as bio-static in a draft OCP fluid table (see `cooling/coolants`).
+- OCP's PG25 guideline asks fluid makers to filter to 50 µm or finer (25 µm preferred) before delivery, and recommends continuous sidestream filtration of 5 to 15% of loop flow for systems above 250 gallons (about 950 L) [7].
 - Flow per kW: about 1.5 L/min per kW at a 10 K rise with PG25 (calculated in `cooling/direct-to-chip-single-phase`).
 
 ## Interactions with other layers
 
-- Layout: each rack in a row draws from a shared header. Pressure falls along the header, so without balancing the racks at the far end of the row get less flow than they need. Jane Street balances flow per cabinet and reads it with ultrasonic flow meters so row ends are not starved [1]. In the app, balancing valves fix the starved racks at a pump-head cost.
-- Piping route: overhead piping is faster to build but has no under-floor containment if it leaks. Under a raised floor, a leak collects on the slab where detection ropes find it [1]. The app adds installation time for raised-floor routes and a leak-exposure note for overhead routes.
-- Cooling: a shared facility loop must run cold enough for the air units, which costs chiller hours compared with a warm loop dedicated to cold plates.
+- Layout: each rack in a row draws from a shared header. Pressure falls along the header, so without balancing the racks at the far end get less flow than they need. Jane Street balances flow per cabinet and reads it with ultrasonic flow meters so row ends are not starved [1]. In the app, balancing valves fix the starved racks at a pump-head cost.
+- Piping route: overhead piping is faster to build but has nothing under it to catch a leak. Under a raised floor, a leak collects on the slab where detection ropes find it [1]. The app adds installation time for raised-floor routes and a leak-exposure note for overhead routes.
+- Cooling: a facility loop shared with air units must run cold enough for them, which costs chiller hours against a warm loop for cold plates only.
 - Buffer tanks hold the loop temperature through chiller restarts (see `cooling/buffer-tanks`).
 
 ## What to watch for
 
-- Flow per rack as well as loop temperature. A starved rack shows low flow on its meter before its GPUs throttle.
+- Flow per rack. A starved rack shows low flow on its meter before its GPUs throttle.
 - Filter differential pressure. A rising reading means debris is collecting; a new loop carries installation debris.
-- Glycol concentration and biology. Sample the loop on a schedule; top-ups with plain water dilute the glycol.
-- Leak detection coverage. Jane Street runs leak-detection rope inside the servers and under the raised floor, tied to isolation valves that can shut off a rack or a branch [1]. The OCP cold-plate leak detection and intervention white paper covers detection and intervention options, including dry-break quick disconnects [6].
+- Glycol concentration and biology. Sample the loop on a schedule; top-ups with plain water dilute the glycol below its bio-static range (see `cooling/coolants`).
+- Leak detection coverage. Jane Street runs leak-detection rope inside the servers and under the raised floor, tied to isolation valves that can shut off a rack or a branch [1]. OCP's cold-plate leak white paper covers intervention options, including dry-break quick disconnects [6].
 - Commissioning: flush and filter the new loop before connecting cold plates.
 
 ## Typical failure modes

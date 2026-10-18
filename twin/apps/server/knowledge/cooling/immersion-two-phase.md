@@ -4,7 +4,7 @@ Servers sit in a sealed tank of engineered fluid that boils on the hot chips. Th
 
 ## What it is
 
-The fluid is chosen to boil at a temperature just above where chips like to run, for example 50 °C at atmospheric pressure for 3M's Fluorinert FC-3284 [4]. Boiling holds every chip close to that temperature regardless of its power, without pumps in the tank. The condenser coil sits in the vapour space and is fed with facility water. The tank must stay closed in operation because the fluid evaporates readily and is expensive.
+The fluid is chosen to boil just above the chips' operating temperature, for example 50 °C at atmospheric pressure for 3M's Fluorinert FC-3284 [4]. Boiling holds every chip close to that temperature regardless of its power, without pumps in the tank. The condenser coil sits in the vapour space and is fed with facility water. The tank must stay closed in operation because the fluid evaporates readily and is expensive.
 
 ## When to use it
 

@@ -25,7 +25,7 @@ An open tower brings the circulating water into direct contact with outdoor air,
 
 - Site: the wet-bulb series from the climate file sets the cold-water temperature each hour; the water allowance limits the peak day.
 - Water: the tower is usually the largest water user on the site (see `cooling/water-use`).
-- Power: fans and condenser pumps are modest, and the lower condenser temperature cuts chiller power on hot hours. On hot hours this gives a lower electrical peak than air-cooled chillers.
+- Power: fans and condenser pumps draw little, and the lower condenser temperature cuts chiller power, so the electrical peak on hot hours is lower than with air-cooled chillers.
 - Coolant: the open loop is dirty by design and must be separated from the technical loop by a heat exchanger.
 
 ## What to watch for

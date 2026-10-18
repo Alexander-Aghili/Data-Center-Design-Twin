@@ -33,7 +33,7 @@ In a rack-scale system the scale-up network stays inside the rack on copper. The
 ## What to watch for
 
 - Latency. Jane Street's fastest links are copper, because light in fiber is slower [6]. For latency-critical paths keep runs short and on copper.
-- Cable mass and tray fill. 8,000 km of fiber in one hall needs real tray space, bend-radius control and labelling [6].
+- Cable mass and tray fill. 8,000 km of fiber in one hall needs tray space, bend-radius control and labelling [6].
 - Copper bulk. Thicker 26 AWG cable at 2 to 3 m [2] adds weight and blocks airflow at the rear of the rack.
 
 ## Typical failure modes

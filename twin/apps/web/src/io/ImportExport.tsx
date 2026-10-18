@@ -127,7 +127,7 @@ export function ImportExport() {
       </style>
       <button type="button" className="btn" disabled={busy} onClick={() => fileRef.current?.click()}
         title="Import a plan, or a catalog pack (a JSON array of entries)">
-        {busy ? 'Importing' : 'Import'}
+        {busy ? 'Importing…' : 'Import'}
       </button>
       <input ref={fileRef} type="file" accept=".json,application/json" aria-label="Import file" hidden onChange={onFile} />
       <button type="button" className="btn" disabled={!plan} onClick={() => plan && downloadJson(plan.name, plan)}>

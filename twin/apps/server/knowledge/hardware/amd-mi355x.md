@@ -29,7 +29,7 @@ Both chips have 288 GB of HBM3E at 8 TB/s and 256 MB of Infinity Cache [1]. Eigh
 
 ## What to watch for
 
-- The gap between maximum and practical density. Use the node count the hall can actually feed and cool.
+- The gap between maximum and practical density. Use the node count the hall can feed and cool.
 - Liquid-cooled MI355X racks bring the same floor-load and CDU questions as other liquid racks.
 - Performance claims are AMD's; independent benchmarks vary by workload.
 

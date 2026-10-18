@@ -4,9 +4,9 @@ import { useTwinStore } from '../state/store'
 
 const PLACEHOLDER: Record<BackendStatus, string> = {
   online: 'Ask about this plan',
-  connecting: 'Connecting to the server',
-  offline: 'Offline. Reconnecting to the server',
-  local: 'The agent needs the local server',
+  connecting: 'Connecting to the server…',
+  offline: 'Offline. Reconnecting to the server…',
+  local: 'Start the local server to use the agent',
 }
 
 const MAX_ROWS = 6

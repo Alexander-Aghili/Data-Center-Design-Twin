@@ -59,7 +59,7 @@ describe('HourlyChart', () => {
     load()
     render(<HourlyChart series={['facilityW', 'outdoorC']} />)
     expect(screen.getByRole('img', { name: /^Facility power over the year/ })).toBeTruthy()
-    expect(screen.getByRole('img', { name: /^Outdoor dry-bulb over the year/ })).toBeTruthy()
+    expect(screen.getByRole('img', { name: /^Outdoor dry bulb over the year/ })).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Show table' }))
     const table = screen.getByRole('table')
     expect(within(table).getAllByRole('row')).toHaveLength(13)
@@ -70,7 +70,7 @@ describe('HourlyChart', () => {
     load()
     const { container } = render(<HourlyChart series={['outdoorC', 'wetBulbC']} />)
     const labels = [...container.querySelectorAll('[data-series-label]')].map((l) => l.textContent)
-    expect(labels).toEqual(['Outdoor dry-bulb', 'Outdoor wet-bulb'])
+    expect(labels).toEqual(['Outdoor dry bulb', 'Outdoor wet bulb'])
   })
 
   it('says "1 hour" for a single hour over the cap', () => {
