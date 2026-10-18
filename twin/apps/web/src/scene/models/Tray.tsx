@@ -4,7 +4,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { FINISH, PERF_TILE_M } from '../Lighting'
 import { useRegistered } from '../Scene'
 import { Gpu, gpuFootprint, gpuPorts } from './Gpu'
-import { box } from './Rack'
+import { box, panelGeometry } from './Rack'
 
 export type TrayCooling = 'coldPlate' | 'air'
 
@@ -24,7 +24,7 @@ export function gpuSlots(n: number, w: number, d: number): GpuSlot[] {
   const cols = Math.min(n, 4)
   const rows = Math.ceil(n / cols)
   const cellW = (w - 0.06) / cols
-  const zFront = -d / 2 + 0.16
+  const zFront = -d / 2 + 0.24
   const zBack = d / 2 - 0.1
   const cellD = (zBack - zFront) / rows
   return Array.from({ length: n }, (_, j) => ({
@@ -50,8 +50,8 @@ function trayGeometry(w: number, h: number, d: number): BufferGeometry {
   ])
   const bezel = box(w, h - 0.002, BEZEL, 0, h / 2, -d / 2 + BEZEL / 2, PERF_TILE_M)
   const handles = mergeGeometries([
-    box(0.012, h * 0.7, 0.02, -w / 2 + 0.018, h / 2, -d / 2 - 0.01),
-    box(0.012, h * 0.7, 0.02, w / 2 - 0.018, h / 2, -d / 2 - 0.01),
+    box(0.008, h * 0.6, 0.014, -w / 2 + 0.016, h / 2, -d / 2 - 0.007),
+    box(0.008, h * 0.6, 0.014, w / 2 - 0.016, h / 2, -d / 2 - 0.007),
   ])
   const merged = mergeGeometries([pan, bezel, handles], true)
   trayCache.set(key, merged)
@@ -136,9 +136,11 @@ export function Shelf({ objectId, kind, y, h, w, d }: { objectId: string; kind: 
       <mesh castShadow receiveShadow material={FINISH.clayMid}>
         <boxGeometry args={[w, h - 0.003, d]} />
       </mesh>
-      <mesh position={[0, 0, -d / 2 - 0.001]} rotation-y={Math.PI} material={kind === 'switch' ? FINISH.graphite : FINISH.perforated}>
-        <planeGeometry args={[w * (kind === 'switch' ? 0.8 : 0.94), h * 0.62]} />
-      </mesh>
+      <mesh
+        position={[0, 0, -d / 2 - 0.001]}
+        geometry={panelGeometry(w * (kind === 'switch' ? 0.8 : 0.94), h * 0.62, PERF_TILE_M)}
+        material={kind === 'switch' ? FINISH.graphite : FINISH.perforated}
+      />
     </group>
   )
 }

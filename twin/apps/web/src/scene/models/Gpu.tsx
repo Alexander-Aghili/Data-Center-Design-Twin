@@ -18,8 +18,8 @@ export function gpuFootprint(n: number, w: number, d: number): number {
   const cols = Math.max(1, Math.min(n, 4))
   const rows = Math.max(1, Math.ceil(n / cols))
   const cellW = (w - 0.06) / cols
-  const cellD = (d - 0.26) / rows
-  return Math.min(cellW * 0.78, cellD * 0.7, 0.14)
+  const cellD = (d - 0.34) / rows
+  return Math.min(cellW * 0.8, cellD * 0.72, 0.15)
 }
 
 function plateHeight(trayH: number): number {

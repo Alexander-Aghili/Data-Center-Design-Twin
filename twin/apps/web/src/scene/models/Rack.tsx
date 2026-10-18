@@ -9,7 +9,7 @@ import {
   type RackEntry,
 } from '@twin/schema'
 import { useLayoutEffect, useMemo, useRef } from 'react'
-import { BoxGeometry, CylinderGeometry, type BufferGeometry, type Group } from 'three'
+import { BoxGeometry, CylinderGeometry, PlaneGeometry, type BufferGeometry, type Group } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { useTwinStore } from '../../state/store'
 import { objectIdForPlacement, rackSize, slotWorld } from '../geometry'
@@ -155,6 +155,19 @@ export function box(w: number, h: number, d: number, x: number, y: number, z: nu
   return g.translate(x, y, z).toNonIndexed()
 }
 
+/** Flat panel facing −z (a cabinet front) with UVs in meters / tile. */
+export function panelGeometry(w: number, h: number, tile: number): BufferGeometry {
+  const key = `${w}|${h}|${tile}`
+  const cached = panelCache.get(key)
+  if (cached) return cached
+  const g = new PlaneGeometry(w, h).rotateY(Math.PI)
+  const uv = g.getAttribute('uv')
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, (uv.getX(i) * w) / tile, (uv.getY(i) * h) / tile)
+  panelCache.set(key, g)
+  return g
+}
+
+const panelCache = new Map<string, BufferGeometry>()
 const shellCache = new Map<string, BufferGeometry>()
 const doorCache = new Map<string, BufferGeometry>()
 

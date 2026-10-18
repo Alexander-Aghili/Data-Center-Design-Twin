@@ -1,10 +1,10 @@
 import { useMemo } from 'react'
 import { CylinderGeometry, RingGeometry, TorusGeometry, type BufferGeometry, type Group } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
-import { FINISH } from '../Lighting'
+import { FINISH, PERF_TILE_M } from '../Lighting'
 import { useRegistered } from '../Scene'
 import type { EquipmentUnit } from './Hall'
-import { box } from './Rack'
+import { box, panelGeometry } from './Rack'
 
 /**
  * Chilled-water CRAH, drawn to fit the 2.2 m of wall the default hall allots per unit (2.0 m wide plus clearance),
@@ -64,9 +64,7 @@ export function Crah({ unit }: { unit: EquipmentUnit }) {
       <mesh position={[0, h / 2, 0]} material={FINISH.clayLight} castShadow receiveShadow>
         <boxGeometry args={[w, h, d]} />
       </mesh>
-      <mesh position={[0, h * 0.47, -d / 2 - 0.002]} rotation-y={Math.PI} material={FINISH.perforated}>
-        <planeGeometry args={[w - 0.12, h * 0.78]} />
-      </mesh>
+      <mesh position={[0, h * 0.47, -d / 2 - 0.002]} geometry={panelGeometry(w - 0.12, h * 0.78, PERF_TILE_M)} material={FINISH.perforated} />
       {fans.map((x) => (
         <FanGrille key={x} r={fanR} x={x} y={h} z={0} />
       ))}

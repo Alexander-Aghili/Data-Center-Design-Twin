@@ -1,10 +1,10 @@
 import { num, type HeatRejectionEntry, type Plan } from '@twin/schema'
 import type { Group } from 'three'
-import { FINISH } from '../Lighting'
+import { FINISH, LOUVER_TILE_M } from '../Lighting'
 import { useRegistered } from '../Scene'
 import { FanGrille } from './Crah'
 import type { EquipmentUnit } from './Hall'
-import { catalogEntry } from './Rack'
+import { catalogEntry, panelGeometry } from './Rack'
 
 type PlantCategory = HeatRejectionEntry['category']
 
@@ -62,11 +62,10 @@ function FanDeckUnit({ length, category }: { length: number; category: PlantCate
         <mesh
           key={s}
           position={[s * (FAN_DECK_W / 2 + 0.002), base + (h - base) / 2, 0]}
-          rotation-y={(s * Math.PI) / 2}
+          rotation-y={(-s * Math.PI) / 2}
+          geometry={panelGeometry(length - 0.2, (h - base) * 0.84, LOUVER_TILE_M)}
           material={category === 'adiabaticDryCooler' ? FINISH.clayMid : FINISH.louver}
-        >
-          <planeGeometry args={[length - 0.2, (h - base) * 0.84]} />
-        </mesh>
+        />
       ))}
       {Array.from({ length: along }, (_, k) =>
         across.map((x) => <FanGrille key={`${k}${x}`} r={FAN_R} x={x} y={h} z={-length / 2 + step * (k + 0.5)} />),
@@ -87,11 +86,10 @@ function TowerCell() {
         <mesh
           key={k}
           position={[Math.sin((k * Math.PI) / 2) * (TOWER_SIDE / 2 + 0.002), h * 0.3, Math.cos((k * Math.PI) / 2) * (TOWER_SIDE / 2 + 0.002)]}
-          rotation-y={(k * Math.PI) / 2}
+          rotation-y={(k * Math.PI) / 2 + Math.PI}
+          geometry={panelGeometry(TOWER_SIDE - 0.3, h * 0.45, LOUVER_TILE_M)}
           material={FINISH.louver}
-        >
-          <planeGeometry args={[TOWER_SIDE - 0.3, h * 0.45]} />
-        </mesh>
+        />
       ))}
       <mesh position={[0, h + 0.6, 0]} material={FINISH.clayLight} castShadow>
         <cylinderGeometry args={[stackR, stackR * 1.08, 1.2, 40, 1, true]} />

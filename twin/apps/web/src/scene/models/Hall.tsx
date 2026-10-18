@@ -2,14 +2,14 @@ import { num, type Evaluation, type Plan, type SizedEquipment } from '@twin/sche
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import { BoxGeometry, Object3D, type Group, type InstancedMesh } from 'three'
 import { objectIdForEquipment, objectIdForPlacement, slotWorld } from '../geometry'
-import { FINISH } from '../Lighting'
+import { FINISH, LOUVER_TILE_M } from '../Lighting'
 import { useRegistered } from '../Scene'
 import { Busway } from './Busway'
 import { Cdu, CDU_SIZE } from './Cdu'
 import { Crah, CRAH_SIZE } from './Crah'
 import { LeafSwitch } from './LeafSwitch'
 import { PLANT_PITCH_M, plantCategory } from './Plant'
-import { DOOR_MATERIALS, Rack, SHELL_MATERIALS, catalogEntry, rackDoorGeometry, rackModel, rackShellGeometry } from './Rack'
+import { DOOR_MATERIALS, Rack, SHELL_MATERIALS, catalogEntry, panelGeometry, rackDoorGeometry, rackModel, rackShellGeometry } from './Rack'
 
 /** Above this many placements the closed racks draw as instanced meshes, one per rack type. */
 export const INSTANCE_THRESHOLD = 40
@@ -227,9 +227,7 @@ function Cabinet({ unit }: { unit: EquipmentUnit }) {
       <mesh position={[0, h / 2, 0]} material={FINISH.clayLight} castShadow receiveShadow>
         <boxGeometry args={[w, h, d]} />
       </mesh>
-      <mesh position={[0, h * 0.55, -d / 2 - 0.002]} rotation-y={Math.PI} material={FINISH.louver}>
-        <planeGeometry args={[w * 0.8, h * 0.6]} />
-      </mesh>
+      <mesh position={[0, h * 0.55, -d / 2 - 0.002]} geometry={panelGeometry(w * 0.8, h * 0.6, LOUVER_TILE_M)} material={FINISH.louver} />
     </group>
   )
 }

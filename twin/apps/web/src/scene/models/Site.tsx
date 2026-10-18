@@ -1,8 +1,6 @@
 import { Edges, Line } from '@react-three/drei'
-import { useFrame } from '@react-three/fiber'
 import type { Plan } from '@twin/schema'
-import { useRef } from 'react'
-import { Vector3, type Group } from 'three'
+import type { Group } from 'three'
 import { GROUND_Y } from '../Ground'
 import { FINISH } from '../Lighting'
 import { PALETTE } from '../palette'
@@ -14,69 +12,47 @@ import { Plant } from './Plant'
 const WALL_T = 0.3
 /** Steel joists and deck above the ceiling line. */
 const ROOF_DEPTH = 0.9
-/** Walls on the camera's side drop to this height above the deck, like a sectioned architectural model. */
-const SILL = 0.9
+/** Below the site shot the walls are cut here, 1.2 m above the deck, like a plan-section model with poché on the cut. */
+const CUT_Y = 1.2
+const POCHE = 0.02
 /** Site margin around the building and yard, to the property line. */
 const MARGIN = 22
 const EDGE = '#9AA6AC'
 
-interface Wall {
-  key: string
-  normal: Vector3
-  center: Vector3
-  size: [number, number]
-  rotY: number
-}
-
-function walls(plan: Plan, height: number): Wall[] {
+/** Wall footprints as [center x, center z, length along x, length along z]. */
+function wallFootprints(plan: Plan): [number, number, number, number][] {
   const { widthM: w, depthM: d } = plan.hall
-  const mid = GROUND_Y + height / 2
   return [
-    { key: 'north', normal: new Vector3(0, 0, -1), center: new Vector3(w / 2, mid, -WALL_T / 2), size: [w + 2 * WALL_T, WALL_T], rotY: 0 },
-    { key: 'south', normal: new Vector3(0, 0, 1), center: new Vector3(w / 2, mid, d + WALL_T / 2), size: [w + 2 * WALL_T, WALL_T], rotY: 0 },
-    { key: 'west', normal: new Vector3(-1, 0, 0), center: new Vector3(-WALL_T / 2, mid, d / 2), size: [d, WALL_T], rotY: Math.PI / 2 },
-    { key: 'east', normal: new Vector3(1, 0, 0), center: new Vector3(w + WALL_T / 2, mid, d / 2), size: [d, WALL_T], rotY: Math.PI / 2 },
+    [w / 2, -WALL_T / 2, w + 2 * WALL_T, WALL_T],
+    [w / 2, d + WALL_T / 2, w + 2 * WALL_T, WALL_T],
+    [-WALL_T / 2, d / 2, WALL_T, d],
+    [w + WALL_T / 2, d / 2, WALL_T, d],
   ]
 }
 
-/** Building shell: four walls that cut down on the camera's side, and the roof for the site shot. */
+/** Building shell: full walls and roof for the site shot; otherwise walls cut low with a dark section cap. */
 function Building({ plan, roof }: { plan: Plan; roof: boolean }) {
   const ref = useRegistered<Group>('site:building', 'building')
-  const height = plan.hall.ceilingM + ROOF_DEPTH - GROUND_Y
-  const list = walls(plan, height)
-  const meshes = useRef<(Group | null)[]>([])
-  const toCamera = new Vector3()
-  const sillScale = (SILL - GROUND_Y) / height
-
-  useFrame(({ camera }) => {
-    list.forEach((wall, i) => {
-      const g = meshes.current[i]
-      if (!g) return
-      const facing = toCamera.copy(camera.position).sub(wall.center).dot(wall.normal) > 0
-      g.scale.y = facing && !roof ? sillScale : 1
-    })
-  })
-
+  const top = roof ? plan.hall.ceilingM + ROOF_DEPTH : CUT_Y
+  const height = top - GROUND_Y
   const { widthM: w, depthM: d } = plan.hall
   return (
     <group ref={ref}>
-      {list.map((wall, i) => (
-        <group
-          key={wall.key}
-          ref={(g) => {
-            meshes.current[i] = g
-          }}
-          position={[wall.center.x, GROUND_Y, wall.center.z]}
-          rotation-y={wall.rotY}
-        >
-          <mesh position-y={height / 2} material={FINISH.clayLight} castShadow receiveShadow>
-            <boxGeometry args={[wall.size[0], height, wall.size[1]]} />
+      {wallFootprints(plan).map(([x, z, lx, lz]) => (
+        <group key={`${x}|${z}`} position={[x, 0, z]}>
+          <mesh position-y={GROUND_Y + height / 2} material={FINISH.clayLight} castShadow receiveShadow>
+            <boxGeometry args={[lx, height, lz]} />
             <Edges color={EDGE} threshold={20} />
           </mesh>
+          {roof ? null : (
+            <mesh position-y={top + POCHE / 2} material={FINISH.ink}>
+              <boxGeometry args={[lx, POCHE, lz]} />
+            </mesh>
+          )}
         </group>
       ))}
       {roof ? (
-        <mesh position={[w / 2, GROUND_Y + height + 0.15, d / 2]} material={FINISH.clayLight} castShadow receiveShadow>
+        <mesh position={[w / 2, top + 0.15, d / 2]} material={FINISH.clayLight} castShadow receiveShadow>
           <boxGeometry args={[w + 2 * WALL_T, 0.3, d + 2 * WALL_T]} />
           <Edges color={EDGE} threshold={20} />
         </mesh>

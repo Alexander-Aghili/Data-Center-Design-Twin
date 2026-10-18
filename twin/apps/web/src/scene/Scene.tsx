@@ -1,11 +1,10 @@
 import { Stats } from '@react-three/drei'
-import { Canvas, useThree } from '@react-three/fiber'
+import { Canvas } from '@react-three/fiber'
 import { EffectComposer, SMAA, SSAO, ToneMapping } from '@react-three/postprocessing'
 import type { Evaluation, Plan, ShotId } from '@twin/schema'
 import { ToneMappingMode } from 'postprocessing'
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
-import { NoToneMapping, PCFSoftShadowMap, type Camera, type Object3D } from 'three'
-import { create } from 'zustand'
+import { useLayoutEffect, useMemo, useRef, type ReactNode } from 'react'
+import { NoToneMapping, PCFShadowMap, type Object3D } from 'three'
 import { useTwinStore } from '../state/store'
 import { CameraRig } from './camera/CameraRig'
 import { Ground } from './Ground'
@@ -31,27 +30,6 @@ export function useRegistered<T extends Object3D>(id: string, kind: string) {
     return useSceneRegistry.getState().register(id, kind, object)
   }, [id, kind])
   return ref
-}
-
-export interface SceneCamera {
-  /** The canvas camera, for DOM overlays outside the Canvas (projection to screen). Null until the canvas mounts. */
-  camera: Camera | null
-  /** Canvas size in CSS pixels. */
-  size: { width: number; height: number }
-}
-
-/** The R3F camera and canvas size, readable outside the Canvas (revision clouds, labels). */
-export const useSceneCamera = create<SceneCamera>()(() => ({ camera: null, size: { width: 0, height: 0 } }))
-
-function PublishCamera() {
-  const camera = useThree((s) => s.camera)
-  const width = useThree((s) => s.size.width)
-  const height = useThree((s) => s.size.height)
-  useEffect(() => {
-    useSceneCamera.setState({ camera, size: { width, height } })
-  }, [camera, width, height])
-  useEffect(() => () => useSceneCamera.setState({ camera: null }), [])
-  return null
 }
 
 /** How far the focused rack opens at each shot: closed down to the row, door open at the rack, trays out closer in. */
@@ -98,23 +76,25 @@ function World() {
 // Dev-only frame-time readout: append ?perf=1 to the URL.
 const showPerf = import.meta.env.DEV && new URLSearchParams(location.search).get('perf') === '1'
 
-/** 3D canvas: the site, hall and equipment as a white architectural model, with overlays, camera rig and picking. */
-export function Scene() {
+/**
+ * 3D canvas: the site, hall and equipment as a white architectural model, with overlays, camera rig and picking.
+ * `children` render inside the Canvas (bridges for DOM overlays, dev tools).
+ */
+export function Scene({ children }: { children?: ReactNode }) {
   return (
     <Canvas
-      shadows={{ type: PCFSoftShadowMap }}
+      shadows={{ type: PCFShadowMap }}
       dpr={[1, 2]}
       gl={{ antialias: false, stencil: false, powerPreference: 'high-performance' }}
-      camera={{ position: [62, 46, 66], fov: 30, near: 0.05, far: 900 }}
+      camera={{ position: [46, 28, 48], fov: 30, near: 0.05, far: 900 }}
       onCreated={({ gl, camera }) => {
         // The composer's neutral tone mapping runs last; the renderer itself stays linear.
         gl.toneMapping = NoToneMapping
-        camera.lookAt(20, 0, 12)
+        camera.lookAt(17, 0, 14)
       }}
     >
       <color attach="background" args={[PALETTE.canvas]} />
       <fog attach="fog" args={[PALETTE.canvas, 160, 520]} />
-      <PublishCamera />
       <Lighting />
       <World />
       <Overlays />
@@ -122,20 +102,22 @@ export function Scene() {
       <Picking />
       <EffectComposer multisampling={0} enableNormalPass>
         <SSAO
-          samples={16}
-          rings={5}
-          radius={0.06}
-          intensity={10}
-          luminanceInfluence={0.4}
-          worldDistanceThreshold={60}
-          worldDistanceFalloff={20}
-          worldProximityThreshold={0.5}
-          worldProximityFalloff={0.3}
+          samples={21}
+          rings={4}
+          radius={0.025}
+          intensity={6}
+          luminanceInfluence={0.5}
+          resolutionScale={1}
+          worldDistanceThreshold={30}
+          worldDistanceFalloff={6}
+          worldProximityThreshold={0.25}
+          worldProximityFalloff={0.1}
           color={PALETTE.ink}
         />
         <ToneMapping mode={ToneMappingMode.NEUTRAL} />
         <SMAA />
       </EffectComposer>
+      {children}
       {showPerf ? <Stats /> : null}
     </Canvas>
   )

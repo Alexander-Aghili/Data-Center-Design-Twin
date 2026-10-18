@@ -1,7 +1,8 @@
 import type { Group } from 'three'
-import { FINISH } from '../Lighting'
+import { FINISH, LOUVER_TILE_M } from '../Lighting'
 import { useRegistered } from '../Scene'
 import type { EquipmentUnit } from './Hall'
+import { panelGeometry } from './Rack'
 
 /** Cabinet envelope of the catalogued row CDU (Vertiv CoolChip CDU 1350: 900 × 1243 × 2122 mm, per the catalog note). */
 export const CDU_SIZE = { w: 0.9, d: 1.243, h: 2.122 }
@@ -22,9 +23,11 @@ export function Cdu({ unit }: { unit: EquipmentUnit }) {
       <mesh position={[0, PLINTH + bodyH / 2, 0]} material={FINISH.clayLight} castShadow receiveShadow>
         <boxGeometry args={[w, bodyH, d]} />
       </mesh>
-      <mesh position={[0, PLINTH + bodyH * 0.3, -d / 2 - 0.002]} rotation-y={Math.PI} material={FINISH.louver}>
-        <planeGeometry args={[w * 0.8, bodyH * 0.42]} />
-      </mesh>
+      <mesh
+        position={[0, PLINTH + bodyH * 0.3, -d / 2 - 0.002]}
+        geometry={panelGeometry(w * 0.8, bodyH * 0.42, LOUVER_TILE_M)}
+        material={FINISH.louver}
+      />
       <mesh position={[w * 0.18, PLINTH + bodyH * 0.74, -d / 2 - 0.004]} material={FINISH.ink}>
         <boxGeometry args={[0.22, 0.14, 0.008]} />
       </mesh>
