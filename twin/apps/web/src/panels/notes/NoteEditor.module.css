@@ -1,0 +1,113 @@
+.list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* As in the approved mockup: a rule down the left edge; its weight says how binding the note is. */
+.note {
+  padding: 1px 0 1px 10px;
+  border-left: 2px solid var(--ink);
+}
+
+.note[data-importance='prefer'] {
+  border-left-color: var(--graphite);
+}
+
+.note[data-importance='fyi'] {
+  border-left: 1px dashed var(--graphite);
+  padding-left: 11px;
+}
+
+.meta {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--graphite);
+}
+
+.importance {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.note[data-importance='fyi'] .importance {
+  font-weight: 500;
+  color: var(--graphite);
+}
+
+.remove {
+  margin-left: auto;
+  height: 20px;
+  padding: 0 var(--space-1);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+
+.note:hover .remove,
+.remove:focus-visible {
+  opacity: 1;
+}
+
+.text {
+  margin: 1px 0 0;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.editor {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+  padding: var(--space-3);
+  border: var(--rule);
+  border-radius: var(--radius);
+  background: var(--clay-light);
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-stretch: var(--stretch-label);
+  color: var(--graphite);
+}
+
+.editor textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 8px;
+  border: var(--rule);
+  border-radius: var(--radius);
+  background: #fff;
+  font: inherit;
+  line-height: 1.4;
+  color: var(--ink);
+  resize: vertical;
+}
+
+.editor textarea:focus-visible {
+  outline: 2px solid var(--supply);
+  outline-offset: -1px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: 2px;
+}
+
+.author {
+  font-size: var(--text-sm);
+  color: var(--graphite);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--heat);
+}

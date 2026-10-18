@@ -1,0 +1,157 @@
+.picker {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.current {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.currentText {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.name {
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.change {
+  flex: none;
+  padding: 2px 0;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  background: none;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--graphite);
+  cursor: pointer;
+}
+
+.change:hover {
+  color: var(--ink);
+}
+
+/* A short spec sheet: one deciding number per line, its basis set right in a lighter voice. */
+.facts {
+  display: grid;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+.fact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.basis {
+  font-size: 10.5px;
+  font-stretch: var(--stretch-label);
+  color: var(--graphite);
+}
+
+.options {
+  display: grid;
+  border-top: var(--rule);
+  border-bottom: var(--rule);
+}
+
+.option {
+  position: relative;
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  cursor: pointer;
+}
+
+.option + .option {
+  border-top: 1px dotted var(--hairline);
+}
+
+.option input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+
+.mark {
+  width: 11px;
+  height: 11px;
+  margin-top: 3px;
+  border: 1.5px solid var(--graphite);
+  border-radius: 50%;
+}
+
+.option input:checked + .mark {
+  border-color: var(--ink);
+  background: radial-gradient(circle, var(--ink) 0 2.5px, transparent 3px);
+}
+
+.option input:focus-visible + .mark {
+  outline: 2px solid var(--supply);
+  outline-offset: 2px;
+}
+
+.option:hover:not([data-blocked]) .name {
+  text-decoration: underline;
+  text-decoration-color: var(--hairline);
+  text-underline-offset: 3px;
+}
+
+.option[data-blocked] {
+  cursor: not-allowed;
+}
+
+.option[data-blocked] .name,
+.option[data-blocked] .facts {
+  color: var(--graphite);
+}
+
+.option[data-blocked] .mark {
+  border-style: dotted;
+}
+
+.optionBody {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.optionHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.status {
+  flex: none;
+  font-size: var(--text-sm);
+  color: var(--graphite);
+}
+
+.blocked,
+.caution {
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+
+.blocked {
+  color: var(--ink);
+}
+
+.caution {
+  flex: none;
+  color: var(--warning);
+  font-weight: 500;
+}
