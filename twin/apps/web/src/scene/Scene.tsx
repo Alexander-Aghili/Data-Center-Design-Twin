@@ -25,7 +25,6 @@ const BUSWAY_FREE_OVERLAYS = new Set<Overlay>(['air', 'liquid', 'temperature', '
 function World() {
   const plan = useTwinStore((s) => s.plan)
   const evaluation = useTwinStore((s) => s.evaluation)
-  const shot = useTwinStore((s) => s.shot)
   const overlay = useTwinStore((s) => s.overlay)
   const layer = useTwinStore((s) => s.activeLayer)
   const openRack = useRackOpenness((s) => (s.value > 0 ? s.placementId : null))
@@ -42,7 +41,7 @@ function World() {
   return (
     <>
       <Ground plan={plan} runs={runs} />
-      <Site plan={plan} units={units} roof={shot === 'site'} />
+      <Site plan={plan} units={units} />
       <Hall plan={plan} units={hallUnits} openRack={openRack} />
       {/* The liquid overlay draws its own colored pipes; the neutral ones would double them. */}
       {overlay === 'liquid' ? null : <Pipes runs={runs} />}

@@ -1,6 +1,9 @@
-import { Edges, Line } from '@react-three/drei'
+import { Edges, Line, type EdgesRef } from '@react-three/drei'
 import type { Plan } from '@twin/schema'
-import type { Group } from 'three'
+import { useFrame } from '@react-three/fiber'
+import { useLayoutEffect, useRef } from 'react'
+import type { Group, Mesh } from 'three'
+import { useSiteReveal } from '../camera/siteReveal'
 import { GROUND_Y } from '../Ground'
 import { FINISH } from '../Lighting'
 import { PALETTE } from '../palette'
@@ -18,6 +21,8 @@ const POCHE = 0.02
 /** Site margin around the building and yard, to the property line. */
 const MARGIN = 22
 const EDGE = '#9AA6AC'
+/** The roof's outline appears once the roof is nearly opaque, so a faint roof never carries a hard edge. */
+const ROOF_EDGES_AT = 0.9
 
 /** Wall footprints as [center x, center z, length along x, length along z]. */
 function wallFootprints(plan: Plan): [number, number, number, number][] {
@@ -30,33 +35,86 @@ function wallFootprints(plan: Plan): [number, number, number, number][] {
   ]
 }
 
-/** Building shell: full walls and roof for the site shot; otherwise walls cut low with a dark section cap. */
-function Building({ plan, roof }: { plan: Plan; roof: boolean }) {
+// The roof fades in as the walls reach full height, on its own material so the rest of the clay stays opaque.
+const roofMaterial = FINISH.clayLight.clone()
+roofMaterial.transparent = true
+
+/**
+ * Building shell, closed by the camera rig's site reveal (`useSiteReveal`): at 0 the walls are cut low with a dark
+ * section cap (a plan-section model), toward 1 they rise to full height and the roof fades in on top.
+ */
+function Building({ plan }: { plan: Plan }) {
   const ref = useRegistered<Group>('site:building', 'building')
-  const top = roof ? plan.hall.ceilingM + ROOF_DEPTH : CUT_Y
-  const height = top - GROUND_Y
+  const walls = useRef<(Mesh | null)[]>([])
+  const caps = useRef<(Mesh | null)[]>([])
+  const roof = useRef<Mesh>(null)
+  const roofEdges = useRef<EdgesRef>(null)
+  const shown = useRef<number | null>(null)
+  const fullTop = plan.hall.ceilingM + ROOF_DEPTH
+  const fullHeight = fullTop - GROUND_Y
   const { widthM: w, depthM: d } = plan.hall
+
+  const apply = (reveal: number) => {
+    const top = CUT_Y + (fullTop - CUT_Y) * reveal
+    const height = top - GROUND_Y
+    for (const wall of walls.current) {
+      if (!wall) continue
+      wall.scale.y = height / fullHeight
+      wall.position.y = GROUND_Y + height / 2
+    }
+    for (const cap of caps.current) {
+      if (!cap) continue
+      cap.visible = reveal < 1
+      cap.position.y = top + POCHE / 2
+    }
+    if (roof.current) {
+      roof.current.visible = reveal > 0
+      roof.current.position.y = top + 0.15
+    }
+    if (roofEdges.current) roofEdges.current.visible = reveal >= ROOF_EDGES_AT
+    roofMaterial.opacity = reveal
+  }
+
+  useLayoutEffect(() => {
+    shown.current = useSiteReveal.getState().value
+    apply(shown.current)
+  })
+  useFrame(() => {
+    const reveal = useSiteReveal.getState().value
+    if (reveal === shown.current) return
+    shown.current = reveal
+    apply(reveal)
+  })
+
   return (
     <group ref={ref}>
-      {wallFootprints(plan).map(([x, z, lx, lz]) => (
+      {wallFootprints(plan).map(([x, z, lx, lz], i) => (
         <group key={`${x}|${z}`} position={[x, 0, z]}>
-          <mesh position-y={GROUND_Y + height / 2} material={FINISH.clayLight} castShadow receiveShadow>
-            <boxGeometry args={[lx, height, lz]} />
+          <mesh
+            ref={(m) => {
+              walls.current[i] = m
+            }}
+            material={FINISH.clayLight}
+            castShadow
+            receiveShadow
+          >
+            <boxGeometry args={[lx, fullHeight, lz]} />
             <Edges color={EDGE} threshold={20} />
           </mesh>
-          {roof ? null : (
-            <mesh position-y={top + POCHE / 2} material={FINISH.ink}>
-              <boxGeometry args={[lx, POCHE, lz]} />
-            </mesh>
-          )}
+          <mesh
+            ref={(m) => {
+              caps.current[i] = m
+            }}
+            material={FINISH.ink}
+          >
+            <boxGeometry args={[lx, POCHE, lz]} />
+          </mesh>
         </group>
       ))}
-      {roof ? (
-        <mesh position={[w / 2, top + 0.15, d / 2]} material={FINISH.clayLight} castShadow receiveShadow>
-          <boxGeometry args={[w + 2 * WALL_T, 0.3, d + 2 * WALL_T]} />
-          <Edges color={EDGE} threshold={20} />
-        </mesh>
-      ) : null}
+      <mesh ref={roof} position={[w / 2, fullTop + 0.15, d / 2]} material={roofMaterial} userData={{ occludesPicks: true }} castShadow receiveShadow>
+        <boxGeometry args={[w + 2 * WALL_T, 0.3, d + 2 * WALL_T]} />
+        <Edges ref={roofEdges} color={EDGE} threshold={20} />
+      </mesh>
     </group>
   )
 }
@@ -103,12 +161,10 @@ function WaterFeed({ siteWestX, yardX, yardZ }: { siteWestX: number; yardX: numb
 interface SiteProps {
   plan: Plan
   units: EquipmentUnit[]
-  /** Show the roof (the site shot); otherwise the hall is open from above. */
-  roof: boolean
 }
 
 /** Everything outside the hall: building shell, yard plant and buffer tank, utility and water feeds, property line. */
-export function Site({ plan, units, roof }: SiteProps) {
+export function Site({ plan, units }: SiteProps) {
   const { widthM: w, depthM: d } = plan.hall
   const plants = units.filter((u) => u.kind === 'plant')
   const tanks = units.filter((u) => u.kind === 'bufferTank')
@@ -122,7 +178,7 @@ export function Site({ plan, units, roof }: SiteProps) {
   const y = GROUND_Y + 0.02
   return (
     <group>
-      <Building plan={plan} roof={roof} />
+      <Building plan={plan} />
       {plants.map((u) => (
         <Plant key={u.objectId} unit={u} plan={plan} />
       ))}

@@ -9,7 +9,7 @@ import { prefersReducedMotion } from './LiquidFlow'
 // A faint plume of rising heat-red bands above racks whose cooling is not OK. Height and strength are
 // visual choices: enough to find the problem from the hall shot, never enough to hide the racks.
 const PLUME_H = 1.3
-const MAX_ALPHA = 0.26
+const MAX_ALPHA = 0.6
 
 const vertexShader = /* glsl */ `
   varying vec2 vUv;

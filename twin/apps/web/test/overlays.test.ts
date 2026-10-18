@@ -314,13 +314,28 @@ describe('picking', () => {
       objects: () => objects,
       select: (target) => store.getState().dispatchView({ type: 'select', target }),
     })
-    return { store, picker }
+    return { store, picker, objects }
   }
 
   it('clicking an object selects it, through child meshes and past unpickable objects', () => {
     const { store, picker } = scene()
     picker.click({ x: 0, y: 0 })
     expect(store.getState().selection).toEqual({ kind: 'rack', id: 'R3-07' })
+    expect(picker.pick({ x: 0, y: 0 })?.objectId).toBe('rack:R3-07')
+  })
+
+  it('a shown roof stops the pick, so racks under it are neither outlined nor selected', () => {
+    const { store, picker, objects } = scene()
+    const roof = new Mesh(new BoxGeometry(40, 0.3, 36), new MeshBasicMaterial())
+    roof.position.set(0, 5, 0)
+    roof.userData.occludesPicks = true
+    roof.updateMatrixWorld()
+    objects.set('site:building', { kind: 'building', ref: roof })
+    expect(picker.pick({ x: 0, y: 0 })).toBeNull()
+    picker.click({ x: 0, y: 0 })
+    expect(store.getState().selection).toBeNull()
+    // Hidden below the site shot, the roof lets the ray through again.
+    roof.visible = false
     expect(picker.pick({ x: 0, y: 0 })?.objectId).toBe('rack:R3-07')
   })
 
