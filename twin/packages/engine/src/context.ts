@@ -1,4 +1,4 @@
-import type { CatalogEntry, CatalogIndex, CatalogKind, ClimateEntry, Plan, Rules } from '@twin/schema'
+import { NETWORK_OVERSUBSCRIPTION_RANGE, POWER_OVERSUBSCRIPTION_RANGE, type CatalogEntry, type CatalogIndex, type CatalogKind, type ClimateEntry, type Plan, type Rules } from '@twin/schema'
 
 export type { CatalogIndex } from '@twin/schema'
 
@@ -21,4 +21,18 @@ export function makeCatalogIndex(entries: CatalogEntry[]): CatalogIndex {
     },
     all: () => [...byId.values()],
   }
+}
+
+const clamp = (value: number, range: { min: number; max: number }) => Math.min(range.max, Math.max(range.min, value))
+
+/**
+ * The plan with its oversubscription decisions inside the schema's ranges. Commands and import already
+ * reject values outside them; this keeps a plan built some other way from dividing loads by almost zero
+ * and sizing unbounded equipment counts.
+ */
+export function withinRanges(plan: Plan): Plan {
+  const power = clamp(plan.power.oversubscription, POWER_OVERSUBSCRIPTION_RANGE)
+  const network = clamp(plan.network.oversubscription, NETWORK_OVERSUBSCRIPTION_RANGE)
+  if (power === plan.power.oversubscription && network === plan.network.oversubscription) return plan
+  return { ...plan, power: { ...plan.power, oversubscription: power }, network: { ...plan.network, oversubscription: network } }
 }

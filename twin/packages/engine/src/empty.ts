@@ -19,7 +19,7 @@ export function emptyHourly(): HourlySeries {
 }
 
 export function emptyNetwork(oversubscription: number): NetworkResult {
-  return { links: [], opticsW: 0, cableM: 0, baseLatencyNs: 0, oversubscription }
+  return { links: [], opticsW: 0, cableM: 0, baseLatencyNs: null, oversubscription }
 }
 
 export function emptyCost(): CostResult {

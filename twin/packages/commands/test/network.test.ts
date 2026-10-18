@@ -13,6 +13,10 @@ describe('network decisions', () => {
   })
 
   it('rejects a ratio below 1:1', () => {
-    expectRejected(plan(), 'setNetworkOversubscription', { ratio: 0.5 }, 'Network oversubscription must be at least 1 (1 means 1:1, non-blocking)')
+    expectRejected(plan(), 'setNetworkOversubscription', { ratio: 0.5 }, /payload\.ratio: Network oversubscription must be at least 1 \(1 means 1:1, non-blocking\)/)
+  })
+
+  it('rejects a ratio above 8:1', () => {
+    expectRejected(plan(), 'setNetworkOversubscription', { ratio: 16 }, /payload\.ratio: Network oversubscription must be at most 8 \(8:1\)/)
   })
 })

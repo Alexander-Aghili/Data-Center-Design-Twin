@@ -1,4 +1,4 @@
-import type { Plan } from '@twin/schema'
+import { NETWORK_OVERSUBSCRIPTION_RANGE, type Plan } from '@twin/schema'
 import { useTwinStore } from '../../state/store'
 import { Field } from '../fields/Field'
 import { NumberInput } from '../fields/Number'
@@ -22,12 +22,13 @@ export function NetworkDecisions({ plan }: { plan: Plan }) {
       <Field
         label="Oversubscription"
         target="decision:network.oversubscription"
-        hint={'Downlink to uplink bandwidth at each leaf. 1:1 is non-blocking.'}
+        hint={'Downlink to uplink bandwidth at each leaf, from 1:1 (non-blocking) to 8:1.'}
       >
         <NumberInput
           value={plan.network.oversubscription}
           unit={':\u00a01'}
-          above={0}
+          min={NETWORK_OVERSUBSCRIPTION_RANGE.min}
+          max={NETWORK_OVERSUBSCRIPTION_RANGE.max}
           onCommit={(ratio) => send({ type: 'setNetworkOversubscription', payload: { ratio } })}
         />
       </Field>

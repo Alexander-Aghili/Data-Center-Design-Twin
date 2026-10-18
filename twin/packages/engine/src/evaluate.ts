@@ -1,7 +1,7 @@
 import type { Builtins, Evaluation, Plan } from '@twin/schema'
 import { assemble } from './assemble'
 import { attachCauses } from './causes'
-import { makeCatalogIndex, type EvalContext } from './context'
+import { makeCatalogIndex, withinRanges, type EvalContext } from './context'
 import { airSide } from './cooling/air'
 import { rideThrough } from './cooling/buffer'
 import { liquidSide } from './cooling/liquid'
@@ -20,7 +20,8 @@ import { sizeEquipment } from './sizing'
  * Pure, deterministic evaluation of a plan. The catalog is `plan.catalog` merged over the built-ins
  * (plan entries win). A plan whose climate preset is missing evaluates to an empty result.
  */
-export function evaluate(plan: Plan, builtins: Builtins): Evaluation {
+export function evaluate(input: Plan, builtins: Builtins): Evaluation {
+  const plan = withinRanges(input)
   const catalog = makeCatalogIndex([...builtins.entries, ...Object.values(plan.catalog)])
   const climate = catalog.get(plan.site.climateId, 'climate')
   if (!climate) return emptyEvaluation(plan.network.oversubscription)

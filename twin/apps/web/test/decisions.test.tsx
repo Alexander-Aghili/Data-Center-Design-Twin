@@ -168,6 +168,30 @@ describe('decision panels', () => {
     expect(document.getElementById(route.getAttribute('aria-describedby')!)?.textContent).toContain('Overhead piping needs a ceiling of 4 m')
   })
 
+  it('oversubscription fields keep to the command ranges (power 1 to 2, network 1 to 8)', () => {
+    const cases = [
+      { layer: 'power', target: 'decision:power.oversubscription', name: 'Oversubscription allowance', low: '0.5', high: '2.5', ok: '1.2', max: 2 },
+      { layer: 'network', target: 'decision:network.oversubscription', name: 'Oversubscription', low: '0.5', high: '16', ok: '2', max: 8 },
+    ] as const
+    for (const c of cases) {
+      const { unmount } = render(<DecisionPanel layer={c.layer} />)
+      const input = within(field(c.target)).getByRole('textbox', { name: c.name })
+      const message = () => document.getElementById(input.getAttribute('aria-describedby')!)?.textContent
+      fireEvent.change(input, { target: { value: c.low } })
+      fireEvent.blur(input)
+      expect(message()).toContain('Enter 1 or more')
+      fireEvent.change(input, { target: { value: c.high } })
+      fireEvent.blur(input)
+      expect(message()).toContain(`Enter ${c.max} or less`)
+      expect(send).not.toHaveBeenCalled()
+      fireEvent.change(input, { target: { value: c.ok } })
+      fireEvent.blur(input)
+      expect(send).toHaveBeenCalledTimes(1)
+      send.mockClear()
+      unmount()
+    }
+  })
+
   it('Layout panel rejects an empty From slot instead of placing at slot 0', async () => {
     render(<DecisionPanel layer="layout" />)
     const form = await screen.findByRole('form', { name: 'Place racks' })

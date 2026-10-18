@@ -234,3 +234,22 @@ describe('auto-sized equipment in the full pipeline', () => {
     expect(byKind('power.ups')).toHaveLength(1)
   })
 })
+
+describe('out-of-range inputs stay bounded', () => {
+  it('a near-zero oversubscription in a plan that skipped validation sizes as no oversubscription', () => {
+    const plan = demoPlan()
+    const atOne = evaluate(plan, builtins)
+    const tiny = evaluate({ ...plan, power: { ...plan.power, oversubscription: 1e-9 }, network: { ...plan.network, oversubscription: 1e-9 } }, builtins)
+    const busways = (e: typeof atOne) => e.equipment.filter((i) => i.key.startsWith('busway:')).map((i) => [i.key, i.count, i.objectIds.length])
+    expect(busways(tiny)).toEqual(busways(atOne))
+    expect(tiny.network).toEqual(atOne.network)
+  })
+
+  it('an overridden unit count does not allocate one 3D object per unit without limit', () => {
+    const plan = demoPlan()
+    const evaluation = evaluate({ ...plan, overrides: [{ key: 'busway:R3', count: 1e9 }] }, builtins)
+    const busway = evaluation.equipment.find((i) => i.key === 'busway:R3')
+    expect(busway?.count).toBe(1e9)
+    expect(busway?.objectIds.length).toBeLessThanOrEqual(1000)
+  })
+})

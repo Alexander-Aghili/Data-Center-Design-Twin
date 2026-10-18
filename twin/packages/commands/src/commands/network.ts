@@ -1,4 +1,3 @@
-import { CommandError } from '@twin/schema'
 import { defineCommand, type AnyCommandDef } from '../define'
 import { formatNumber } from '../format'
 
@@ -21,9 +20,8 @@ const setNetworkOversubscription = defineCommand({
   layer: 'network',
   title: 'Set network oversubscription',
   description:
-    'Sets the leaf uplink oversubscription ratio, as the number before ":1" (1 = 1:1 non-blocking, 2 = 2:1). Higher ratios need fewer spine ports and optics but slow all-to-all traffic. Must be at least 1.',
+    'Sets the leaf uplink oversubscription ratio, as the number before ":1" (1 = 1:1 non-blocking, 2 = 2:1). Higher ratios need fewer spine ports and optics but slow all-to-all traffic. Must be between 1 and 8.',
   apply(draft, payload) {
-    if (payload.ratio < 1) throw new CommandError('Network oversubscription must be at least 1 (1 means 1:1, non-blocking)', 'payload.ratio')
     draft.network.oversubscription = payload.ratio
   },
   summarize: (payload, plan) =>

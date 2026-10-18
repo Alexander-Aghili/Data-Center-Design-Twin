@@ -17,6 +17,25 @@ function integrityProblems(plan: Plan, catalog: CatalogIndex): string[] {
   const lines: string[] = []
   const groupIds = new Set(plan.rackGroups.map((g) => g.id))
   const rowIds = new Set(plan.hall.rows.map((r) => r.id))
+  const positionIds = new Set(plan.hall.positions.map((p) => p.id))
+  if (!findEntry(plan, catalog, plan.site.climateId, 'climate')) lines.push(`site.climateId: unknown climate "${plan.site.climateId}"`)
+  if (!findEntry(plan, catalog, plan.cooling.heatRejectionId, 'heatRejection')) {
+    lines.push(`cooling.heatRejectionId: unknown heat rejection method "${plan.cooling.heatRejectionId}"`)
+  }
+  plan.hall.positions.forEach((p, i) =>
+    p.servesRows.forEach((rowId, j) => {
+      if (!rowIds.has(rowId)) lines.push(`hall.positions.${i}.servesRows.${j}: unknown row "${rowId}"`)
+    }),
+  )
+  plan.overrides.forEach((o, i) => {
+    // The plant takes a heat rejection model; every other key an equipment model.
+    if (o.modelId !== undefined && !findEntry(plan, catalog, o.modelId, 'equipment') && !findEntry(plan, catalog, o.modelId, 'heatRejection')) {
+      lines.push(`overrides.${i}.modelId: unknown equipment model "${o.modelId}"`)
+    }
+    o.positionIds?.forEach((id, j) => {
+      if (!positionIds.has(id)) lines.push(`overrides.${i}.positionIds.${j}: unknown equipment position "${id}"`)
+    })
+  })
   plan.rackGroups.forEach((g, i) => {
     if (!findEntry(plan, catalog, g.rackTypeId, 'rack')) lines.push(`rackGroups.${i}.rackTypeId: unknown rack type "${g.rackTypeId}"`)
     if (!findEntry(plan, catalog, g.coolingMethodId, 'rackCooling')) {
@@ -77,7 +96,7 @@ const importPlan = defineCommand({
   layer: 'plan',
   title: 'Import plan',
   description:
-    'Replaces the whole plan with a plan JSON document (schemaVersion 1), such as a file exported earlier. The document is checked first: schema, references between rack groups, rows and racks, and rack overlaps. On any problem nothing changes and the error lists each one as "path: problem".',
+    'Replaces the whole plan with a plan JSON document (schemaVersion 1), such as a file exported earlier. The document is checked first: schema, catalog references (climate, heat rejection, rack types, cooling methods, equipment models), references between rack groups, rows, positions and racks, and rack overlaps. On any problem nothing changes and the error lists each one as "path: problem".',
   apply(draft, payload, ctx) {
     Object.assign(draft, parsePlan(payload.plan, ctx.catalog))
   },

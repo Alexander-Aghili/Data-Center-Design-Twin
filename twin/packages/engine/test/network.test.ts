@@ -281,10 +281,10 @@ describe('networkFabric', () => {
     expect(result.checks.find((c) => c.kind === 'network.copperReach')?.status).toBe('unknown')
   })
 
-  it('an empty hall evaluates to zeros and passing checks', () => {
+  it('an empty hall evaluates to zeros, an unknown base latency and passing checks', () => {
     const { ctx, racks } = setup({ slots: [] })
     const result = networkFabric(ctx, racks)
-    expect(result.network).toEqual({ links: [], opticsW: 0, cableM: 0, baseLatencyNs: 0, oversubscription: 1 })
+    expect(result.network).toEqual({ links: [], opticsW: 0, cableM: 0, baseLatencyNs: null, oversubscription: 1 })
     expect(result.checks.map((c) => c.status)).toEqual(['pass', 'pass'])
     expect(result.metrics.find((m) => m.id === 'network.baseLatencyNs')?.value).toBeNull()
   })

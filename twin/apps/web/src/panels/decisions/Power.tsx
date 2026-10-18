@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import type { EquipmentEntry, Plan } from '@twin/schema'
+import { POWER_OVERSUBSCRIPTION_RANGE, type EquipmentEntry, type Plan } from '@twin/schema'
 import { useTwinStore } from '../../state/store'
 import { useCatalog } from '../fields/CatalogPicker'
 import { Field, useField } from '../fields/Field'
@@ -99,12 +99,13 @@ export function PowerDecisions({ plan }: { plan: Plan }) {
       <Field
         label="Oversubscription allowance"
         target="decision:power.oversubscription"
-        hint="How far rack load may exceed busway rating. 1.0 allows none."
+        hint="How far rack load may exceed busway rating, from 1.0 (none) to 2.0."
       >
         <NumberInput
           value={p.oversubscription}
           unit="× rating"
-          above={0}
+          min={POWER_OVERSUBSCRIPTION_RANGE.min}
+          max={POWER_OVERSUBSCRIPTION_RANGE.max}
           onCommit={(factor) => send({ type: 'setOversubscription', payload: { factor } })}
         />
       </Field>

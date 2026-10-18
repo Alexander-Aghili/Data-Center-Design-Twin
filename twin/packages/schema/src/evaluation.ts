@@ -147,7 +147,7 @@ export const NetworkResultSchema = z.object({
   ),
   opticsW: z.number(),
   cableM: z.number(),
-  baseLatencyNs: z.number(),
+  baseLatencyNs: z.number().nullable(), // null when no link exists (empty hall)
   oversubscription: z.number(),
 })
 export type NetworkResult = z.infer<typeof NetworkResultSchema>

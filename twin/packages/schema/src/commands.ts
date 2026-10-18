@@ -6,8 +6,10 @@ import {
   FabricSchema,
   FloorTypeSchema,
   LayerIdSchema,
+  NetworkOversubscriptionSchema,
   NoteImportanceSchema,
   PipingRouteSchema,
+  PowerOversubscriptionSchema,
   RedundancySchema,
   WorkloadPurposeSchema,
   type LayerId,
@@ -54,10 +56,10 @@ export const CommandSchemas = {
   // power
   setRedundancy: z.object({ redundancy: RedundancySchema }),
   setDistribution: z.object({ distribution: PowerDistributionSchema }),
-  setOversubscription: z.object({ factor: z.number().positive() }),
+  setOversubscription: z.object({ factor: PowerOversubscriptionSchema }),
   // network
   setFabric: z.object({ fabric: FabricSchema }),
-  setNetworkOversubscription: z.object({ ratio: z.number().positive() }),
+  setNetworkOversubscription: z.object({ ratio: NetworkOversubscriptionSchema }),
   // equipment
   overrideEquipment: z.object({
     key: id,

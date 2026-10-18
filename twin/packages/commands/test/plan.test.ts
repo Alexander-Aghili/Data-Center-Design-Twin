@@ -61,6 +61,33 @@ describe('importPlan', () => {
     expect(message).toContain('placements.81.rowId: unknown row "R9"')
   })
 
+  it('rejects unknown climate, heat rejection, override and position references', () => {
+    const p = plan()
+    p.site.climateId = 'climate.dalas'
+    p.cooling.heatRejectionId = 'hr.nothing'
+    p.rackGroups[0]!.rackTypeId = 'rack.nothing'
+    p.rackGroups[0]!.coolingMethodId = 'rc.nothing'
+    p.overrides.push({ key: 'cdu:R3', modelId: 'eq.nothing', positionIds: ['P-nowhere'] })
+    p.hall.positions[0]!.servesRows = ['R99']
+    const message = rejection(plan(), 'importPlan', { plan: p }).message
+    expect(message).toContain('site.climateId: unknown climate "climate.dalas"')
+    expect(message).toContain('cooling.heatRejectionId: unknown heat rejection method "hr.nothing"')
+    expect(message).toContain('rackGroups.0.rackTypeId: unknown rack type "rack.nothing"')
+    expect(message).toContain('rackGroups.0.coolingMethodId: unknown rack cooling method "rc.nothing"')
+    expect(message).toContain('overrides.0.modelId: unknown equipment model "eq.nothing"')
+    expect(message).toContain('overrides.0.positionIds.0: unknown equipment position "P-nowhere"')
+    expect(message).toContain(`hall.positions.0.servesRows.0: unknown row "R99"`)
+  })
+
+  it('rejects out-of-range oversubscription in an imported plan', () => {
+    const p = plan()
+    p.power.oversubscription = 1e-9
+    p.network.oversubscription = 100
+    const message = rejection(plan(), 'importPlan', { plan: p }).message
+    expect(message).toMatch(/power\.oversubscription: /)
+    expect(message).toMatch(/network\.oversubscription: /)
+  })
+
   it('importPlan on a valid plan replaces it and keeps schemaVersion 1', () => {
     const imported = run(plan(), 'renamePlan', { name: 'Imported hall' }).plan
     const result = run(plan(), 'importPlan', { plan: JSON.parse(JSON.stringify(imported)) })

@@ -16,6 +16,11 @@ describe('power decisions', () => {
   })
 
   it('rejects oversubscription below 1', () => {
-    expectRejected(plan(), 'setOversubscription', { factor: 0.8 }, 'Power oversubscription must be at least 1 (1 means no oversubscription)')
+    expectRejected(plan(), 'setOversubscription', { factor: 0.8 }, /payload\.factor: Power oversubscription must be at least 1 \(1 means no oversubscription\)/)
+    expectRejected(plan(), 'setOversubscription', { factor: 1e-9 }, /must be at least 1/)
+  })
+
+  it('rejects oversubscription above 2', () => {
+    expectRejected(plan(), 'setOversubscription', { factor: 2.5 }, /payload\.factor: Power oversubscription must be at most 2/)
   })
 })

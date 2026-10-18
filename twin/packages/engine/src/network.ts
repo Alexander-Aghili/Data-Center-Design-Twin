@@ -176,7 +176,7 @@ export function networkFabric(ctx: EvalContext, racks: RackResult[]): NetworkSli
   ]
 
   return {
-    network: { links, opticsW, cableM, baseLatencyNs: baseLatencyNs ?? 0, oversubscription },
+    network: { links, opticsW, cableM, baseLatencyNs, oversubscription },
     checks,
     metrics,
   }

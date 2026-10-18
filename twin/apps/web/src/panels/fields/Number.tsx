@@ -16,6 +16,7 @@ export function NumberInput(props: {
   onCommit(value: number): void | Promise<void>
   scale?: number
   min?: number
+  max?: number
   /** Smallest value excluded, for quantities that must be positive. */
   above?: number
 }) {
@@ -27,6 +28,7 @@ export function NumberInput(props: {
     const n = Number(text.trim().replace(/,/g, ''))
     if (text.trim() === '' || !Number.isFinite(n)) return 'Enter a number'
     if (props.min !== undefined && n < props.min) return `Enter ${props.min} or more`
+    if (props.max !== undefined && n > props.max) return `Enter ${props.max} or less`
     if (props.above !== undefined && n <= props.above) return `Enter a number above ${props.above}`
     return null
   }

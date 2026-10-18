@@ -1,4 +1,3 @@
-import { CommandError } from '@twin/schema'
 import { defineCommand, type AnyCommandDef } from '../define'
 import { formatNumber } from '../format'
 
@@ -33,9 +32,8 @@ const setOversubscription = defineCommand({
   layer: 'power',
   title: 'Set power oversubscription',
   description:
-    'Sets the power oversubscription factor: the ratio of summed rack peak power to provisioned power. 1 means none; 1.2 provisions for 1/1.2 of the peak and relies on racks not peaking together. Must be at least 1.',
+    'Sets the power oversubscription factor: the ratio of summed rack peak power to provisioned power. 1 means none; 1.2 provisions for 1/1.2 of the peak and relies on racks not peaking together. Must be between 1 and 2.',
   apply(draft, payload) {
-    if (payload.factor < 1) throw new CommandError('Power oversubscription must be at least 1 (1 means no oversubscription)', 'payload.factor')
     draft.power.oversubscription = payload.factor
   },
   summarize: (payload, plan) =>

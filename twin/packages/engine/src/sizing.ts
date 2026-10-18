@@ -148,6 +148,12 @@ interface Candidate {
   entry?: EquipmentEntry
 }
 
+/**
+ * Most 3D object ids one sized item gets. The scene draws one object per id; hall positions and row busways
+ * hold far fewer units, so only an override with a huge unit count reaches this, and then the item draws this many.
+ */
+const MAX_OBJECT_IDS = 1000
+
 interface Demand {
   key: string
   category: string
@@ -238,7 +244,7 @@ function fill(ctx: EvalContext, d: Demand, free: FreeMap): Fill {
       loadW: d.loadW,
       capacityW: usableW,
       // Same form as the web geometry's objectIdForEquipment: "eq:<key>:<index>".
-      objectIds: Array.from({ length: count }, (_, i) => `eq:${d.key}:${i}`),
+      objectIds: Array.from({ length: Math.min(count, MAX_OBJECT_IDS) }, (_, i) => `eq:${d.key}:${i}`),
     },
   }
 }

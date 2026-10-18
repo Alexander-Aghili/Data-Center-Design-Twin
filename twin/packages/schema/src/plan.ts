@@ -113,15 +113,32 @@ export const CoolingDecisionsSchema = z.object({
   containment: ContainmentSchema,
 })
 
+/**
+ * Power oversubscription: summed rack peak over provisioned power. 1 is none; 2 (half the peak provisioned)
+ * is already far past what operators run, and smaller values would size unbounded equipment counts.
+ */
+export const POWER_OVERSUBSCRIPTION_RANGE = { min: 1, max: 2 } as const
+/** Leaf uplink oversubscription as the number before ":1". 1:1 is non-blocking; 8:1 is the far end for AI fabrics. */
+export const NETWORK_OVERSUBSCRIPTION_RANGE = { min: 1, max: 8 } as const
+
+export const PowerOversubscriptionSchema = z
+  .number()
+  .min(POWER_OVERSUBSCRIPTION_RANGE.min, `Power oversubscription must be at least ${POWER_OVERSUBSCRIPTION_RANGE.min} (1 means no oversubscription)`)
+  .max(POWER_OVERSUBSCRIPTION_RANGE.max, `Power oversubscription must be at most ${POWER_OVERSUBSCRIPTION_RANGE.max} (provisioning for half the rack peak)`)
+export const NetworkOversubscriptionSchema = z
+  .number()
+  .min(NETWORK_OVERSUBSCRIPTION_RANGE.min, `Network oversubscription must be at least ${NETWORK_OVERSUBSCRIPTION_RANGE.min} (1 means 1:1, non-blocking)`)
+  .max(NETWORK_OVERSUBSCRIPTION_RANGE.max, `Network oversubscription must be at most ${NETWORK_OVERSUBSCRIPTION_RANGE.max} (8:1)`)
+
 export const PowerDecisionsSchema = z.object({
   redundancy: RedundancySchema,
   distribution: PowerDistributionSchema,
-  oversubscription: z.number().positive(),
+  oversubscription: PowerOversubscriptionSchema,
 })
 
 export const NetworkDecisionsSchema = z.object({
   fabric: FabricSchema,
-  oversubscription: z.number().positive(),
+  oversubscription: NetworkOversubscriptionSchema,
 })
 
 export const PlanSchema = z.object({

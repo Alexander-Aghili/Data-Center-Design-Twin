@@ -29,6 +29,7 @@ describe('engine skeleton', () => {
     const evaluation = evaluate(createDefaultPlan(), { entries: [], rules })
     expect(evaluation.checks).toEqual([])
     expect(evaluation.headline.pueAnnual).toBeNull()
+    expect(evaluation.network.baseLatencyNs).toBeNull()
   })
 
   it('makeCatalogIndex lets later entries win and filters by kind', () => {
