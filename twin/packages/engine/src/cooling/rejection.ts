@@ -271,7 +271,7 @@ function capacityCheck(
   const units = `${count} ${count === 1 ? 'unit' : 'units'} of ${mw(plant.unitW)}`
   const sentences = [
     `Heat to reject at the worst hour is ${mw(loadW)}.`,
-    `${sized ? 'The plant has' : 'Sized to'} ${units} (${plant.entry.name}), ${usable} usable after the ${redundancy} spares: ${mw(limit)}.`,
+    `${sized ? 'The plant has' : 'Sized to'} ${units} (${plant.entry.name}), ${usable} usable with ${redundancy} redundancy: ${mw(limit)}.`,
   ]
   if (needsTrim) {
     sentences.push(
