@@ -1,3 +1,4 @@
+import Anthropic from '@anthropic-ai/sdk'
 import { diffEvaluations } from '@twin/engine'
 import type { AgentEvent, EvalDiff, Evaluation, Proposal, Severity, ViewAction } from '@twin/schema'
 import { randomUUID } from 'node:crypto'
@@ -32,10 +33,13 @@ export interface AgentRuntimeDeps {
   views?: ViewSource
 }
 
+const MISSING_KEY = 'The agent needs an API key in .env'
 const FRESH_CONVERSATION_OFFER = 'This is a different plan now. Start a new conversation if the earlier discussion no longer applies.'
 
 export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
   const client = deps.client ?? createAnthropicClient()
+  // Without a key every request would fail inside the SDK; say so plainly instead of calling the API.
+  const missingKey = client instanceof Anthropic && client.apiKey === null && client.authToken === null
   const model = deps.model ?? AGENT_MODEL
   const diff = deps.diff ?? diffEvaluations
   const file = deps.dataDir ? join(deps.dataDir, 'conversation.json') : null
@@ -85,7 +89,7 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
 
   const observe = ({ prev, next, summaries }: MergedChanges) => {
     const d = diff(prev, next)
-    if (!isWorthObserving(d)) return
+    if (missingKey || !isWorthObserving(d)) return
     enqueueTurn({ text: formatAppEvent(d, summaries), effort: 'low', trigger: 'observation', severity: severityOf(d) })
   }
   const coalescer = new ChangeCoalescer(observe)
@@ -114,6 +118,7 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
   return {
     handleChat(text) {
       emit({ kind: 'userMessage', messageId: randomUUID(), text })
+      if (missingKey) return emit({ kind: 'error', message: MISSING_KEY })
       enqueueTurn({ text, effort: 'high', trigger: 'chat', severity: 'info' })
     },
 
@@ -127,6 +132,7 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
         return
       }
       if (change.author === 'user') coalescer.add(change)
+      else coalescer.cut()
     },
 
     resetConversation() {

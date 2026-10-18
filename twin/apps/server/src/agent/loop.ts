@@ -15,10 +15,8 @@ import { toolResultNumbers, type AgentTool, type ToolOutcome } from './tools/ind
 const MAX_TOKENS = 16000
 /** Model calls allowed in one turn before the loop gives up, so a confused turn cannot run up cost. */
 const MAX_STEPS = 20
-/** Visible retries for a 429 that outlasted the SDK's own retries. */
+/** Visible retries for a 429 that outlasted the SDK's own retries (only before anything streamed). */
 const RATE_LIMIT_RETRIES = 2
-/** Re-issues of a request whose streamed tool input could not be parsed as JSON at all. */
-const JSON_RETRIES = 2
 const BETAS = [
   'server-side-fallback-2026-07-01', // fallbacks: 'default'
   'mid-conversation-output-config-2026-07-01', // per-message effort
@@ -32,15 +30,17 @@ const MESSAGES = {
 }
 
 /**
- * Tool definitions as sent to the API: fixed order, eager input streaming, a cache breakpoint on the
- * last one, and no `$schema` key (zod's JSON Schema output adds it; the API's input_schema has no use for it).
+ * Tool definitions as sent to the API: fixed order, a cache breakpoint on the last one, and no `$schema`
+ * key (zod's JSON Schema output adds it; the API's input_schema has no use for it). Eager input streaming
+ * stays off: tool inputs here are short command payloads that the UI never renders while they stream, and
+ * buffered input is validated by the API, so the SDK never fails on unparseable JSON and no request has
+ * to be re-issued after text was already shown.
  */
 export function toolParams(tools: AgentTool[]): BetaTool[] {
   return tools.map((t, i) => ({
     name: t.name,
     description: t.description,
     input_schema: { ...withoutSchemaKey(t.inputSchema), type: 'object' as const },
-    eager_input_streaming: true,
     ...(i === tools.length - 1 ? { cache_control: { type: 'ephemeral' as const } } : {}),
   }))
 }
@@ -124,6 +124,7 @@ class TurnOutput {
   #started = false
   #wroteText = false
   #lastIndex = -1
+  #streamedThisRequest = false
 
   constructor(private readonly ctx: TurnContext) {}
 
@@ -139,6 +140,12 @@ class TurnOutput {
 
   newRequest(): void {
     this.#lastIndex = -1
+    this.#streamedThisRequest = false
+  }
+
+  /** A request that already showed text cannot be retried without repeating that text. */
+  get streamedThisRequest(): boolean {
+    return this.#streamedThisRequest
   }
 
   text(index: number, text: string): void {
@@ -147,6 +154,7 @@ class TurnOutput {
     const separated = this.#wroteText && index !== this.#lastIndex ? `\n\n${text}` : text
     this.#lastIndex = index
     this.#wroteText = true
+    this.#streamedThisRequest = true
     this.ctx.emit({ kind: 'textDelta', messageId: this.ctx.messageId, text: separated })
   }
 
@@ -162,7 +170,6 @@ class TurnOutput {
 
 async function callModel(ctx: TurnContext, out: TurnOutput): Promise<FinalMessage> {
   let rateLimited = 0
-  let badJson = 0
   for (;;) {
     out.newRequest()
     try {
@@ -175,14 +182,12 @@ async function callModel(ctx: TurnContext, out: TurnOutput): Promise<FinalMessag
       }
       return await stream.finalMessage()
     } catch (err) {
-      if (err instanceof Anthropic.RateLimitError && rateLimited < RATE_LIMIT_RETRIES) {
+      if (err instanceof Anthropic.RateLimitError && rateLimited < RATE_LIMIT_RETRIES && !out.streamedThisRequest) {
         const seconds = retryAfterSeconds(err, rateLimited++)
         out.error(`Rate limited, retrying in ${seconds}s`)
         await sleep(seconds * 1000)
         continue
       }
-      // An AnthropicError that is not an API error is the SDK failing to parse streamed tool-input JSON.
-      if (err instanceof Anthropic.AnthropicError && !(err instanceof Anthropic.APIError) && badJson++ < JSON_RETRIES) continue
       throw err
     }
   }
