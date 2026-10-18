@@ -1,0 +1,15 @@
+spec_version: 2
+name: cool-the-cluster
+version: 0.1.0
+
+# What the evaluator reports, in ranking order: every passing report must start
+# with exactly these, and ranking is lexicographic in this order.
+metrics:
+  - {name: score, direction: min}
+  - {name: worst_scenario_ratio, direction: min}
+  - {name: worst_inlet_c, direction: min}
+
+# Hard kill for a hung evaluator. A full evaluation takes well under a second.
+watchdog_timeout_s: 120
+
+params: {}

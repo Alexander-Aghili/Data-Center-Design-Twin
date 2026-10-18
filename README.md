@@ -15,6 +15,7 @@ Early. What exists today:
 | Core engine and `dctwin` CLI (Python) | Planned — [Plan 1](docs/superpowers/plans/2026-10-18-plan1-core-engine-cli.md) |
 | API and 3D web viewer (TypeScript, Three.js) | Planned — Plan 2 |
 | Sculptured design desk team | Planned — Plan 3 |
+| Operations twin prototype (energy per unit of work, telemetry tracker, AutoLab hill) | Working — [prototypes/cool-the-cluster](prototypes/cool-the-cluster/) |
 
 ## What Phase 1 does
 
@@ -91,6 +92,7 @@ core/         Python engine and CLI (planned)
 web/          TypeScript + Three.js viewer (planned)
 sculptured/   design-desk team files (planned)
 examples/     sample hall, project and brief (planned)
+prototypes/   working prototypes — cool-the-cluster/ (optimize + track twin, AutoLab hill)
 ```
 
 ## Working with the catalog

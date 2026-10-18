@@ -1,0 +1,176 @@
+{
+ "as_of_day": 119,
+ "fouling": {
+  "G00": 0.0075,
+  "G01": 0.004,
+  "G02": 0.0017,
+  "G03": 0.0075,
+  "G04": 0.0063,
+  "G05": 0.0046,
+  "G06": 0.007,
+  "G07": 0.0,
+  "G08": 0.0079,
+  "G09": 0.0011,
+  "G10": 0.004,
+  "G11": 0.0,
+  "G12": 0.0079,
+  "G13": 0.0074,
+  "G14": 0.002,
+  "G15": 0.0036,
+  "G16": 0.0065,
+  "G17": 0.0069,
+  "G18": 0.0017,
+  "G19": 0.0006,
+  "G20": 0.0037,
+  "G21": 0.2095,
+  "G22": 0.0008,
+  "G23": 0.0031
+ },
+ "fouling_per_day": {
+  "G00": 4e-05,
+  "G01": 0.0,
+  "G02": 0.0,
+  "G03": 9.8e-05,
+  "G04": 0.000338,
+  "G05": 0.000117,
+  "G06": 0.000179,
+  "G07": 0.0,
+  "G08": 0.000106,
+  "G09": 5e-06,
+  "G10": 9.4e-05,
+  "G11": 2.8e-05,
+  "G12": 0.000305,
+  "G13": 0.0,
+  "G14": 0.000229,
+  "G15": 0.0,
+  "G16": 3.5e-05,
+  "G17": 0.0,
+  "G18": 0.0,
+  "G19": 0.0,
+  "G20": 4.3e-05,
+  "G21": 0.002256,
+  "G22": 0.0,
+  "G23": 0.000273
+ },
+ "recirc_scale": {
+  "S2": 3.277
+ },
+ "findings": [
+  {
+   "kind": "cold_plate_fouling",
+   "asset": "G21",
+   "severity": "high",
+   "evidence": "cold-plate resistance +21% vs commissioning, rising 6.8%/month; junction peaked 92.2 C last week",
+   "prediction": "throttling now (junction over 87 C)",
+   "material": "pex"
+  },
+  {
+   "kind": "pipe_scaling",
+   "asset": "G08",
+   "severity": "medium",
+   "evidence": "branch dP 117.3 -> 121.5 kPa (+1.45 kPa/month); inferred roughness 673 um vs 1.5 um new / 30 um 5-yr spec",
+   "prediction": "CDU1 hits its 185 kPa pump-head limit in ~485 days"
+  },
+  {
+   "kind": "laser_wear",
+   "asset": "G03->N1 lane 5",
+   "severity": "high",
+   "evidence": "Tx bias 7.10 -> 10.57 mA (+1.42 mA/month)",
+   "prediction": "past wear-out alarm now"
+  },
+  {
+   "kind": "dirty_connector",
+   "asset": "G19->N0 lane 2",
+   "severity": "medium",
+   "evidence": "Rx power -2.6 -> -5.8 dBm, step change on day 75",
+   "prediction": "link margin cut; errors and flaps likely as optics age"
+  },
+  {
+   "kind": "recirculation",
+   "asset": "S2",
+   "severity": "medium",
+   "evidence": "inlet runs +0.85 K over the twin since ~day 60; recirculation x3.3",
+   "prediction": "check blanking panels / containment door on this rack"
+  }
+ ],
+ "predictions": [
+  {
+   "when": "as designed",
+   "annual_mwh": 7927.557682738049,
+   "kwh_per_rack_hour": 49.73857786520742,
+   "summer_min_job_speed": 1.0,
+   "summer_worst_junction_c": 81.96527777777777,
+   "summer_worst_inlet_c": 26.980759909725233,
+   "violations": []
+  },
+  {
+   "when": "today (calibrated)",
+   "annual_mwh": 7885.264971249224,
+   "kwh_per_rack_hour": 49.88158877056608,
+   "summer_min_job_speed": 0.9656485610739765,
+   "summer_worst_junction_c": 87.85878597313379,
+   "summer_worst_inlet_c": 27.557551646332247,
+   "violations": [
+    "summer_training: inlet of S2 reaches 27.50 C at 0.50 h (limit 27.0 C)",
+    "summer_training: inlet of S2 reaches 27.55 C at 1.50 h (limit 27.0 C)"
+   ]
+  },
+  {
+   "when": "+30 days",
+   "annual_mwh": 7835.751569804982,
+   "kwh_per_rack_hour": 50.05280446976546,
+   "summer_min_job_speed": 0.9284760489963446,
+   "summer_worst_junction_c": 88.78809877507936,
+   "summer_worst_inlet_c": 27.55449068514341,
+   "violations": [
+    "summer_training: inlet of S2 reaches 27.50 C at 0.50 h (limit 27.0 C)",
+    "summer_training: inlet of S2 reaches 27.55 C at 1.50 h (limit 27.0 C)"
+   ]
+  },
+  {
+   "when": "+90 days",
+   "annual_mwh": 7734.054952688996,
+   "kwh_per_rack_hour": 50.41708604233895,
+   "summer_min_job_speed": 0.860861590172135,
+   "summer_worst_junction_c": 90.47846024568469,
+   "summer_worst_inlet_c": 27.548922989480747,
+   "violations": [
+    "summer_training: inlet of S2 reaches 27.50 C at 0.50 h (limit 27.0 C)",
+    "summer_training: inlet of S2 reaches 27.55 C at 1.50 h (limit 27.0 C)"
+   ]
+  }
+ ],
+ "actions": [
+  {
+   "action": "Flush loop + clean cold plates on G21; move pex branches to stainless at next window",
+   "saves_mwh_yr": 22.793719687037115,
+   "urgency": "now"
+  },
+  {
+   "action": "Stop-gap until the flush: run warm-season coolant 0.5 C colder (setpoints_by_scenario) so fouled racks stop throttling",
+   "saves_mwh_yr": 3.431102521843169,
+   "urgency": "this week"
+  },
+  {
+   "action": "Re-install blanking panels / fix containment at S2",
+   "saves_mwh_yr": 0.0,
+   "urgency": "now",
+   "note": "summer_training: inlet of S2 reaches 27.50 C at 0.50 h (limit 27.0 C)"
+  },
+  {
+   "action": "Descale / chemically treat branch G08; add a strainer and water-quality sampling",
+   "saves_mwh_yr": 0.0,
+   "urgency": "before 485 days"
+  },
+  {
+   "action": "Replace transceiver G03->N1 lane 5 (pre-emptive)",
+   "saves_mwh_yr": 0.0,
+   "urgency": "past wear-out alarm now"
+  },
+  {
+   "action": "Inspect and clean connector on G19->N0 lane 2",
+   "saves_mwh_yr": 0.0,
+   "urgency": "next walk-through"
+  }
+ ]
+}
