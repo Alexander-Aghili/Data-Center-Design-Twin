@@ -52,24 +52,18 @@ function useNotes(target: string): Note[] {
   return useMemo(() => (notes ?? []).filter((n) => n.target === target), [notes, target])
 }
 
-/** Note badge, the notes themselves and the editor, for one note target. */
+/** Note flag with its count; it opens the notes themselves and the editor inline. */
 export function useNoted(target: string, subject: string) {
   useTrackTarget(target)
   const notes = useNotes(target)
-  const [editing, setEditing] = useState(false)
-  const editorId = useId()
-  const badge = (
-    <NoteBadge notes={notes} subject={subject} expanded={editing} controls={editorId} onToggle={() => setEditing((v) => !v)} />
-  )
-  const body = (
-    <>
+  const [open, setOpen] = useState(false)
+  const bodyId = useId()
+  const badge = <NoteBadge notes={notes} subject={subject} expanded={open} controls={bodyId} onToggle={() => setOpen((v) => !v)} />
+  const body = open && (
+    <div id={bodyId} className={s.notes}>
       {notes.length > 0 && <NoteList notes={notes} />}
-      {editing && (
-        <div id={editorId}>
-          <NoteEditor target={target} onAdded={() => setEditing(false)} />
-        </div>
-      )}
-    </>
+      <NoteEditor target={target} onAdded={() => setOpen(false)} />
+    </div>
   )
   return { badge, body }
 }

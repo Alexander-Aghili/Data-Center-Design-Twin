@@ -41,12 +41,12 @@
 }
 
 .segment input:checked + span {
-  background: var(--action, #1f4ed8);
+  background: var(--action);
   color: var(--clay-light);
   font-weight: 500;
 }
 
 .segment input:focus-visible + span {
-  outline: 2px solid var(--action, #1f4ed8);
+  outline: var(--focus-ring);
   outline-offset: -2px;
 }

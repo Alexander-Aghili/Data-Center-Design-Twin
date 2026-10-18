@@ -73,17 +73,17 @@
 }
 
 .details:hover {
-  color: var(--action-soft-ink, #1a3e9e);
-  background: var(--action-soft, #e3eeff);
+  color: var(--action-soft-ink);
+  background: var(--action-soft);
 }
 
 .details[aria-expanded='true'] {
-  color: var(--action-soft-ink, #1a3e9e);
-  background: var(--action-soft, #e3eeff);
+  color: var(--action-soft-ink);
+  background: var(--action-soft);
 }
 
 .details:focus-visible {
-  outline: 2px solid var(--action, #1f4ed8);
+  outline: var(--focus-ring);
   outline-offset: 1px;
 }
 
@@ -149,17 +149,17 @@
 }
 
 .option input:checked + .mark {
-  border-color: var(--action, #1f4ed8);
-  background: radial-gradient(circle, var(--action, #1f4ed8) 0 2.5px, transparent 3px);
+  border-color: var(--action);
+  background: radial-gradient(circle, var(--action) 0 2.5px, transparent 3px);
 }
 
 .option:has(input:checked) {
-  background: var(--action-soft, #e3eeff);
-  box-shadow: -6px 0 0 var(--action-soft, #e3eeff), 6px 0 0 var(--action-soft, #e3eeff);
+  background: var(--action-soft);
+  box-shadow: -6px 0 0 var(--action-soft), 6px 0 0 var(--action-soft);
 }
 
 .option input:focus-visible + .mark {
-  outline: 2px solid var(--action, #1f4ed8);
+  outline: var(--focus-ring);
   outline-offset: 2px;
 }
 

@@ -39,7 +39,7 @@ function openMore() {
 /** Note targets of the fields shown up front, outside "More settings". */
 function upFront(): string[] {
   return [...document.querySelectorAll<HTMLElement>('[data-note-target]')]
-    .filter((el) => !el.closest('[hidden]') && !el.matches('section'))
+    .filter((el) => !el.closest('[hidden]') && el.tagName !== 'SECTION')
     .map((el) => el.dataset.noteTarget!)
 }
 
@@ -200,8 +200,12 @@ describe('decision panels', () => {
       }))
       act(() => usePlan({ ...plan, notes }))
       for (const target of targets) {
-        expect(within(field(target)).getAllByRole('button', { name: /^1 note, for info/ }), target).not.toHaveLength(0)
-        expect(field(target).textContent, target).toContain(`About ${target}`)
+        const flag = within(field(target)).getAllByRole('button', { name: /^1 note, for info/ })[0]!
+        // The note opens from its flag, inline under the field.
+        expect(field(target).textContent, target).not.toContain(`About ${target}`)
+        fireEvent.click(flag)
+        expect(flag.getAttribute('aria-expanded')).toBe('true')
+        expect(document.getElementById(flag.getAttribute('aria-controls')!)?.textContent, target).toContain(`About ${target}`)
       }
       unmount()
     }

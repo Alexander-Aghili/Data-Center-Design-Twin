@@ -34,9 +34,8 @@ export function DecisionPanel(props: { layer: LayerId }) {
   return (
     <section className={s.panel} aria-labelledby={headingId} data-note-target={`layer:${props.layer}`}>
       <div className={s.head}>
-        <h2 id={headingId} className={s.heading}>
+        <h2 id={headingId} className={s.heading} aria-label={`${title} decisions`}>
           {title}
-          <span className="visually-hidden"> decisions</span>
         </h2>
         {owner && <span className={s.owner}>{owner.name}</span>}
         {plan && badge}

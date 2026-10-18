@@ -26,44 +26,6 @@
   align-self: center;
 }
 
-/*
- * Button colors from the shared action tokens. The shell defines them globally; the fallbacks keep the
- * card right until then (king blue for the one primary action, baby blue for secondary ones).
- */
-.panel :global(.btn--primary) {
-  background: var(--action, #1f4ed8);
-  border-color: var(--action, #1f4ed8);
-  color: #fff;
-}
-
-.panel :global(.btn--primary:hover:enabled) {
-  background: var(--action-hover, #183fb0);
-  border-color: var(--action-hover, #183fb0);
-}
-
-.panel :global(.btn--secondary) {
-  background: var(--action-soft, #e3eeff);
-  border-color: var(--action-soft, #e3eeff);
-  color: var(--action-soft-ink, #1a3e9e);
-  font-weight: 500;
-}
-
-.panel :global(.btn--secondary:hover:enabled) {
-  border-color: var(--action-ring, #8db4ff);
-}
-
-.panel :global(.btn--primary:disabled),
-.panel :global(.btn--secondary:disabled) {
-  background: var(--clay-mid);
-  border-color: var(--clay-mid);
-  color: var(--graphite);
-}
-
-.panel :global(.btn:focus-visible) {
-  outline: 2px solid var(--action, #1f4ed8);
-  outline-offset: 2px;
-}
-
 .lede {
   margin: var(--space-2) 0 0;
   font-size: var(--text-sm);
@@ -265,8 +227,8 @@
 }
 
 .slot[data-state='selected'] {
-  border-color: var(--action, #1f4ed8);
-  background: var(--action, #1f4ed8);
+  border-color: var(--action);
+  background: var(--action);
 }
 
 .zones {
@@ -307,14 +269,14 @@
 }
 
 .chip input:checked + span {
-  border-color: var(--action, #1f4ed8);
-  background: var(--action, #1f4ed8);
+  border-color: var(--action);
+  background: var(--action);
   color: var(--clay-light);
   font-weight: 500;
 }
 
 .chip input:focus-visible + span {
-  outline: 2px solid var(--action, #1f4ed8);
+  outline: var(--focus-ring);
   outline-offset: 1px;
 }
 

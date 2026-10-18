@@ -14,7 +14,7 @@ function strongest(notes: Note[]): NoteImportance | null {
 
 /**
  * Flag note marker, as on a drawing: the count of notes on a decision, drawn filled for "must",
- * outlined for "prefer" and dashed for "fyi". With no notes it is a faint flag that opens the editor.
+ * outlined for "prefer" and dashed for "fyi". It opens the notes and the editor; with no notes it is a faint flag.
  */
 export function NoteBadge(props: {
   notes: Note[]
@@ -26,7 +26,7 @@ export function NoteBadge(props: {
   const top = strongest(props.notes)
   const n = props.notes.length
   const name = top
-    ? `${n} ${n === 1 ? 'note' : 'notes'}, ${IMPORTANCE_LABEL[top].toLowerCase()}. Add a note to ${props.subject}`
+    ? `${n} ${n === 1 ? 'note' : 'notes'}, ${IMPORTANCE_LABEL[top].toLowerCase()}, on ${props.subject}`
     : `Add a note to ${props.subject}`
   return (
     <button

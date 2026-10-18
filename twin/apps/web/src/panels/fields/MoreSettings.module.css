@@ -11,8 +11,8 @@
   padding: 0 var(--space-2);
   border: 0;
   border-radius: var(--radius-control);
-  background: var(--action-soft, #e3eeff);
-  color: var(--action-soft-ink, #1a3e9e);
+  background: var(--action-soft);
+  color: var(--action-soft-ink);
   font: inherit;
   font-size: var(--text-sm);
   font-weight: 600;
@@ -22,11 +22,11 @@
 }
 
 .toggle:hover {
-  background: color-mix(in srgb, var(--action-soft, #e3eeff) 80%, var(--action, #1f4ed8));
+  background: var(--action-soft-hover);
 }
 
 .toggle:focus-visible {
-  outline: 2px solid var(--action, #1f4ed8);
+  outline: var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -60,8 +60,8 @@
 }
 
 .notes[data-importance='must'] {
-  background: var(--action-soft-ink, #1a3e9e);
-  border-color: var(--action-soft-ink, #1a3e9e);
+  background: var(--action-soft-ink);
+  border-color: var(--action-soft-ink);
   color: #fff;
 }
 
