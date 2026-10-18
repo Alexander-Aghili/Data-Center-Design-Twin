@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import websocket from '@fastify/websocket'
 import { SERVER_PORT, type AgentEvent, type Builtins } from '@twin/schema'
-import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify'
+import Fastify, { type FastifyBaseLogger, type FastifyInstance, type FastifyRequest } from 'fastify'
 import type { AgentRuntime, PlanStore } from './contracts'
 import { registerRoutes } from './routes'
 import { createPlanStore, type CommandApplier } from './store'
@@ -9,8 +9,8 @@ import { createHub } from './ws'
 
 export interface AppOptions {
   dataDir: string
-  /** Builds the design agent. Without it the server runs with a stand-in that explains the missing key. */
-  agentFactory?: (store: PlanStore) => AgentRuntime
+  /** Builds the design agent; it logs its API spend to `log`. Without it the server runs with a stand-in that explains the missing key. */
+  agentFactory?: (store: PlanStore, log: FastifyBaseLogger) => AgentRuntime
   /** Test seams; default to the built-in catalog and command registry. */
   builtins?: Builtins
   registry?: CommandApplier
@@ -83,6 +83,10 @@ function createOfflineAgent(): AgentRuntime {
     threadEvents: () => [...thread],
     runTool: async () => ({ ok: false, error: NO_AGENT_MESSAGE }),
     listTools: () => [],
+    stopTurn() {},
+    setAutoReview() {},
+    status: () => null,
+    onStatus: () => () => {},
   }
 }
 
@@ -95,7 +99,7 @@ export async function createApp(opts: AppOptions): Promise<FastifyInstance> {
     onError: (err, context) => app.log.error({ err }, context),
     onWarning: (text) => app.log.warn(text),
   })
-  const agent = opts.agentFactory?.(store) ?? createOfflineAgent()
+  const agent = opts.agentFactory?.(store, app.log) ?? createOfflineAgent()
   const stopFeedingAgent = store.onChange((change) => agent.handleChange(change))
   const hub = createHub({ store, agent, log: app.log })
 

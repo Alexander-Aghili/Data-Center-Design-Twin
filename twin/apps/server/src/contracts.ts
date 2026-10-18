@@ -1,4 +1,4 @@
-import type { AgentEvent, Builtins, Command, Evaluation, HistoryInfo, Plan, ViewAction } from '@twin/schema'
+import type { AgentEvent, AgentStatus, Builtins, Command, Evaluation, HistoryInfo, Plan, ViewAction } from '@twin/schema'
 
 export interface StoreChange {
   prev: Evaluation
@@ -42,5 +42,12 @@ export interface AgentRuntime {
   threadEvents(): AgentEvent[]
   runTool(name: string, input: unknown): Promise<ToolRunResult>
   listTools(): { name: string; description: string; inputSchema: object }[]
+  /** Aborts the running turn; its partial text stays and a "Stopped" line follows. */
+  stopTurn(): void
+  /** Turns the automatic review of the person's edits on or off (persisted). */
+  setAutoReview(on: boolean): void
+  /** Null when there is no agent to spend anything (no API key). */
+  status(): AgentStatus | null
+  onStatus(cb: (s: AgentStatus) => void): () => void
 }
 

@@ -1,14 +1,19 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { diffEvaluations } from '@twin/engine'
-import type { AgentEvent, EvalDiff, Evaluation, Proposal, Severity, ViewAction } from '@twin/schema'
+import type { AgentEvent, AgentStatus, EvalDiff, Evaluation, Proposal, Severity, ViewAction } from '@twin/schema'
 import { randomUUID } from 'node:crypto'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { z } from 'zod'
 import type { AgentRuntime, PlanStore, StoreChange, ToolRunResult } from '../contracts'
 import { AGENT_MODEL, createAnthropicClient, type AnthropicLike } from './client'
 import { Conversation, type Effort } from './conversation'
+import { DEFAULT_LIMITS, type AgentLimits } from './limits'
 import { callSummary, errorText, runTurn, toolParams } from './loop'
+import { dailyBudgetMessage, TurnMeter, type SpendLog } from './meter'
 import { ChangeCoalescer, formatAppEvent, isWorthObserving, severityOf, type MergedChanges } from './observe'
 import { toolResultNumbers, type AgentTool, type ToolOutcome } from './tools/index'
+import { UsageLedger } from './usage'
 
 /** Task 13's `ProposalBook`, as far as applying and dismissing go. */
 export interface ProposalControl {
@@ -31,6 +36,12 @@ export interface AgentRuntimeDeps {
   diff?: (prev: Evaluation, next: Evaluation) => EvalDiff
   proposals?: ProposalControl
   views?: ViewSource
+  /** Spending caps; the defaults unless the server read overrides from the environment. */
+  limits?: AgentLimits
+  /** Each API request's tokens and cost go here at info level. */
+  log?: SpendLog
+  /** Milliseconds since the epoch; the day of the budget and the review rate limit follow it. */
+  now?: () => number
 }
 
 interface Turn {
@@ -41,6 +52,20 @@ interface Turn {
 }
 
 const MISSING_KEY = 'The agent needs an API key in .env'
+const HOUR_MS = 3_600_000
+
+const SettingsSchema = z.object({ autoReview: z.boolean() })
+type Settings = z.infer<typeof SettingsSchema>
+
+function loadSettings(file: string | null): Settings {
+  if (!file || !existsSync(file)) return { autoReview: true }
+  try {
+    const parsed = SettingsSchema.safeParse(JSON.parse(readFileSync(file, 'utf8')))
+    return parsed.success ? parsed.data : { autoReview: true }
+  } catch {
+    return { autoReview: true }
+  }
+}
 const FRESH_CONVERSATION_OFFER = 'This is a different plan now. Start a new conversation if the earlier discussion no longer applies.'
 
 /** Ids of proposals in a thread that no later status event settled. */
@@ -60,8 +85,19 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
   const model = deps.model ?? AGENT_MODEL
   const diff = deps.diff ?? diffEvaluations
   const file = deps.dataDir ? join(deps.dataDir, 'conversation.json') : null
+  const settingsFile = deps.dataDir ? join(deps.dataDir, 'agent-settings.json') : null
+  const limits = deps.limits ?? DEFAULT_LIMITS
+  const now = deps.now ?? Date.now
+  const ledger = new UsageLedger(deps.dataDir ? join(deps.dataDir, 'usage.json') : null, () => new Date(now()))
   const tools = toolParams(deps.tools)
   const listeners = new Set<(e: AgentEvent) => void>()
+  const statusListeners = new Set<(s: AgentStatus) => void>()
+  let settings = loadSettings(settingsFile)
+  /** The turn now running: its meter for the live cost, its controller for Stop. */
+  let running: { meter: TurnMeter; abort: AbortController } | null = null
+  let lastTurnUsd = 0
+  /** When each automatic review of the last hour started. */
+  let reviewTimes: number[] = []
   let conversation = new Conversation(file)
   let planId = deps.store.state().plan.id
   let queue = Promise.resolve()
@@ -76,6 +112,24 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
     if (conv === conversation) for (const cb of listeners) cb(e)
   }
   const emit = (e: AgentEvent) => emitTo(conversation)(e)
+
+  const status = (): AgentStatus => {
+    const todayUsd = ledger.todayUsd()
+    return {
+      running: running !== null,
+      turnUsd: running ? running.meter.usd : lastTurnUsd,
+      todayUsd,
+      dailyBudgetUsd: limits.dailyBudgetUsd,
+      budgetSpent: todayUsd >= limits.dailyBudgetUsd,
+      autoReview: settings.autoReview,
+    }
+  }
+  const emitStatus = () => {
+    const s = status()
+    for (const cb of [...statusListeners]) cb(s)
+  }
+  const budgetSpent = () => ledger.todayUsd() >= limits.dailyBudgetUsd
+  const budgetNotice = () => emit({ kind: 'notice', message: dailyBudgetMessage(ledger.todayUsd(), limits.dailyBudgetUsd) })
 
   const save = (conv: Conversation) => {
     if (conv !== conversation) return
@@ -94,10 +148,16 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
     queue = queue.then(async () => {
       const turn = typeof next === 'function' ? next() : next
       if (!turn) return
+      // A chat queued behind a turn that used up the budget is not sent.
+      if (budgetSpent()) return budgetNotice()
       const conv = conversation
       conv.appendUserTurn(turn.text, turn.effort)
       const messageId = randomUUID()
       turnMessageId = messageId
+      const abort = new AbortController()
+      const meter = new TurnMeter({ model, limits, ledger, ...(deps.log ? { log: deps.log } : {}), onChange: emitStatus })
+      running = { meter, abort }
+      emitStatus()
       try {
         await runTurn({
           client,
@@ -109,9 +169,14 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
           trigger: turn.trigger,
           severity: turn.severity,
           emit: emitTo(conv),
+          signal: abort.signal,
+          meter,
         })
       } finally {
         turnMessageId = null
+        running = null
+        lastTurnUsd = meter.usd
+        emitStatus()
       }
       save(conv)
     })
@@ -124,21 +189,39 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
    */
   let pendingObservation: MergedChanges | null = null
 
+  /**
+   * Whether an automatic review may run now: it is on, the hourly count has room, and at least the reserve share
+   * of today's budget is left for chat.
+   */
+  const reviewAllowed = (t: number): boolean => {
+    reviewTimes = reviewTimes.filter((at) => t - at < HOUR_MS)
+    if (!settings.autoReview || reviewTimes.length >= limits.observationsPerHour) return false
+    return ledger.todayUsd() <= limits.dailyBudgetUsd * (1 - limits.observationReserve)
+  }
+
+  const reviewTurn = (): Turn | null => {
+    const changes = pendingObservation
+    pendingObservation = null
+    if (!changes) return null
+    const t = now()
+    if (!reviewAllowed(t)) return null
+    const d = diff(changes.prev, changes.next)
+    if (!isWorthObserving(d)) return null
+    reviewTimes.push(t)
+    return { text: formatAppEvent(d, changes.summaries), effort: 'low', trigger: 'observation', severity: severityOf(d) }
+  }
+
+  /** A review closer than the minimum gap to the last one waits for the gap to pass; edits meanwhile merge into it. */
   const observe = (merged: MergedChanges) => {
-    if (missingKey) return
+    if (missingKey || !settings.autoReview) return
     if (pendingObservation) {
       pendingObservation = { prev: pendingObservation.prev, next: merged.next, summaries: [...pendingObservation.summaries, ...merged.summaries] }
       return
     }
     pendingObservation = merged
-    enqueueTurn(() => {
-      const changes = pendingObservation
-      pendingObservation = null
-      if (!changes) return null
-      const d = diff(changes.prev, changes.next)
-      if (!isWorthObserving(d)) return null
-      return { text: formatAppEvent(d, changes.summaries), effort: 'low', trigger: 'observation', severity: severityOf(d) }
-    })
+    const wait = (reviewTimes.at(-1) ?? -Infinity) + limits.observationGapMs - now()
+    if (wait <= 0) enqueueTurn(reviewTurn)
+    else setTimeout(() => enqueueTurn(reviewTurn), wait).unref?.()
   }
   const coalescer = new ChangeCoalescer(observe)
 
@@ -186,7 +269,35 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
     handleChat(text) {
       emit({ kind: 'userMessage', messageId: randomUUID(), text })
       if (missingKey) return emit({ kind: 'error', message: MISSING_KEY })
+      if (budgetSpent()) return budgetNotice()
       enqueueTurn({ text, effort: 'high', trigger: 'chat', severity: 'info' })
+    },
+
+    stopTurn() {
+      running?.abort.abort()
+    },
+
+    setAutoReview(on) {
+      settings = { ...settings, autoReview: on }
+      if (!on) pendingObservation = null
+      if (settingsFile) {
+        try {
+          mkdirSync(deps.dataDir!, { recursive: true })
+          writeFileSync(settingsFile, JSON.stringify(settings))
+        } catch (err) {
+          emit({ kind: 'error', message: `Could not save the agent settings: ${errorText(err)}` })
+        }
+      }
+      emitStatus()
+    },
+
+    status: () => (missingKey ? null : status()),
+
+    onStatus(cb) {
+      statusListeners.add(cb)
+      return () => {
+        statusListeners.delete(cb)
+      }
     },
 
     handleChange(change: StoreChange) {

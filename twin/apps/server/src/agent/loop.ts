@@ -9,12 +9,11 @@ import type {
 import type { AgentEvent, Severity } from '@twin/schema'
 import type { AnthropicLike, FinalMessage } from './client'
 import { BASE_EFFORT, type Conversation } from './conversation'
+import { usageFromDelta, usageFromStart, type TurnMeter } from './meter'
 import { SYSTEM_PROMPT } from './prompt/system'
 import { toolResultNumbers, type AgentTool, type ToolOutcome } from './tools/index'
 
 const MAX_TOKENS = 16000
-/** Model calls allowed in one turn before the loop gives up, so a confused turn cannot run up cost. */
-const MAX_STEPS = 20
 /** Visible retries for a 429 that outlasted the SDK's own retries (only before anything streamed). */
 const RATE_LIMIT_RETRIES = 2
 const BETAS = [
@@ -25,7 +24,7 @@ const BETAS = [
 
 const MESSAGES = {
   refusal: 'Claude declined this request. Rephrase it, or start a new conversation if it keeps happening.',
-  tooManySteps: `The agent stopped after ${MAX_STEPS} steps in one turn. Ask again to continue.`,
+  stopped: 'Stopped',
   truncatedInput: 'This tool input was cut off at max_tokens and was not run. Send a shorter input.',
 }
 
@@ -143,6 +142,9 @@ export interface TurnContext {
   trigger: 'chat' | 'observation'
   severity: Severity
   emit: (e: AgentEvent) => void
+  /** Aborted by the person's Stop: the stream ends and the turn stops at the next safe point. */
+  signal: AbortSignal
+  meter: TurnMeter
 }
 
 /** Streams one assistant message into thread events; it opens only once there is something to show. */
@@ -189,6 +191,11 @@ class TurnOutput {
     this.ctx.emit({ kind: 'error', ...(messageId ? { messageId } : {}), message })
   }
 
+  notice(message: string): void {
+    const messageId = this.messageId
+    this.ctx.emit({ kind: 'notice', ...(messageId ? { messageId } : {}), message })
+  }
+
   end(): void {
     if (this.#started) this.ctx.emit({ kind: 'messageEnd', messageId: this.ctx.messageId })
   }
@@ -199,12 +206,17 @@ async function callModel(ctx: TurnContext, out: TurnOutput): Promise<FinalMessag
   for (;;) {
     out.newRequest()
     try {
-      const stream = ctx.client.beta.messages.stream(request(ctx.model, ctx.toolParams, ctx.conversation))
+      const stream = ctx.client.beta.messages.stream(request(ctx.model, ctx.toolParams, ctx.conversation), { signal: ctx.signal })
+      let usage = { input: 0, output: 0, cacheWrite: 0, cacheRead: 0 }
       for await (const event of stream) {
-        if (event.type !== 'content_block_delta') continue
-        // With display "updates", a non-empty thinking block is a progress note between tool calls.
-        if (event.delta.type === 'text_delta') out.text(event.index, event.delta.text)
-        else if (event.delta.type === 'thinking_delta') out.text(event.index, event.delta.thinking)
+        if (ctx.signal.aborted) throw new Anthropic.APIUserAbortError()
+        if (event.type === 'message_start') ctx.meter.progress((usage = usageFromStart(event.message.usage)))
+        else if (event.type === 'message_delta') ctx.meter.progress((usage = usageFromDelta(usage, event.usage)))
+        else if (event.type === 'content_block_delta') {
+          // With display "updates", a non-empty thinking block is a progress note between tool calls.
+          if (event.delta.type === 'text_delta') out.text(event.index, event.delta.text)
+          else if (event.delta.type === 'thinking_delta') out.text(event.index, event.delta.thinking)
+        }
       }
       return await stream.finalMessage()
     } catch (err) {
@@ -215,6 +227,8 @@ async function callModel(ctx: TurnContext, out: TurnOutput): Promise<FinalMessag
         continue
       }
       throw err
+    } finally {
+      ctx.meter.settle()
     }
   }
 }
@@ -238,14 +252,22 @@ async function runTool(ctx: TurnContext, out: TurnOutput, block: BetaToolUseBloc
   return { type: 'tool_result', tool_use_id: block.id, content: outcome.content }
 }
 
+const notRun = (b: BetaToolUseBlock, content: string): Promise<BetaToolResultBlockParam> =>
+  Promise.resolve({ type: 'tool_result', tool_use_id: b.id, is_error: true, content })
+
 /**
  * Runs one agent turn: stream a reply, run every requested tool, send all results back in one
- * user message, and repeat until the model stops asking for tools. History is append-only.
+ * user message, and repeat until the model stops asking for tools, a cap is reached or the person
+ * stops it. History is append-only and every tool_use in it gets its tool_result: a turn ends only
+ * before a request or after the results of the last one are appended, and an aborted request
+ * leaves nothing in history.
  */
 export async function runTurn(ctx: TurnContext): Promise<void> {
   const out = new TurnOutput(ctx)
   try {
-    for (let step = 0; step < MAX_STEPS; step++) {
+    for (;;) {
+      const cap = ctx.meter.stopBeforeRequest()
+      if (cap) return out.notice(cap)
       const message = await callModel(ctx, out)
       // A refusal can cut a tool call off mid-input: never run its tools, and keep the partial out of history.
       if (message.stop_reason === 'refusal') return out.error(MESSAGES.refusal)
@@ -254,19 +276,20 @@ export async function runTurn(ctx: TurnContext): Promise<void> {
       const toolUses = content.filter((b): b is BetaToolUseBlock => b.type === 'tool_use')
       if (toolUses.length === 0) return
       const truncated = message.stop_reason === 'max_tokens'
+      const allowed = truncated ? toolUses.length : ctx.meter.takeToolCalls(toolUses.length)
       const results = await Promise.all(
-        toolUses.map(
-          (b): Promise<BetaToolResultBlockParam> =>
-            truncated
-              ? Promise.resolve({ type: 'tool_result', tool_use_id: b.id, is_error: true, content: MESSAGES.truncatedInput })
-              : runTool(ctx, out, b),
-        ),
+        toolUses.map((b, i): Promise<BetaToolResultBlockParam> => {
+          if (truncated) return notRun(b, MESSAGES.truncatedInput)
+          return i < allowed ? runTool(ctx, out, b) : notRun(b, ctx.meter.notRunMessage())
+        }),
       )
       ctx.conversation.append({ role: 'user', content: results })
+      if (ctx.signal.aborted) return out.notice(MESSAGES.stopped)
+      if (allowed < toolUses.length) return out.notice(ctx.meter.toolCapMessage())
     }
-    out.error(MESSAGES.tooManySteps)
   } catch (err) {
-    out.error(describeError(err))
+    if (ctx.signal.aborted) out.notice(MESSAGES.stopped)
+    else out.error(describeError(err))
   } finally {
     out.end()
   }

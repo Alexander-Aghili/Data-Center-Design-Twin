@@ -12,10 +12,13 @@ import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { AGENT_MODEL, createAnthropicClient, type AnthropicLike } from '../src/agent/client'
 import { Conversation } from '../src/agent/conversation'
+import { DEFAULT_LIMITS } from '../src/agent/limits'
 import { runTurn, toolParams } from '../src/agent/loop'
+import { TurnMeter } from '../src/agent/meter'
 import { formatAppEvent } from '../src/agent/observe'
 import { createAgentRuntime } from '../src/agent/runtime'
 import { buildTools, ProposalBook, type AgentTool } from '../src/agent/tools/index'
+import { UsageLedger } from '../src/agent/usage'
 import { generateBrief } from '../src/brief/openfoam'
 import type { PlanStore } from '../src/contracts'
 import { createPlanStore } from '../src/store'
@@ -54,8 +57,8 @@ function meteredClient(): AnthropicLike {
   return {
     beta: {
       messages: {
-        stream(params) {
-          const stream = client.beta.messages.stream(params)
+        stream(params, options) {
+          const stream = client.beta.messages.stream(params, options)
           stream.on('finalMessage', ({ usage }) => {
             spend.input += usage.input_tokens
             spend.output += usage.output_tokens
@@ -275,6 +278,8 @@ describe.skipIf(!LIVE)('design agent behavior (live)', () => {
       trigger: 'observation',
       severity: 'info',
       emit: (e) => events.push(e),
+      signal: new AbortController().signal,
+      meter: new TurnMeter({ model: AGENT_MODEL, limits: DEFAULT_LIMITS, ledger: new UsageLedger(null), onChange: () => {} }),
     })
     transcript('rename app event', events)
     expect(textOf(events)).toBe('')

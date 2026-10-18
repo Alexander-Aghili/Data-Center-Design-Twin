@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import type { AgentEvent, ViewAction } from '@twin/schema'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { AnthropicLike } from '../src/agent/client'
+import { DEFAULT_LIMITS } from '../src/agent/limits'
 import { designAgentFactory } from '../src/agent/wire'
 import { createPlanStore } from '../src/store'
 
@@ -26,7 +27,7 @@ afterEach(() => rmSync(dataDir, { recursive: true, force: true }))
 describe('designAgentFactory', () => {
   it('wires the real tools, proposals, view actions and briefs to one runtime', async () => {
     const store = createPlanStore({ dataDir })
-    const agent = designAgentFactory({ dataDir, client: noModel })(store)
+    const agent = designAgentFactory({ dataDir, limits: DEFAULT_LIMITS, client: noModel })(store, { info: () => {} })
     const views: ViewAction[] = []
     const events: AgentEvent[] = []
     agent.onView((a) => views.push(a))

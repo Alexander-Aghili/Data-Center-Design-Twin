@@ -22,7 +22,8 @@ interface MessageStreamLike extends AsyncIterable<BetaRawMessageStreamEvent> {
 
 /** The slice of `@anthropic-ai/sdk` the agent uses, so tests can inject a scripted fake. */
 export interface AnthropicLike {
-  beta: { messages: { stream(params: BetaMessageStreamParams): MessageStreamLike } }
+  /** Aborting `signal` ends the stream (the SDK throws `APIUserAbortError`). */
+  beta: { messages: { stream(params: BetaMessageStreamParams, options?: { signal?: AbortSignal }): MessageStreamLike } }
 }
 
 /** The only host the key goes to. Explicit, so an `ANTHROPIC_BASE_URL` in the shell never redirects it. */
