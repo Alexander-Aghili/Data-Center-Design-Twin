@@ -1,31 +1,30 @@
 import './theme/global.css'
 import type { LayerId } from '@twin/schema'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 import { Thread } from './agent/Thread'
-import { CatalogBrowser } from './catalog/CatalogBrowser'
-import { ImportExport } from './io/ImportExport'
 import { AllVariables } from './panels/AllVariables'
 import { DecisionPanel } from './panels/decisions'
 import { Inspector } from './panels/Inspector'
 import { LayerHeader } from './panels/LayerHeader'
-import { LayerList } from './panels/LayerList'
-import { Totals } from './panels/Totals'
+import { SummaryPanel } from './panels/Summary'
+import { RackBar } from './racks/RackBar'
 import { RevisionClouds } from './scene/annotations/RevisionClouds'
 import { Scene } from './scene/Scene'
+import { tabId } from './shell/LayerTabs'
+import { TopBar } from './shell/TopBar'
 import { useTwinStore } from './state/store'
 import { Strip } from './strips/Strip'
 
-const CONNECTION_NOTE = {
-  connecting: 'Connecting…',
-  online: null,
-  local: 'Local mode. The design agent needs the server.',
-  offline: 'Offline',
-} as const
+const CARD_ID = 'layer-card'
+const PANEL_ID = 'layer-panel'
+const SCHEMATIC_ID = 'layer-schematic'
 
-function revisedAt(iso: string): string {
-  const d = new Date(iso)
-  const sameDay = d.toDateString() === new Date().toDateString()
-  return new Intl.DateTimeFormat(undefined, sameDay ? { timeStyle: 'short' } : { dateStyle: 'medium', timeStyle: 'short' }).format(d)
+/** The layers whose schematic strip can open under the scene, by the name its button uses. */
+const SCHEMATICS: Partial<Record<LayerId, string>> = {
+  site: 'hourly load',
+  cooling: 'cooling chain',
+  power: 'power one-line',
+  network: 'network tiers',
 }
 
 const isTyping = (t: EventTarget | null) =>
@@ -50,111 +49,66 @@ function useUndoShortcuts() {
   }, [undo, redo])
 }
 
-function TopBar() {
-  const name = useTwinStore((s) => s.plan?.name)
-  const updatedAt = useTwinStore((s) => s.plan?.updatedAt)
-  const connection = useTwinStore((s) => s.connection)
-  const history = useTwinStore((s) => s.history)
-  const undo = useTwinStore((s) => s.undo)
-  const redo = useTwinStore((s) => s.redo)
-  const note = CONNECTION_NOTE[connection]
-  return (
-    <header className="topbar">
-      <div className="topbar__title">
-        <h1 className="topbar__plan">{name ?? 'Data center design twin'}</h1>
-        {updatedAt && <span className="topbar__meta">Revised {revisedAt(updatedAt)}</span>}
-        {note && (
-          <span className="topbar__meta" role="status">
-            {note}
-          </span>
-        )}
-      </div>
-      <div className="topbar__actions">
-        <button type="button" className="btn btn--quiet" disabled={!history.canUndo} onClick={undo} aria-keyshortcuts="Meta+Z Control+Z">
-          Undo
-        </button>
-        <button
-          type="button"
-          className="btn btn--quiet"
-          disabled={!history.canRedo}
-          onClick={redo}
-          aria-keyshortcuts="Meta+Shift+Z Control+Y"
-        >
-          Redo
-        </button>
-        <span className="topbar__divider" aria-hidden="true" />
-        <CatalogBrowser />
-        <ImportExport />
-      </div>
-    </header>
-  )
-}
-
-function LayerColumn({ children }: { children: ReactNode }) {
-  return (
-    <aside className="layer-column" aria-label="Layers and decisions">
-      {children}
-    </aside>
-  )
-}
-
-/** Center column: overlay switcher, the 3D scene with its annotations and inspector, then the layer strip. */
-function SceneRegion({ layer, children }: { layer: LayerId; children?: ReactNode }) {
-  return (
-    <main className="center" aria-label="Plan view">
-      <LayerHeader />
-      <div className="scene-stage">
-        <Scene />
-        <RevisionClouds />
-        <Inspector />
-      </div>
-      <div className="strip-slot">
-        <Strip layer={layer} />
-      </div>
-      {children}
-    </main>
-  )
-}
-
-function TotalsRegion({ children }: { children: ReactNode }) {
-  return (
-    <section className="totals-region" aria-label="Plan totals">
-      {children}
-    </section>
-  )
-}
-
-function AgentRegion({ children }: { children: ReactNode }) {
-  return (
-    <section className="agent-region" aria-label="Design agent">
-      {children}
-    </section>
-  )
-}
-
+/**
+ * Two places to look: the scene in the middle, the summary and the agent on the right. The layer card on the
+ * left collapses, the inspector opens over it, and the active layer's schematic opens under the scene on request.
+ */
 export function App() {
   const activeLayer = useTwinStore((s) => s.activeLayer)
+  const [cardOpen, setCardOpen] = useState(true)
+  const [schematicOpen, setSchematicOpen] = useState(false)
   const [allVariablesOpen, setAllVariablesOpen] = useState(false)
+  const schematic = SCHEMATICS[activeLayer]
   useUndoShortcuts()
 
   return (
-    <div className="shell">
-      <TopBar />
-      <LayerColumn>
-        <LayerList />
-        <DecisionPanel layer={activeLayer} />
-      </LayerColumn>
-      <SceneRegion layer={activeLayer}>
-        {allVariablesOpen && <AllVariables onClose={() => setAllVariablesOpen(false)} />}
-      </SceneRegion>
-      <div className="side">
-        <TotalsRegion>
-          <Totals allOpen={allVariablesOpen} onToggleAll={() => setAllVariablesOpen((open) => !open)} />
-        </TotalsRegion>
-        <AgentRegion>
-          <Thread />
-        </AgentRegion>
-      </div>
+    <div className="shell" data-card={cardOpen ? 'open' : 'closed'}>
+        <TopBar panelId={PANEL_ID} cardId={CARD_ID} cardOpen={cardOpen} onToggleCard={() => setCardOpen((open) => !open)} />
+        <aside id={CARD_ID} className="layer-card" aria-label="Layer decisions" hidden={!cardOpen}>
+          <div id={PANEL_ID} role="tabpanel" aria-labelledby={tabId(activeLayer)}>
+            <DecisionPanel layer={activeLayer} />
+          </div>
+        </aside>
+        <main className="center" aria-label="Plan view">
+          <div className="scene-stage">
+            <Scene />
+            <RevisionClouds />
+            <div className="scene-overlays">
+              <LayerHeader />
+            </div>
+            <div className="scene-dock">
+              <RackBar />
+              {schematic && (
+                <button
+                  type="button"
+                  className="btn btn--secondary scene-dock__schematic"
+                  aria-expanded={schematicOpen}
+                  aria-controls={SCHEMATIC_ID}
+                  onClick={() => setSchematicOpen((open) => !open)}
+                >
+                  {schematicOpen ? 'Hide' : 'Show'} {schematic}
+                </button>
+              )}
+            </div>
+          </div>
+          {schematic && schematicOpen && (
+            <div id={SCHEMATIC_ID} className="strip-slot">
+              <Strip layer={activeLayer} />
+            </div>
+          )}
+          {allVariablesOpen && <AllVariables onClose={() => setAllVariablesOpen(false)} />}
+        </main>
+        <div className="inspector-dock">
+          <Inspector />
+        </div>
+        <div className="side">
+          <section className="summary-region" aria-label="Plan totals">
+            <SummaryPanel allOpen={allVariablesOpen} onToggleAll={() => setAllVariablesOpen((open) => !open)} />
+          </section>
+          <section className="agent-region" aria-label="Design agent">
+            <Thread />
+          </section>
+        </div>
     </div>
   )
 }

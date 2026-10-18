@@ -1,7 +1,10 @@
 /*
  * Design tokens. Engineering-drawing paper, white clay models, color only where physics happens.
  * Physics colors (supply, return, heat, ok, warning) mark things; text stays ink or graphite.
- * Contrast on --panel: ink 15.1, graphite 5.5, heat 4.4, ok 3.7, warning 3.3 (marks need 3:1).
+ * Action blues mark what a person can do: king blue for the one primary action and the active tab,
+ * baby blue for secondary actions and selected cards. Supply coolant sits toward cyan so the two never read alike.
+ * Contrast on --panel: ink 15.1, graphite 5.5, heat 4.4, ok 3.7, warning 3.3, supply 3.6 (marks need 3:1).
+ * Text on action tokens: white on --action 6.7, white on --action-hover 8.8, --action-soft-ink on --action-soft 8.1.
  */
 :root {
   /* surfaces */
@@ -14,23 +17,26 @@
 
   /* ink */
   --ink: #172026;
-  --ink-hover: #2a363d;
   --graphite: #59656c;
   --hairline: #c6cfd3;
   --ink-inverse: #ffffff;
 
+  /* actions */
+  --action: #1f4ed8;
+  --action-hover: #183fb0;
+  --action-soft: #e3eeff;
+  --action-soft-hover: #d2e3ff;
+  --action-soft-ink: #1a3e9e;
+  /* too light to stand alone on --panel, so it is only ever the inner halo of the king-blue focus ring */
+  --action-ring: #8db4ff;
+
   /* physics */
-  --supply: #2d6cdf;
+  --supply: #1e88c8;
   --return: #e0922a;
   --heat: #d23b2a;
   --ok: #2f8f5b;
   --warning: #b7791f;
   --unknown: #59656c;
-
-  /* status marks on an ink background (the active layer row): 7.3 and 8.7 contrast */
-  --heat-on-ink: #ff8b7e;
-  --warning-on-ink: #e5b45a;
-  --graphite-on-ink: #aeb8bd;
 
   /* rack clay */
   --clay-light: #fbfcfc;
@@ -65,16 +71,22 @@
   --rule: 1px solid var(--hairline);
   --radius: 2px;
   --radius-control: 5px;
-  --focus-ring: 2px solid var(--supply);
+  --radius-pill: 999px;
+  /* focus: a king-blue outline (6.1 on --panel; it alone carries the 3:1) around a baby-blue halo in the outline offset */
+  --focus-ring: 2px solid var(--action);
+  --focus-halo: 0 0 0 2px var(--action-ring);
 
   /* layout (design target 1440×900) */
-  --topbar-h: 44px;
+  --topbar-h: 52px;
   --col-left: 300px;
   --col-right: 360px;
   --strip-h: 168px;
+  --inspector-w: 284px;
 
-  /* the drawer sits over the scene and its annotations */
+  /* scene chrome (overlay pills, rack bar) over the canvas; drawers over that; the ⋯ menu over everything */
+  --z-scene-chrome: 10;
   --z-drawer: 20;
+  --z-menu: 30;
 
   /* motion: only in answer to a person's action */
   --ease: cubic-bezier(0.2, 0, 0, 1);
