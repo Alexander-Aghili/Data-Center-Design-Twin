@@ -160,6 +160,103 @@ describe('procedural models', () => {
     expect(Math.min(...far.map((x) => Math.min(...near.map((n) => Math.abs(n - x)))))).toBeCloseTo(3.4 / 2)
   })
 
+  it('keeps indoor equipment inside the hall walls and yard plant outside, up to every position capacity', async () => {
+    const { evaluate } = await import('@twin/engine')
+    const { loadBuiltins } = await import('@twin/catalog')
+    const { equipmentUnits } = await import('../src/scene/models/Hall')
+    const { Site } = await import('../src/scene/models/Site')
+    const plan = nvl72Plan()
+    const evaluation = evaluate(plan, loadBuiltins())
+    // Every position filled to its capacity: 64 leaf switches each, 3 CDUs per row end, 4 CRAHs per zone, a full
+    // electrical room and plant yard.
+    const full = plan.hall.positions.flatMap((p) => {
+      const sized = (key: string, count: number) => ({
+        key,
+        category: key,
+        modelId: null,
+        count,
+        required: count,
+        positionIds: [p.id],
+        autoSized: true,
+        loadW: 0,
+        capacityW: null,
+        objectIds: [],
+      })
+      switch (p.kind) {
+        case 'leaf':
+          return [sized(`leaf:${p.id}`, p.capacity)]
+        case 'cdu':
+          return [sized(`cdu:${p.servesRows[0]}`, p.capacity)]
+        case 'crah':
+          return [sized(`crah:${p.id}`, p.capacity)]
+        case 'plant':
+          return [sized('plant', p.capacity)]
+        case 'electrical':
+          return [sized('ups', p.capacity - 7), sized('transformer', 7)]
+        default:
+          return []
+      }
+    })
+    const { widthM: w, depthM: d } = plan.hall
+    const OUTDOOR = new Set(['plant', 'bufferTank'])
+    for (const ev of [evaluation, { ...evaluation, equipment: full }]) {
+      const units = equipmentUnits(plan, ev)
+      useTwinStore.setState({ plan, evaluation: ev })
+      renderer = await ReactThreeTestRenderer.create(
+        <>
+          <Hall plan={plan} units={units} openRack={null} />
+          <Site plan={plan} units={units} />
+        </>,
+      )
+      const { worldBox, objects } = useSceneRegistry.getState()
+      const cabinets = [...objects].filter(([, o]) => o.kind === 'networkRack').map(([id]) => ({ objectId: id, kind: 'networkRack' }))
+      expect(cabinets.length).toBeGreaterThan(0)
+      for (const u of [...units, ...cabinets]) {
+        const box = worldBox(u.objectId)
+        expect(box, u.objectId).not.toBeNull()
+        const [min, max] = [box!.min, box!.max]
+        if (OUTDOOR.has(u.kind)) {
+          const clear = max.x <= 0 || min.x >= w || max.z <= 0 || min.z >= d
+          expect(clear, `${u.objectId} stands in the yard`).toBe(true)
+        } else {
+          const inside = min.x >= -1e-6 && max.x <= w + 1e-6 && min.z >= -1e-6 && max.z <= d + 1e-6
+          expect(inside, `${u.objectId} [${min.x.toFixed(2)}, ${min.z.toFixed(2)}]–[${max.x.toFixed(2)}, ${max.z.toFixed(2)}] inside the walls`).toBe(true)
+        }
+      }
+      await renderer.unmount()
+      renderer = null
+    }
+  })
+
+  it('stacks leaf switches eight to a network rack at the row ends their position serves', async () => {
+    const { evaluate } = await import('@twin/engine')
+    const { loadBuiltins } = await import('@twin/catalog')
+    const { equipmentUnits } = await import('../src/scene/models/Hall')
+    const plan = createDefaultPlan()
+    const position = plan.hall.positions.find((p) => p.kind === 'leaf')!
+    const leaf = {
+      key: `leaf:${position.id}`,
+      category: 'leaf',
+      modelId: null,
+      count: 20,
+      required: 20,
+      positionIds: [position.id],
+      autoSized: true,
+      loadW: 0,
+      capacityW: null,
+      objectIds: [],
+    }
+    const units = equipmentUnits(plan, { ...evaluate(plan, loadBuiltins()), equipment: [leaf] })
+    const cabinets = new Map<string, number>()
+    for (const u of units) cabinets.set(`${u.x}|${u.z}`, (cabinets.get(`${u.x}|${u.z}`) ?? 0) + 1)
+    expect([...cabinets.values()]).toEqual([8, 8, 4])
+    const rowCenters = position.servesRows.map((id) => {
+      const row = plan.hall.rows.find((r) => r.id === id)!
+      return row.z + row.rackDepthM / 2
+    })
+    for (const key of cabinets.keys()) expect(rowCenters).toContain(Number(key.split('|')[1]))
+  })
+
   it('the open rack stays drawn while it eases shut, then returns to the instanced hall', async () => {
     const plan = nvl72Plan()
     useTwinStore.setState({ plan, evaluation: null })

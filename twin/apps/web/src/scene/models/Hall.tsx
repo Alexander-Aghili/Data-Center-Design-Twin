@@ -8,7 +8,7 @@ import { useRegistered } from '../hooks'
 import { Busway } from './Busway'
 import { Cdu, CDU_SIZE } from './Cdu'
 import { Crah, CRAH_SIZE } from './Crah'
-import { LeafSwitch } from './LeafSwitch'
+import { LeafRack } from './LeafSwitch'
 import { PLANT_PITCH_M, plantCategory, plantUnitLength } from './Plant'
 import { DOOR_MATERIALS, Rack, SHELL_MATERIALS, catalogEntry, panelGeometry, rackDoorGeometry, rackModel, rackShellGeometry } from './Rack'
 
@@ -32,6 +32,8 @@ export interface EquipmentUnit {
   rotY: number
   /** Row a busway or CDU belongs to. */
   rowId: string | null
+  /** Leaf switches: the switch's slot in its network rack, top down; every switch of one rack shares x, z and rotY. */
+  slot?: number
 }
 
 type EquipmentSource = Pick<SizedEquipment, 'key' | 'modelId' | 'count' | 'positionIds' | 'objectIds'>
@@ -93,6 +95,23 @@ const CABINET_PITCH_M = { ups: 1.4, transformer: 2.0 } as const
 /** Service aisle between rows of yard plant (m). */
 const PLANT_ROW_GAP_M = 2.5
 
+/** A network rack (rack.network) holds eight 64-port switches. */
+const SWITCHES_PER_RACK = 8
+/** Network racks stand side by side, one 600 mm rack width apart. */
+const NETWORK_RACK_PITCH_M = 0.6
+
+/**
+ * Network rack `r` of a leaf position: at the end of one of the rows it serves (round robin, so each row end gets
+ * its racks in turn), further racks at a row end stepping away from the rows toward the nearer side wall.
+ */
+function leafRackAt(plan: Plan, p: Plan['hall']['positions'][number], r: number): { x: number; z: number; rowId: string | null } {
+  const rows = p.servesRows.map((id) => plan.hall.rows.find((row) => row.id === id)).filter((row) => row !== undefined)
+  const row = rows.length > 0 ? rows[r % rows.length]! : null
+  const column = rows.length > 0 ? Math.floor(r / rows.length) : r
+  const away = p.x < plan.hall.widthM / 2 ? -1 : 1
+  return { x: p.x + away * column * NETWORK_RACK_PITCH_M, z: row ? row.z + row.rackDepthM / 2 : p.z, rowId: row?.id ?? null }
+}
+
 /** Yard plant stands in rows no wider than the building. */
 function plantRowLength(plan: Plan, pitch: number): number {
   return Math.max(1, Math.floor(plan.hall.widthM / pitch))
@@ -152,9 +171,11 @@ export function equipmentUnits(plan: Plan, evaluation: Evaluation | null): Equip
         case 'crah':
           units.push({ ...base, x: p.x, z: p.z + centered(CRAH_SIZE.w + 0.2), rotY: -Math.PI / 2, rowId: null })
           break
-        case 'leaf':
-          units.push({ ...base, x: p.x, z: p.z + centered(0.7), rotY: rowRot(p.servesRows[0]), rowId: null })
+        case 'leaf': {
+          const rack = leafRackAt(plan, p, Math.floor(j / SWITCHES_PER_RACK))
+          units.push({ ...base, x: rack.x, z: rack.z, rotY: rowRot(rack.rowId ?? undefined), rowId: null, slot: j % SWITCHES_PER_RACK })
           break
+        }
         case 'plant': {
           const pitch = PLANT_PITCH_M[plantCategory(plan, e.modelId)]
           const at = yardSlot(j, m, plantRowLength(plan, pitch))
@@ -323,6 +344,16 @@ export function Hall({ plan, units, openRack }: HallProps) {
     return [...byType.entries()]
   }, [plan, instanced, open])
 
+  const leafRacks = useMemo(() => {
+    const racks = new Map<string, EquipmentUnit[]>()
+    for (const u of units) {
+      if (u.kind !== 'leaf') continue
+      const id = `${u.x.toFixed(3)}|${u.z.toFixed(3)}`
+      racks.set(id, [...(racks.get(id) ?? []), u])
+    }
+    return racks
+  }, [units])
+
   return (
     <group>
       {instanced
@@ -331,14 +362,15 @@ export function Hall({ plan, units, openRack }: HallProps) {
             .filter((p) => p.id !== open)
             .map((p) => <Rack key={p.id} placementId={p.id} openness={0} interior={false} />)}
       {open ? <RigRack key={`open-${open}`} placementId={open} /> : null}
+      {[...leafRacks].map(([id, rackUnits]) => (
+        <LeafRack key={id} id={id} units={rackUnits} plan={plan} />
+      ))}
       {units.map((u) => {
         switch (u.kind) {
           case 'cdu':
             return <Cdu key={u.objectId} unit={u} />
           case 'crah':
             return <Crah key={u.objectId} unit={u} />
-          case 'leaf':
-            return <LeafSwitch key={u.objectId} unit={u} plan={plan} />
           case 'busway':
             return <Busway key={u.objectId} unit={u} plan={plan} />
           case 'ups':
