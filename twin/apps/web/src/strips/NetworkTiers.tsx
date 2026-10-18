@@ -1,6 +1,6 @@
 import type { NetworkResult, SizedEquipment } from '@twin/schema'
 import { fmtPower } from '../format'
-import { Node, Pipe, selectFor, statusOf, StripFrame, type LayerStripProps } from './parts'
+import { fmtUnit, Node, Pipe, selectFor, statusOf, StripFrame, type LayerStripProps } from './parts'
 
 const FABRIC: Record<string, string> = { railOptimized: 'Rail-optimized', fatTree: 'Fat tree' }
 const TOP = 26
@@ -161,7 +161,7 @@ export function NetworkTiers({ plan, evaluation, select }: LayerStripProps) {
           y={spineY}
           label="Spine"
           value={`${FABRIC[plan.network.fabric] ?? plan.network.fabric}, ${network.oversubscription}:1`}
-          detail={`base latency ${Math.round(network.baseLatencyNs).toLocaleString('en-US')} ns`}
+          detail={`base latency ${fmtUnit(network.baseLatencyNs, 'ns')}`}
           textAt="right"
           symbol={<SwitchSymbol x={spineX} y={spineY} />}
         />
