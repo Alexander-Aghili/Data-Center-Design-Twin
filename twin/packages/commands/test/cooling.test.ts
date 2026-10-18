@@ -16,7 +16,7 @@ describe('setCoolingMethod', () => {
   })
 
   it('rejects unknown methods and groups', () => {
-    expectRejected(plan(), 'setCoolingMethod', { groupId: 'g1', coolingMethodId: 'rackCooling.magic' }, /^Unknown rack cooling method "rackCooling\.magic"\. Rack cooling methods: rackCooling\.air-contained, rackCooling\.dlc-1p$/)
+    expectRejected(plan(), 'setCoolingMethod', { groupId: 'g1', coolingMethodId: 'rackCooling.magic' }, /^Unknown rack cooling method "rackCooling\.magic"\. Known rack cooling methods: rackCooling\.air-contained, rackCooling\.dlc-1p$/)
     expectRejected(plan(), 'setCoolingMethod', { groupId: 'gx', coolingMethodId: RACK_COOLING.DLC_1P }, /^Unknown rack group "gx"/)
   })
 })

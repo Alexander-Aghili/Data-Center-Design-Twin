@@ -20,7 +20,7 @@ describe('overrideEquipment', () => {
 
   it('rejects bad keys, mismatched models, unknown positions and empty overrides', () => {
     expectRejected(plan(), 'overrideEquipment', { key: 'pump:R3', count: 1 }, /^Unknown equipment key "pump:R3"\. Keys look like/)
-    expectRejected(plan(), 'overrideEquipment', { key: 'cdu:R3', modelId: HEAT_REJECTION.DRY_COOLER }, /^Unknown cdu model "heatRejection\.dry-cooler"\. cdu models: cdu\.1200kw$/)
+    expectRejected(plan(), 'overrideEquipment', { key: 'cdu:R3', modelId: HEAT_REJECTION.DRY_COOLER }, /^Unknown cdu model "heatRejection\.dry-cooler"\. Known cdu models: cdu\.1200kw$/)
     expectRejected(plan(), 'overrideEquipment', { key: 'cdu:R3', positionIds: ['crah-W1'] }, 'Position crah-W1 holds crah equipment, not cdu')
     expectRejected(plan(), 'overrideEquipment', { key: 'cdu:R3', positionIds: ['cdu-E99'] }, /^Unknown equipment position "cdu-E99"/)
     expectRejected(plan(), 'overrideEquipment', { key: 'ups' }, 'overrideEquipment needs modelId, count or positionIds')

@@ -10,7 +10,7 @@ describe('addNote', () => {
     const added = result.plan.notes.at(-1)
     expect(added).toMatchObject({ id: 'note-2', target: 'decision:cooling.facilitySupplyC', importance: 'must', authorRole: 'cooling' })
     expect(Number.isNaN(Date.parse(added!.createdAt))).toBe(false)
-    expect(result.summary).toBe('Must note on cooling.facilitySupplyC: "Keep supply at or above 30 °C so dry coolers work most of the…"')
+    expect(result.summary).toBe('Must note on cooling.facilitySupplyC: "Keep supply at or above 30 °C so dry coolers work most of…"')
   })
 
   it('accepts every target kind', () => {

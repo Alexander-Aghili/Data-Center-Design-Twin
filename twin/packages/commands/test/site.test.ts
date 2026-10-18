@@ -24,7 +24,7 @@ describe('setSiteInput', () => {
   it('rejects wrong value types, unknown climates and out-of-range numbers', () => {
     expectRejected(plan(), 'setSiteInput', { field: 'gridCapacityW', value: '12 MW' }, 'gridCapacityW needs a number in W, not the text "12 MW"')
     expectRejected(plan(), 'setSiteInput', { field: 'climateId', value: 4 }, 'climateId needs a climate id such as "climate.dallas", not a number')
-    expectRejected(plan(), 'setSiteInput', { field: 'climateId', value: 'climate.oslo' }, /^Unknown climate "climate\.oslo"\. Climates: climate\.dallas, climate\.stockholm$/)
+    expectRejected(plan(), 'setSiteInput', { field: 'climateId', value: 'climate.oslo' }, /^Unknown climate "climate\.oslo"\. Known climates: climate\.dallas, climate\.stockholm$/)
     expectRejected(plan(), 'setSiteInput', { field: 'gridCapacityW', value: 0 }, 'gridCapacityW must be greater than 0')
     expectRejected(plan(), 'setSiteInput', { field: 'waterAllowanceM3PerDay', value: -1 }, 'waterAllowanceM3PerDay cannot be negative')
   })

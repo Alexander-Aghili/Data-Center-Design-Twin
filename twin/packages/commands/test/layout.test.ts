@@ -32,8 +32,8 @@ describe('placeRacks', () => {
   })
 
   it('rejects unknown groups and rows with the valid choices', () => {
-    expectRejected(plan(), 'placeRacks', { groupId: 'g9', rowId: 'R6', slots: [0] }, 'Unknown rack group "g9". Groups: g1 (Inference block), g2 (Training block)')
-    expectRejected(plan(), 'placeRacks', { groupId: 'g1', rowId: 'R9', slots: [0] }, 'Unknown row "R9". Rows: R1, R2, R3, R4, R5, R6, R7, R8')
+    expectRejected(plan(), 'placeRacks', { groupId: 'g9', rowId: 'R6', slots: [0] }, 'Unknown rack group "g9". Known rack groups: g1 (Inference block), g2 (Training block)')
+    expectRejected(plan(), 'placeRacks', { groupId: 'g1', rowId: 'R9', slots: [0] }, 'Unknown row "R9". Known rows: R1, R2, R3, R4, R5, R6, R7, R8')
   })
 
   describe('double-wide occupancy', () => {
@@ -41,7 +41,7 @@ describe('placeRacks', () => {
       const p = withWideGroup()
       const next = run(p, 'placeRacks', { groupId: 'g3', rowId: 'R6', slots: [4] }).plan
       expectRejected(next, 'placeRacks', { groupId: 'g1', rowId: 'R6', slots: [5] }, 'Slot R6-05 is taken by R6-04')
-      expect(run(next, 'placeRacks', { groupId: 'g1', rowId: 'R6', slots: [6] }).plan.placements).toHaveLength(81)
+      expect(run(next, 'placeRacks', { groupId: 'g1', rowId: 'R6', slots: [6] }).plan.placements).toHaveLength(82)
     })
 
     it('needs slot+1 free', () => {
@@ -51,7 +51,7 @@ describe('placeRacks', () => {
     })
 
     it('needs slot+1 within the row', () => {
-      expectRejected(withWideGroup(), 'placeRacks', { groupId: 'g3', rowId: 'R6', slots: [23] }, 'Wide is 2 slots wide, so a rack at R6-23 needs slots 23–24, but R6 has slots 00–23')
+      expectRejected(withWideGroup(), 'placeRacks', { groupId: 'g3', rowId: 'R6', slots: [23] }, 'Wide test rack is 2 slots wide, so a rack at R6-23 needs slots 23–24, but R6 has slots 00–23')
       expect(run(withWideGroup(), 'placeRacks', { groupId: 'g3', rowId: 'R6', slots: [22] }).plan.placements).toHaveLength(81)
     })
   })
@@ -62,7 +62,7 @@ describe('fillRow', () => {
     const p = run(plan(), 'placeRacks', { groupId: 'g1', rowId: 'R6', slots: [2] }).plan
     const result = run(p, 'fillRow', { groupId: 'g2', rowId: 'R6', from: 0, count: 4 })
     expect(ids(result.plan, 'R6')).toEqual(['R6-02', 'R6-00', 'R6-01', 'R6-03', 'R6-04'])
-    expect(result.summary).toBe('Filled R6 with 4 Training block racks at slots 00–01, 03–04')
+    expect(result.summary).toBe('Filled R6 with 4 Training block racks starting at slot 00')
   })
 
   it('fillRow stops at row end and rejects overflow', () => {

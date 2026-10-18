@@ -11,7 +11,7 @@ describe('createRackGroup', () => {
   })
 
   it('rejects unknown catalog ids, unsupported cooling and duplicate names', () => {
-    expectRejected(plan(), 'createRackGroup', { name: 'X', rackTypeId: 'rack.nope', coolingMethodId: RACK_COOLING.DLC_1P }, /^Unknown rack type "rack\.nope"\. Rack types: rack\.hgx-b300-air/)
+    expectRejected(plan(), 'createRackGroup', { name: 'X', rackTypeId: 'rack.nope', coolingMethodId: RACK_COOLING.DLC_1P }, /^Unknown rack type "rack\.nope"\. Known rack types: rack\.hgx-b300-air/)
     expectRejected(plan(), 'createRackGroup', { name: 'X', rackTypeId: RACK.GB300_NVL72, coolingMethodId: 'gpu.b300' }, /^Unknown rack cooling method "gpu\.b300"/)
     expectRejected(plan(), 'createRackGroup', { name: 'X', rackTypeId: RACK.GB300_NVL72, coolingMethodId: RACK_COOLING.AIR_CONTAINED }, 'GB300 NVL72 does not support air cooling (Air with containment). It supports: dlc-1p, dlc-2p.')
     expectRejected(plan(), 'createRackGroup', { name: ' training BLOCK ', rackTypeId: RACK.HGX_B300_AIR, coolingMethodId: RACK_COOLING.AIR_CONTAINED }, 'A rack group named "Training block" already exists (g2)')
