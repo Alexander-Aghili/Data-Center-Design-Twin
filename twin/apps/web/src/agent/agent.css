@@ -56,7 +56,6 @@
 }
 
 .ag-msg--problem {
-  color: var(--ink);
   --sev: var(--heat);
 }
 
@@ -258,7 +257,6 @@
 
 .ag-card--previewing {
   border-color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--ink);
 }
 
 .ag-card--dismissed {
@@ -291,7 +289,7 @@
 
 .ag-card__changes li {
   position: relative;
-  padding: 2px 0 2px 16px;
+  padding: 1px 0 1px 16px;
 }
 
 .ag-card__changes li::before {
@@ -320,7 +318,14 @@
 }
 
 .ag-card__check {
+  display: block;
+  margin-top: 2px;
   font-weight: 600;
+}
+
+.ag-card__check > span {
+  display: inline-block;
+  width: 14px;
 }
 
 .ag-card__check--warn {
