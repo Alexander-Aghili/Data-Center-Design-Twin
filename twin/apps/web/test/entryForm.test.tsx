@@ -3,11 +3,13 @@ import { join } from 'node:path'
 import { EQUIPMENT_CATEGORIES, type CatalogEntry, type Command, type RackCoolingEntry } from '@twin/schema'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import type { CatalogBrowser as CatalogBrowserType } from '../src/catalog/CatalogBrowser'
 import type { EntryForm as EntryFormType } from '../src/catalog/EntryForm'
 import type { FORM_KINDS as FormKinds, fieldLabel as FieldLabel, formFields as FormFields } from '../src/catalog/schemaForm'
 import type { useTwinStore as UseTwinStore } from '../src/state/store'
 
 let EntryForm: typeof EntryFormType
+let CatalogBrowser: typeof CatalogBrowserType
 let FORM_KINDS: typeof FormKinds
 let formFields: typeof FormFields
 let fieldLabel: typeof FieldLabel
@@ -17,6 +19,7 @@ beforeAll(async () => {
   // The store module opens the app's socket on import; keep it inert.
   vi.stubGlobal('WebSocket', class { readyState = 0 })
   ;({ EntryForm } = await import('../src/catalog/EntryForm'))
+  ;({ CatalogBrowser } = await import('../src/catalog/CatalogBrowser'))
   ;({ FORM_KINDS, formFields, fieldLabel } = await import('../src/catalog/schemaForm'))
   ;({ useTwinStore } = await import('../src/state/store'))
 })
@@ -148,5 +151,31 @@ describe('schema-driven entry form', () => {
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Brine' } })
     fireEvent.click(screen.getByRole('button', { name: 'Add entry' }))
     expect(await within(fieldOf('Name')).findByText('Too small: expected string to have >=1 characters')).toBeTruthy()
+  })
+
+  it('catalog browser lists built-in and custom entries and copies one into a prefilled form', async () => {
+    // jsdom has no modal dialogs.
+    HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
+      this.open = true
+    }
+    const builtins = builtinEntries()
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response(JSON.stringify({ entries: builtins, rules: {} })))))
+    const mine = { ...builtins.find((e) => e.id === 'coolant.water')!, id: 'coolant.site-water', name: 'Site water', custom: true }
+    useTwinStore.setState({ plan: { catalog: { [mine.id]: mine } } as never })
+    render(<CatalogBrowser kind="coolant" />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Catalog' }))
+    const list = await screen.findByRole('region', { name: 'Coolants entries' })
+    await within(list).findByText('Site water')
+    const builtInNames = builtins.filter((e) => e.kind === 'coolant').map((e) => e.name).sort((x, y) => x.localeCompare(y))
+    const names = within(list).getAllByRole('listitem').map((li) => li.querySelector('.cb-entry-name')?.textContent)
+    expect(names).toEqual([...builtInNames, 'Site water'])
+
+    fireEvent.click(within(list).getByText('Treated water'))
+    expect(screen.getByRole('table')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Copy as custom entry' }))
+    expect((screen.getByLabelText('ID') as HTMLInputElement).value).toBe('coolant.water-custom')
+    expect((screen.getByLabelText('Specific heat') as HTMLInputElement).value).not.toBe('')
+    vi.unstubAllGlobals()
   })
 })
