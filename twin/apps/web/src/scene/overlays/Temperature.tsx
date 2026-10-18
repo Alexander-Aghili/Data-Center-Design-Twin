@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { Color, DoubleSide, Matrix4, MeshBasicMaterial, PlaneGeometry, Quaternion, Vector3, type InstancedMesh } from 'three'
 import type { Evaluation, Plan, RackResult } from '@twin/schema'
 import { useTwinStore } from '../../state/store'
+import { useRackOpenness } from '../camera/openness'
 import { tempColor } from '../palette'
 import { rackGeometry, rowFaces, temperatureScale, type TempScale } from './flowPaths'
 
@@ -23,8 +24,12 @@ const STRIP_DEPTH = 1.0
 
 const mean = (values: number[]) => values.reduce((s, v) => s + v, 0) / values.length
 
-/** Rack front panels colored by inlet air, rear panels by outlet air, and half-aisle floor strips by their row means. */
-function temperaturePanels(plan: Plan, evaluation: Evaluation, scale: TempScale): { faces: Panel[]; aisles: Panel[] } {
+/**
+ * Rack front panels colored by inlet air, rear panels by outlet air, and half-aisle floor strips by their row means.
+ * The rack the camera has opened gets no face panels: the close-up looks through its door at the trays, where the
+ * coolant hoses carry the color.
+ */
+function temperaturePanels(plan: Plan, evaluation: Evaluation, scale: TempScale, openRack: string | null): { faces: Panel[]; aisles: Panel[] } {
   const color = (c: number) => tempColor(c, scale.lo, scale.hi)
   const faces: Panel[] = []
   const aisles: Panel[] = []
@@ -39,6 +44,7 @@ function temperaturePanels(plan: Plan, evaluation: Evaluation, scale: TempScale)
     const frontRot = rearRot + Math.PI
     const geo = racks.map((r) => ({ r, g: rackGeometry(plan, r) }))
     for (const { r, g } of geo) {
+      if (r.placementId === openRack) continue
       const y = g.h / 2
       faces.push({ position: new Vector3(g.x, y, frontZ - dir * FACE_GAP), rotY: frontRot, w: g.w * 0.94, h: g.h * 0.96, color: color(r.airInletC) })
       faces.push({ position: new Vector3(g.x, y, rearZ + dir * FACE_GAP), rotY: rearRot, w: g.w * 0.94, h: g.h * 0.96, color: color(r.airOutletC) })
@@ -86,9 +92,11 @@ function Panels({ panels, opacity }: { panels: Panel[]; opacity: number }) {
 }
 
 const formatC = (c: number) => `${Math.round(c)} °C`
+const LEGEND_SAMPLES = 9
 
 /**
- * Legend for the sequential scale (the layer header names the overlay): the three stops `tempColor` blends.
+ * Legend for the sequential scale (the layer header names the overlay), sampled from `tempColor` so the CSS gradient
+ * follows its OKLab blend rather than blending in RGB between a few stops.
  * Plain DOM in its own React root, pinned to the canvas container's lower-left corner.
  */
 function Legend({ scale }: { scale: TempScale }) {
@@ -111,7 +119,7 @@ function Legend({ scale }: { scale: TempScale }) {
     }
   }, [host])
   useEffect(() => {
-    const stops = [0, 0.5, 1].map((t) => tempColor(scale.lo + t * (scale.hi - scale.lo), scale.lo, scale.hi))
+    const stops = Array.from({ length: LEGEND_SAMPLES }, (_, i) => i / (LEGEND_SAMPLES - 1)).map((t) => tempColor(scale.lo + t * (scale.hi - scale.lo), scale.lo, scale.hi))
     root.current?.render(
       <span
         style={{
@@ -139,11 +147,12 @@ function Legend({ scale }: { scale: TempScale }) {
 export function Temperature() {
   const plan = useTwinStore((s) => s.plan)
   const evaluation = useTwinStore((s) => s.evaluation)
+  const openRack = useRackOpenness((s) => (s.value > 0 ? s.placementId : null))
   const view = useMemo(() => {
     if (!plan || !evaluation) return null
     const scale = temperatureScale(evaluation)
-    return { scale, ...temperaturePanels(plan, evaluation, scale) }
-  }, [plan, evaluation])
+    return { scale, ...temperaturePanels(plan, evaluation, scale, openRack) }
+  }, [plan, evaluation, openRack])
   if (!view) return null
   return (
     <group name="temperature">
