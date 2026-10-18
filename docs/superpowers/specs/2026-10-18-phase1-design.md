@@ -63,7 +63,7 @@ A designer can:
 ```
 core/       Python package `dctwin` — model, catalog, solvers, checks, CLI, HTTP API
 web/        TypeScript front end (Vite, React, Three.js via react-three-fiber)
-catalog/    YAML data: racks, systems, equipment, rules
+catalog/    JSON data: racks, systems, equipment, rules
 examples/   sample hall, sample project, sample brief
 sculptured/ design-desk team files (Claude and Codex copies), agent job texts, README
 docs/
@@ -84,7 +84,7 @@ Labels, strongest to weakest (builder's call): `measured` > `vendor_spec` > `oem
 
 ### Catalog
 
-`catalog/racks/`, `catalog/systems/`, `catalog/equipment/`, `catalog/rules.yaml`, one entry per file, with the spec's field groups (identity, electrical, thermal, mechanical, network, compute) plus `supported_power_input` (54 V busbar AC chain, 800 V DC, or both) and `max_coolant_supply_temp`.
+`catalog/racks/`, `catalog/systems/`, `catalog/equipment/`, `catalog/rules.json`, one entry per file, with the spec's field groups (identity, electrical, thermal, mechanical, network, compute) plus `supported_power_input` (54 V busbar AC chain, 800 V DC, or both) and `max_coolant_supply_temp`.
 
 Racks in Phase 1: NVIDIA GB300 NVL72, NVIDIA Vera Rubin NVL72, AMD Helios (weight as a range, note that reports conflict), air-cooled 8-GPU rack (HGX B300 class), network rack, storage rack. Rubin Ultra (Kyber) is deferred: its sidecar layout needs the multi-rack system model to mature first (builder's call).
 
@@ -119,7 +119,7 @@ CDU, air-handler and optics power feed the power network; optics heat feeds air;
 
 ## Solvers (exact)
 
-All coefficients come from `catalog/rules.yaml`.
+All coefficients come from `catalog/rules.json`.
 
 - **Power**: rack peak power (EDPp) per busway, plus CDU, air-handler and optics loads, with per-stage efficiency upstream.
   - **2N** (builder's call): two fully independent chains A and B (transformer, switchgear, UPS or rectifier, busway). Each rack draws from both. Losing one feed puts 100% of the load on the other.
@@ -190,7 +190,7 @@ The handoffs run lead → researcher and layout (in parallel) → the four engin
 
 ## Left to the builder
 
-Module layout, graph library, API payload shapes, visual style within the rules above, default numbers in `rules.yaml` and generic equipment (labeled `estimated` with notes), incremental vs full recompute as long as 1 s holds, and the exact wording of agent jobs.
+Module layout, graph library, API payload shapes, visual style within the rules above, default numbers in `rules.json` and generic equipment (labeled `estimated` with notes), incremental vs full recompute as long as 1 s holds, and the exact wording of agent jobs.
 
 ## Open questions carried from the product spec (not blocking)
 

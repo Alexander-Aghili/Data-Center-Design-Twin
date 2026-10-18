@@ -1,0 +1,795 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Alexander-Aghili/Data-Center-Design-Twin/catalog/schema/catalog.schema.json",
+  "title": "Data Center Design Twin catalog entry",
+  "description": "One file per entry: catalog/racks/<id>.json, catalog/systems/<id>.json, catalog/equipment/<id>.json. Cross-file rules (ids, sources, required params per category) are enforced by catalog/validate.py.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/RackType"
+    },
+    {
+      "$ref": "#/$defs/SystemType"
+    },
+    {
+      "$ref": "#/$defs/EquipmentType"
+    },
+    {
+      "$ref": "#/$defs/Rules"
+    }
+  ],
+  "$defs": {
+    "Provenance": {
+      "enum": [
+        "measured",
+        "vendor_spec",
+        "oem_datasheet",
+        "user_input",
+        "derived",
+        "estimated",
+        "surrogate",
+        "unknown"
+      ]
+    },
+    "Quantity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "unit",
+        "provenance"
+      ],
+      "properties": {
+        "value": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "low": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "high": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "unit": {
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "source": {
+          "type": "string",
+          "description": "id of an entry in this file's sources list"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "Source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "url"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "title": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string",
+          "pattern": "^https?://"
+        },
+        "accessed": {
+          "type": "string",
+          "format": "date"
+        }
+      }
+    },
+    "Id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "PowerInput": {
+      "enum": [
+        "ac_54v",
+        "dc_800v"
+      ]
+    },
+    "RackType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id",
+        "name",
+        "vendor",
+        "model",
+        "generation",
+        "availability",
+        "as_of",
+        "role",
+        "electrical",
+        "thermal",
+        "mechanical",
+        "network",
+        "compute",
+        "sources"
+      ],
+      "properties": {
+        "kind": {
+          "const": "rack"
+        },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "name": {
+          "type": "string"
+        },
+        "vendor": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "generation": {
+          "type": "string"
+        },
+        "availability": {
+          "type": "string"
+        },
+        "as_of": {
+          "type": "string",
+          "format": "date"
+        },
+        "role": {
+          "enum": [
+            "compute",
+            "network",
+            "storage"
+          ]
+        },
+        "description": {
+          "type": "string"
+        },
+        "electrical": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "nominal_power_w",
+            "peak_power_w",
+            "power_shelves",
+            "shelf_rating_w",
+            "supported_power_input"
+          ],
+          "properties": {
+            "nominal_power_w": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "peak_power_w": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "power_shelves": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "shelf_rating_w": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "supported_power_input": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/PowerInput"
+              },
+              "minItems": 1
+            }
+          }
+        },
+        "thermal": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "liquid_fraction",
+            "max_coolant_supply_c",
+            "rack_pressure_drop_kpa"
+          ],
+          "properties": {
+            "liquid_fraction": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "max_coolant_supply_c": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "rack_pressure_drop_kpa": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "flow_lpm_per_kw": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "quick_disconnect": {
+              "type": "string"
+            }
+          }
+        },
+        "mechanical": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "width_mm",
+            "depth_mm",
+            "height_mm",
+            "weight_kg",
+            "feet"
+          ],
+          "properties": {
+            "width_mm": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "depth_mm": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "height_mm": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "rack_units": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "weight_kg": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "feet": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "service_clearance_front_mm": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "service_clearance_rear_mm": {
+              "$ref": "#/$defs/Quantity"
+            }
+          }
+        },
+        "network": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scale_out_ports",
+            "port_speed_gbps",
+            "scale_up_domain",
+            "switch_slots"
+          ],
+          "properties": {
+            "scale_out_ports": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "port_speed_gbps": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "scale_up_domain": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "scale_up_bandwidth_tbps": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "switch_slots": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "port_media": {
+              "type": "string"
+            }
+          }
+        },
+        "compute": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "accelerators",
+            "fp4_pflops"
+          ],
+          "properties": {
+            "accelerators": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "accelerator_model": {
+              "type": "string"
+            },
+            "cpus": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "hbm_tb": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "fp4_pflops": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "fp8_pflops": {
+              "$ref": "#/$defs/Quantity"
+            }
+          }
+        },
+        "overridable": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Source"
+          }
+        }
+      }
+    },
+    "SystemType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id",
+        "name",
+        "as_of",
+        "members",
+        "links",
+        "sources"
+      ],
+      "properties": {
+        "kind": {
+          "const": "system"
+        },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "name": {
+          "type": "string"
+        },
+        "as_of": {
+          "type": "string",
+          "format": "date"
+        },
+        "description": {
+          "type": "string"
+        },
+        "members": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "key",
+              "rack_type",
+              "slot_offset"
+            ],
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "rack_type": {
+                "$ref": "#/$defs/Id"
+              },
+              "slot_offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "a",
+              "b",
+              "media",
+              "count"
+            ],
+            "properties": {
+              "a": {
+                "type": "string"
+              },
+              "b": {
+                "type": "string"
+              },
+              "media": {
+                "enum": [
+                  "copper",
+                  "optics"
+                ]
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        },
+        "notes": {
+          "type": "string"
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Source"
+          }
+        }
+      }
+    },
+    "EquipmentType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id",
+        "name",
+        "category",
+        "as_of",
+        "params",
+        "sources"
+      ],
+      "properties": {
+        "kind": {
+          "const": "equipment"
+        },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "name": {
+          "type": "string"
+        },
+        "vendor": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "category": {
+          "enum": [
+            "cdu",
+            "busway",
+            "ups_module",
+            "rectifier",
+            "transformer",
+            "switchgear",
+            "dry_cooler",
+            "chiller",
+            "air_handler",
+            "leaf_switch",
+            "spine_switch",
+            "cable"
+          ]
+        },
+        "as_of": {
+          "type": "string",
+          "format": "date"
+        },
+        "description": {
+          "type": "string"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Quantity"
+          }
+        },
+        "attrs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Source"
+          }
+        }
+      }
+    },
+    "Rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "as_of",
+        "warning_threshold",
+        "range_policy",
+        "derate",
+        "spares",
+        "coolants",
+        "facility_delta_t_k",
+        "pipe",
+        "network",
+        "default_presets"
+      ],
+      "properties": {
+        "kind": {
+          "const": "rules"
+        },
+        "as_of": {
+          "type": "string",
+          "format": "date"
+        },
+        "description": {
+          "type": "string"
+        },
+        "warning_threshold": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "range_policy": {
+          "enum": [
+            "high",
+            "low",
+            "mid"
+          ]
+        },
+        "derate": {
+          "$ref": "#/$defs/Quantity"
+        },
+        "spares": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cdu",
+            "air_handler",
+            "heat_rejection",
+            "ups_module",
+            "rectifier",
+            "transformer",
+            "switchgear"
+          ],
+          "properties": {
+            "cdu": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "air_handler": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "heat_rejection": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "ups_module": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "rectifier": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "transformer": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "switchgear": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "coolants": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "cp_j_kgk",
+              "density_kg_m3"
+            ],
+            "properties": {
+              "cp_j_kgk": {
+                "$ref": "#/$defs/Quantity"
+              },
+              "density_kg_m3": {
+                "$ref": "#/$defs/Quantity"
+              },
+              "description": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "facility_delta_t_k": {
+          "$ref": "#/$defs/Quantity"
+        },
+        "pipe": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "nominal_diameters_m",
+            "max_velocity_m_s",
+            "roughness_m",
+            "fittings_factor",
+            "facility_pump_head_kpa",
+            "rack_manifold_drop_kpa"
+          ],
+          "properties": {
+            "nominal_diameters_m": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "minItems": 1
+            },
+            "max_velocity_m_s": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "roughness_m": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "fittings_factor": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "facility_pump_head_kpa": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "rack_manifold_drop_kpa": {
+              "$ref": "#/$defs/Quantity"
+            }
+          }
+        },
+        "network": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "slack_fraction",
+            "drop_m",
+            "propagation_ns_per_m",
+            "message_bytes",
+            "nic_overhead_ns",
+            "max_oversubscription"
+          ],
+          "properties": {
+            "slack_fraction": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "drop_m": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "propagation_ns_per_m": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "message_bytes": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "nic_overhead_ns": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "max_oversubscription": {
+              "$ref": "#/$defs/Quantity"
+            }
+          }
+        },
+        "default_presets": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "redundancy",
+            "power_input",
+            "facility_supply_c",
+            "rack_delta_t_k",
+            "coolant",
+            "fabric",
+            "models"
+          ],
+          "properties": {
+            "redundancy": {
+              "enum": [
+                "N+1",
+                "2N"
+              ]
+            },
+            "power_input": {
+              "$ref": "#/$defs/PowerInput"
+            },
+            "facility_supply_c": {
+              "type": "number"
+            },
+            "rack_delta_t_k": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "coolant": {
+              "type": "string"
+            },
+            "fabric": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "topology",
+                "oversubscription",
+                "leaf_model",
+                "spine_model"
+              ],
+              "properties": {
+                "topology": {
+                  "enum": [
+                    "fat_tree",
+                    "rail_optimized"
+                  ]
+                },
+                "oversubscription": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "leaf_model": {
+                  "type": "string"
+                },
+                "spine_model": {
+                  "type": "string"
+                }
+              }
+            },
+            "models": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "cdu",
+                "busway",
+                "ups_module",
+                "rectifier",
+                "transformer",
+                "switchgear",
+                "dry_cooler",
+                "chiller",
+                "air_handler"
+              ],
+              "properties": {
+                "cdu": {
+                  "type": "string"
+                },
+                "busway": {
+                  "type": "string"
+                },
+                "ups_module": {
+                  "type": "string"
+                },
+                "rectifier": {
+                  "type": "string"
+                },
+                "transformer": {
+                  "type": "string"
+                },
+                "switchgear": {
+                  "type": "string"
+                },
+                "dry_cooler": {
+                  "type": "string"
+                },
+                "chiller": {
+                  "type": "string"
+                },
+                "air_handler": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Source"
+          }
+        }
+      }
+    }
+  }
+}

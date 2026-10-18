@@ -6,7 +6,7 @@
 
 **Architecture:** Pure evaluation: `replay(project, branch) -> DesignState`, then `evaluate(state) -> Result`. Solvers run in the fixed order network → liquid → air → power → structural → rollups, because each later one consumes loads the earlier ones produce. Every physical number is a `Quantity` carrying provenance; arithmetic goes through `derive()` so labels propagate and unknowns never become zero.
 
-**Tech Stack:** Python 3.12, uv, pydantic 2, PyYAML, typer, pytest. No graph library: tray routing uses a hand-written Dijkstra on a small graph.
+**Tech Stack:** Python 3.12, uv, pydantic 2, typer, pytest. No graph library: tray routing uses a hand-written Dijkstra on a small graph.
 
 **Spec:** `docs/superpowers/specs/2026-10-18-phase1-design.md` (product spec: `docs/spec/product-spec.md`).
 
@@ -22,7 +22,7 @@ Later plans: Plan 2 (FastAPI + web viewer), Plan 3 (Sculptured design desk). The
 - Status thresholds: Pass < `warning_threshold` (default 0.8) ≤ Warning ≤ 1.0 < Fail.
 - Ranges (`low`/`high`) resolve by `rules.range_policy`, default `high`.
 - Sub-second evaluation for 500 racks.
-- All coefficients and limits live in `catalog/rules.yaml` or catalog entries, never as literals in solver code (physical constants like g = 9.80665 excepted).
+- All coefficients and limits live in `catalog/rules.json` or catalog entries, never as literals in solver code (physical constants like g = 9.80665 excepted).
 - Results never change silently: projects evaluate against the catalog bundle stored in the project file.
 - Every journal entry records `author`.
 - Commit messages end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
@@ -33,7 +33,7 @@ Later plans: Plan 2 (FastAPI + web viewer), Plan 3 (Sculptured design desk). The
 2. A row holding liquid-cooled racks with no CDU positions → the CDU check fails with advice; nothing divides by zero. Test in Task 8.
 3. A rack type with unknown weight → only the bays it touches report Unknown, naming `weight_kg`; other bays still compute. Test in Task 10.
 4. An empty hall → `evaluate` returns zero IT load, PUE unknown (not a crash or infinity), and checks for capacity-only equipment pass. Test in Task 12.
-5. A hand-edited catalog YAML or project file with a missing or misspelled field → an error naming the file and the field path, no traceback. Tests in Task 2 and Task 13.
+5. A hand-edited catalog JSON or project file with a missing or misspelled field → an error naming the file and the field path, no traceback. Tests in Task 2 and Task 13.
 
 ---
 
@@ -61,7 +61,7 @@ core/src/dctwin/solvers/rollups.py
 core/src/dctwin/evaluate.py          evaluate, compare, facility_deltas, Result
 core/src/dctwin/cli.py               typer app `dctwin`
 core/tests/...                       one test file per module + fixtures/
-catalog/racks/*.yaml catalog/systems/*.yaml catalog/equipment/*.yaml catalog/rules.yaml
+catalog/racks/*.json catalog/systems/*.json catalog/equipment/*.json catalog/rules.json
 examples/halls/sample-hall.json
 ```
 
@@ -82,7 +82,7 @@ examples/halls/sample-hall.json
   - `derive(fn: Callable[..., float], unit: str, policy: str = "high", **inputs: Quantity | float) -> Quantity` — calls `fn(**resolved)` with floats; plain floats count as exact; label = `weakest(DERIVED, *input labels)`; if any input unknown, returns `Quantity.unknown(unit, note="unknown input: <name>[, <name>]")`; `ZeroDivisionError` → unknown with note `"division by zero: <fn qualname>"`.
   - `qsum(items: Iterable[Quantity], unit: str, name: str = "item") -> Quantity` — empty sum is `0.0` with label `DERIVED`; an unknown item gives unknown with note naming `name[i]`.
 
-- [ ] **Step 1: Write `core/pyproject.toml`** with project `dctwin`, `requires-python = ">=3.12"`, dependencies `pydantic>=2.7`, `pyyaml>=6`, `typer>=0.12`; dev group `pytest>=8`; script `dctwin = "dctwin.cli:app"`; src layout. Run `cd core && uv sync` — expected: creates `.venv`, exit 0.
+- [ ] **Step 1: Write `core/pyproject.toml`** with project `dctwin`, `requires-python = ">=3.12"`, dependencies `pydantic>=2.7`, `typer>=0.12`; dev group `pytest>=8`; script `dctwin = "dctwin.cli:app"`; src layout. Run `cd core && uv sync` — expected: creates `.venv`, exit 0.
 
 - [ ] **Step 2: Write failing tests**
 
@@ -131,12 +131,13 @@ def test_unknown_label_requires_no_value():
 
 **Files:**
 - Create: `core/src/dctwin/catalog/__init__.py`, `core/src/dctwin/catalog/schema.py`, `core/src/dctwin/catalog/loader.py`
-- Create fixtures: `core/tests/fixtures/catalog/` (minimal valid catalog: 2 racks, 1 system, one equipment entry per category, rules.yaml)
+- Create fixtures: `core/tests/fixtures/catalog/` (minimal valid catalog: 2 racks, 1 system, one equipment entry per category, rules.json)
 - Test: `core/tests/test_catalog.py`
 
 **Interfaces:**
 - Consumes: `Quantity`, `Provenance`.
 - Produces (pydantic models, `extra="forbid"` everywhere so misspelled fields fail):
+  - The models mirror `catalog/schema/catalog.schema.json` exactly (it already exists, with `catalog/validate.py` and `catalog/FORMAT.md`): every entry has `kind` (`rack`|`system`|`equipment`), `as_of`, optional `description`, and the optional Quantity fields listed in the schema. The fields named below are the required ones solvers use.
   - `Source(id: str, title: str, url: str)`
   - `RackType`: `id, name, vendor, model, generation, availability: str`; `role: Literal["compute","network","storage"]`; `electrical: RackElectrical(nominal_power_w, peak_power_w, power_shelves, shelf_rating_w: Quantity; supported_power_input: list[Literal["ac_54v","dc_800v"]])`; `thermal: RackThermal(liquid_fraction, max_coolant_supply_c, rack_pressure_drop_kpa: Quantity)`; `mechanical: RackMechanical(width_mm, depth_mm, height_mm, weight_kg, feet: Quantity)`; `network: RackNetwork(scale_out_ports, port_speed_gbps, scale_up_domain, switch_slots: Quantity)`; `compute: RackCompute(accelerators, fp4_pflops: Quantity)`; `overridable: list[str] = []` (dotted paths, e.g. `"electrical.peak_power_w"`); `sources: list[Source]`. Every `Quantity.source` that is set must match a `Source.id` in the same entry.
   - `SystemMember(key: str, rack_type: str, slot_offset: int)`, `SystemLink(a: str, b: str, media: Literal["copper","optics"], count: int)`, `SystemType(id, name: str, members: list[SystemMember], links: list[SystemLink], notes: str = "", sources: list[Source] = [])`.
@@ -149,12 +150,12 @@ def test_unknown_label_requires_no_value():
     - leaf_switch, spine_switch: `ports, port_speed_gbps, hop_latency_ns, power_w`
     - cable: `reach_m, power_per_end_w, weight_kg_per_m`; attrs `media` (`copper`|`optics`)
   - `FabricPreset(topology: Literal["fat_tree","rail_optimized"], oversubscription: float, leaf_model: str, spine_model: str)`
-  - `Presets(redundancy: Literal["N+1","2N"], power_input: Literal["ac_54v","dc_800v"], facility_supply_c: float, rack_delta_t_k: float, coolant: str, fabric: FabricPreset, models: dict[EquipmentCategory, str])` — `models` maps every category except `cable` to a catalog equipment id; `cable` uses all cable entries sorted by `reach_m`.
+  - `Presets(redundancy: Literal["N+1","2N"], power_input: Literal["ac_54v","dc_800v"], facility_supply_c: float, rack_delta_t_k: float, coolant: str, fabric: FabricPreset, models: dict[EquipmentCategory, str])` — `models` maps every category except `cable`, `leaf_switch` and `spine_switch` (those come from `fabric`) to a catalog equipment id; `cable` uses all cable entries sorted by `reach_m`.
   - `Coolant(cp_j_kgk: Quantity, density_kg_m3: Quantity)`
   - `Rules`: `warning_threshold: float = 0.8`, `range_policy: Literal["high","low","mid"] = "high"`, `derate: Quantity`, `spares: dict[Literal["cdu","air_handler","heat_rejection","ups_module","rectifier","transformer","switchgear"], int]`, `coolants: dict[str, Coolant]`, `facility_delta_t_k: Quantity`, `pipe: PipeRules(nominal_diameters_m: list[float], max_velocity_m_s, roughness_m, fittings_factor, facility_pump_head_kpa, rack_manifold_drop_kpa: Quantity)`, `network: NetworkRules(slack_fraction, drop_m, propagation_ns_per_m, message_bytes, nic_overhead_ns, max_oversubscription: Quantity)`, `default_presets: Presets`.
   - `CatalogBundle(racks: dict[str, RackType], systems: dict[str, SystemType], equipment: dict[str, EquipmentType], rules: Rules, hash: str)`; `hash` = sha256 of the canonical JSON (sorted keys) of everything else.
   - `class CatalogError(Exception)` with message `"<relative file>: <field.path>: <problem>"`.
-  - `load_catalog(root: Path) -> CatalogBundle` reads `racks/*.yaml`, `systems/*.yaml`, `equipment/*.yaml`, `rules.yaml`; filename stem must equal `id`; cross-checks: system members reference known racks, link keys reference member keys, every preset model id exists with the right category.
+  - `load_catalog(root: Path) -> CatalogBundle` reads `racks/*.json`, `systems/*.json`, `equipment/*.json`, `rules.json`; filename stem must equal `id`; cross-checks: system members reference known racks, link keys reference member keys, every preset model id exists with the right category.
   - `bundle_from_json(data: dict) -> CatalogBundle` and `CatalogBundle.to_json() -> dict` (used by project files; hash is recomputed and must match).
 
 - [ ] **Step 1: Write failing tests**
@@ -173,13 +174,13 @@ def test_hash_stable_and_content_sensitive(fixture_catalog, tmp_path):
     assert load_catalog(changed).hash != a
 
 def test_misspelled_field_names_file_and_path(fixture_catalog_copy):
-    # rename electrical.peak_power_w -> peak_powr_w in racks/rack-a.yaml
-    with pytest.raises(CatalogError, match=r"racks/rack-a.yaml: electrical\.peak_powr_w"):
+    # rename electrical.peak_power_w -> peak_powr_w in racks/rack-a.json
+    with pytest.raises(CatalogError, match=r"racks/rack-a.json: electrical\.peak_powr_w"):
         load_catalog(fixture_catalog_copy)
 
 def test_missing_required_equipment_param(fixture_catalog_copy):
-    # delete params.max_flow_kg_s from equipment/cdu-x.yaml
-    with pytest.raises(CatalogError, match=r"equipment/cdu-x.yaml: params\.max_flow_kg_s: missing"):
+    # delete params.max_flow_kg_s from equipment/cdu-x.json
+    with pytest.raises(CatalogError, match=r"equipment/cdu-x.json: params\.max_flow_kg_s: missing"):
         load_catalog(fixture_catalog_copy)
 
 def test_system_member_must_exist(fixture_catalog_copy):
@@ -205,10 +206,10 @@ def test_bundle_json_roundtrip(fixture_catalog):
 ### Task 3: Real catalog content (research task)
 
 **Files:**
-- Create: `catalog/racks/{gb300-nvl72,vera-rubin-nvl72,amd-helios,hgx-b300-air,network-rack,storage-rack}.yaml`
-- Create: `catalog/systems/{gb300-su8,helios-pod4,single-*}.yaml` — `gb300-su8` = 8 × gb300-nvl72 + network racks (count `estimated`); `helios-pod4` = 4 × amd-helios + 1 network rack; one `single-<rack>` system per rack type.
-- Create: `catalog/equipment/*.yaml` — at least one model per category; two cable copper classes (passive DAC, active copper) and one optics class at 800 Gb/s.
-- Create: `catalog/rules.yaml`, `catalog/README.md` (what each provenance label means here and how estimates were made)
+- Create: `catalog/racks/{gb300-nvl72,vera-rubin-nvl72,amd-helios,hgx-b300-air,network-rack,storage-rack}.json`
+- Create: `catalog/systems/{gb300-su8,amd-helios-pod4,single-*}.json` — `gb300-su8` = 8 × gb300-nvl72 + network racks (count `estimated`); `amd-helios-pod4` = 4 × amd-helios + 1 network rack; one `single-<rack>` system per rack type.
+- Create: `catalog/equipment/*.json` — at least one model per category; two cable copper classes (passive DAC, active copper) and one optics class at 800 Gb/s.
+- Create: `catalog/rules.json`, `catalog/README.md` (what each provenance label means here and how estimates were made)
 - Test: `core/tests/test_real_catalog.py`
 
 **Interfaces:**
@@ -221,7 +222,7 @@ Content rules:
 - `hgx-b300-air`: 4 chassis × ~14 kW per chassis; `overridable: ["electrical.nominal_power_w","electrical.peak_power_w","mechanical.weight_kg"]` with a note on chassis count. Network and storage racks: power and weight `user_input`-style defaults labeled `estimated`, overridable.
 - Network rack `switch_slots`: number of leaf/spine switches it holds (estimated, e.g. 16).
 - Generic equipment values: `estimated` with notes; real models where a public datasheet exists.
-- `rules.yaml` defaults (all `estimated` unless noted): `warning_threshold 0.8`, `range_policy high`, `derate 0.8`, spares 1 for cdu/air_handler/heat_rejection/ups_module/rectifier/transformer/switchgear, coolants `water` (cp 4186, ρ 998), `pg25` (cp 3900, ρ 1020), `pg40` (cp 3600, ρ 1035), `facility_delta_t_k 8`, pipe `nominal_diameters_m [0.05,0.065,0.08,0.1,0.125,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5]`, `max_velocity_m_s 2.5`, `roughness_m 4.5e-5`, `fittings_factor 1.5`, `facility_pump_head_kpa 300`, `rack_manifold_drop_kpa 30`, network `slack_fraction 0.1`, `drop_m 3.0`, `propagation_ns_per_m 5.0`, `message_bytes 4096`, `nic_overhead_ns 1000`, `max_oversubscription 1.5`; default presets: `2N`, `ac_54v`, supply 30 °C, rack ΔT 10 K, coolant `water`, fabric fat tree 1.0, models = the largest-capacity entry per category.
+- `rules.json` defaults (all `estimated` unless noted): `warning_threshold 0.8`, `range_policy high`, `derate 0.8`, spares 1 for cdu/air_handler/heat_rejection/ups_module/rectifier/transformer/switchgear, coolants `water` (cp 4186, ρ 998), `pg25` (cp 3900, ρ 1020), `pg40` (cp 3600, ρ 1035), `facility_delta_t_k 8`, pipe `nominal_diameters_m [0.05,0.065,0.08,0.1,0.125,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5]`, `max_velocity_m_s 2.5`, `roughness_m 4.5e-5`, `fittings_factor 1.5`, `facility_pump_head_kpa 300`, `rack_manifold_drop_kpa 30`, network `slack_fraction 0.1`, `drop_m 3.0`, `propagation_ns_per_m 5.0`, `message_bytes 4096`, `nic_overhead_ns 1000`, `max_oversubscription 1.5`; default presets: `2N`, `ac_54v`, supply 30 °C, rack ΔT 10 K, coolant `water`, fabric fat tree 1.0, models = the largest-capacity entry per category.
 
 - [ ] **Step 1: Write failing tests**
 
@@ -231,7 +232,7 @@ CATALOG = Path(__file__).parents[2] / "catalog"
 def test_real_catalog_loads():
     b = load_catalog(CATALOG)
     assert {"gb300-nvl72","vera-rubin-nvl72","amd-helios","hgx-b300-air","network-rack","storage-rack"} <= set(b.racks)
-    assert {"gb300-su8","helios-pod4"} <= set(b.systems)
+    assert {"gb300-su8","amd-helios-pod4"} <= set(b.systems)
 
 def test_spec_figures_present():
     r = load_catalog(CATALOG).racks
@@ -256,7 +257,7 @@ def test_estimates_explain_themselves():
 (`iter_quantities` / `iter_all_quantities`: small helpers in the test file walking pydantic models for `Quantity` fields.)
 
 - [ ] **Step 2: Run** `uv run pytest tests/test_real_catalog.py -v` — expected: FAIL.
-- [ ] **Step 3: Research and write the YAML files** per the content rules.
+- [ ] **Step 3: Research and write the JSON files** per the content rules. (Done ahead of the plan on 2026-10-18 by parallel research agents; this task now only adds `rules.json` checks and the test file. `catalog/validate.py` must also pass.)
 - [ ] **Step 4: Run** — expected: all pass.
 - [ ] **Step 5: Commit** `feat(catalog): Phase 1 racks, systems, equipment and rules with sources`.
 
