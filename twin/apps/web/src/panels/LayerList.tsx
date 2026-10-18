@@ -59,9 +59,11 @@ export function LayerList() {
                 aria-current={id === activeLayer ? 'true' : undefined}
                 onClick={() => dispatchView({ type: 'setLayer', layer: id })}
               >
-                <span className="layer-row__owner" title={owner?.name}>
-                  {owner?.initials}
-                </span>
+                {owner && (
+                  <span className="layer-row__owner" title={owner.name}>
+                    {owner.initials}
+                  </span>
+                )}
                 <span className="layer-row__name">{LAYER_NAMES[id]}</span>
                 <span className="layer-row__issues">
                   {fail > 0 && <StatusMark status="fail" label={String(fail)} />}

@@ -19,7 +19,7 @@ const CONNECTION_NOTE = {
   connecting: 'Connecting…',
   online: null,
   local: 'Local mode. The design agent needs the server.',
-  offline: 'Offline. Start the server with npm run dev.',
+  offline: 'Offline',
 } as const
 
 function revisedAt(iso: string): string {
