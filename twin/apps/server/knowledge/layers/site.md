@@ -4,7 +4,7 @@ The site layer holds the inputs nobody in the hall can change: the climate, the 
 
 ## What it is
 
-In this app the site is fixed. The location is legal, the utility delivers a fixed capacity in MW, and the water allowance is a fixed volume per day. The location preset supplies 8,760 hourly dry-bulb and wet-bulb temperatures, which drive heat rejection hour by hour. The hall geometry and floor ratings bound how many racks fit and how heavy they can be.
+In this app the site is fixed. The location is given, the utility delivers a fixed capacity in MW, and the water allowance is a fixed volume per day. The location preset supplies 8,760 hourly dry-bulb and wet-bulb temperatures, which drive heat rejection hour by hour. The hall geometry and floor ratings bound how many racks fit and how heavy they can be.
 
 ## When to use it
 

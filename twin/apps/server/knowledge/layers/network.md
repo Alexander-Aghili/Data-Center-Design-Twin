@@ -31,7 +31,7 @@ Rack-scale systems have two networks. Scale-up runs inside the rack: a GB300 NVL
 ## What to watch for
 
 - Leaf placement. Putting leaves mid-row instead of at row ends can keep more links within AEC reach.
-- Fiber volume. Jane Street's Texas hall, 56 racks and 4,032 GPUs, has about 8,000 km of fiber [6]. Cable trays, bend radius and labelling take real space and time.
+- Fiber volume. Jane Street's Texas hall, 56 racks and 4,032 GPUs, has about 8,000 km of fiber [6]. Cable trays, bend-radius limits and labelling take space and installation time.
 - Latency. Jane Street's fastest links are copper, because light in fiber is slower [6]. Within copper reach there is also no optical conversion to pay for.
 
 ## Typical failure modes

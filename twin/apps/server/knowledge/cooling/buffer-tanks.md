@@ -46,7 +46,7 @@ where V is the tank volume, ΔT_allowed is the gap between normal supply and the
 
 - The real ΔT_allowed. A loop already near the rack limit on a hot day has little margin left.
 - Stratification versus mixing: a well-stratified tank delivers its cold water first; a mixed tank warms from the start.
-- Placement in the loop. An informal engineering forum view is that a tank simply on the chiller outlet may not protect the load during an outage, which argues for a dedicated, valved arrangement [5].
+- Placement in the loop. An informal engineering forum view is that a tank placed only on the chiller outlet may not protect the load during an outage, which argues for a dedicated, valved arrangement [5].
 - Restart time measured on site, not the brochure value.
 
 ## Typical failure modes

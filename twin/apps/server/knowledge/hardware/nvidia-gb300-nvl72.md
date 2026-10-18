@@ -32,7 +32,7 @@ Eighteen 1U compute trays and the NVLink switch trays sit in a 48U MGX rack [2].
 
 - Peak vs nominal: listings differ by several kW; size busways on the higher figure.
 - Coolant quality and filtration in the technical loop (see `liquid-cooling-operations`).
-- Power smoothing settings. They are configurable through nvidia-smi or Redfish [4], and off is the expensive default for the grid.
+- Power smoothing settings. They are configurable through nvidia-smi or Redfish [4]; with smoothing off, the grid sees the full swing.
 - Install time: about 100 minutes per compute tray, per a CES 2026 comparison with Vera Rubin [8].
 
 ## Typical failure modes

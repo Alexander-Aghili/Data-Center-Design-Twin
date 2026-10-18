@@ -4,7 +4,7 @@ Cold plates sit on the GPUs, CPUs and switch chips. A water-glycol coolant flows
 
 ## What it is
 
-Each hot chip has a copper cold plate with fine internal channels. Rack manifolds feed the plates through dripless quick disconnects. Coolant leaves the rack warmer and returns to a coolant distribution unit (CDU), where a heat exchanger passes the heat to the facility water loop. The loop inside the racks is called the technical cooling system (TCS); the loop outside the CDU is the facility water system (FWS). See `cooling/liquid-cooling-operations` for how the two loops are run.
+Each hot chip has a copper cold plate with fine internal channels. Rack manifolds feed the plates through dripless quick disconnects. Warm coolant returns to a coolant distribution unit (CDU), where a heat exchanger passes the heat to the facility water loop. The loop inside the racks is called the technical cooling system (TCS); the loop outside the CDU is the facility water system (FWS). See `cooling/liquid-cooling-operations` for how the two loops are run.
 
 Memory, drives, optics and power supplies are often still air cooled, so a DLC rack has a liquid heat fraction below 1.
 
@@ -12,7 +12,7 @@ Memory, drives, optics and power supplies are often still air cooled, so a DLC r
 
 - Rack-scale GPU systems: GB300 NVL72, Vera Rubin NVL72, AMD Helios. These are designed for cold plates and cannot be air cooled.
 - Any rack above the air limit of about 35 to 50 kW. A 130 kW rack on air alone would need about 7 m³/s of airflow (see `cooling/air-containment`).
-- Sites that want warm water and few or no chiller hours: cold plates accept supply water far warmer than air systems.
+- Sites that want few or no chiller hours: cold plates accept far warmer supply water than air systems.
 
 ## Textbook numbers
 
@@ -27,12 +27,12 @@ Memory, drives, optics and power supplies are often still air cooled, so a DLC r
 - Compute: rack peak power times the liquid fraction gives the CDU load; the remainder is air load for CRAHs.
 - Cooling: CDU count per zone, pump head, and the heat rejection choice. Warmer allowed supply means more dry-cooler hours and fewer chiller hours.
 - Layout: racks far from their CDU add pipe length and pressure drop. Row manifolds without balancing starve the last racks.
-- Floor: rack-scale GPU racks are the heaviest objects in the hall, and coolant in the rack and manifolds adds to the catalog weight. Check bay ratings on raised floors.
+- Floor: rack-scale GPU racks are the heaviest objects in the hall, and coolant in the rack adds to the catalog weight; check raised-floor bay ratings.
 - Power: CDU pump power (a coefficient in the rules file) counts against the grid cap.
 
 ## What to watch for
 
-- Supply temperature against each rack's maximum. Next-generation racks list different limits; a facility loop set for one generation may be too warm or wastefully cold for the next.
+- Supply temperature against each rack's maximum. A facility loop set for one rack generation may be too warm or wastefully cold for the next.
 - The air fraction. Even 15% of 140 kW is 21 kW per rack of air load, which is more than many legacy halls give a whole rack.
 - Filtration. Cold plate microchannels clog; CDUs filter the technical loop, typically at 25 or 50 µm [6].
 - Flow balance along the row. A per-rack flow meter shows starvation before temperatures do.
