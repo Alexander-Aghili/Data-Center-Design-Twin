@@ -1,0 +1,122 @@
+{
+  "id": "rackCooling.immersion-1p",
+  "kind": "rackCooling",
+  "name": "Single-phase immersion tank",
+  "vendor": "Submer SmartPod EVO800 class",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "submer",
+      "url": "https://www.opencompute.org/wp-content/uploads/2026/07/6ed62fe254cf2297a3e0f5716faa4dd1ad5dae20.pdf",
+      "title": "Submer SmartPod EVO800 data sheet Rev.01 (hosted by OCP)"
+    }
+  ],
+  "summary": "Servers sit vertically in a tank of dielectric oil that in-tank CDUs cool with facility water. Almost all heat goes to the fluid. Tanks are heavy (about 1.8 t filled) and need hardware qualified for immersion.",
+  "category": "immersion-1p",
+  "maxRackW": {
+    "value": 100000,
+    "unit": "W",
+    "basis": "vendor",
+    "low": 50000,
+    "high": 140000,
+    "source": "https://www.opencompute.org/wp-content/uploads/2026/07/6ed62fe254cf2297a3e0f5716faa4dd1ad5dae20.pdf",
+    "note": "EVO800: up to 100 kW at 26 °C water inlet and 50 °C setpoint (50 kW fully redundant); 140 kW at 22 °C water and 55 °C setpoint."
+  },
+  "toTechnicalLoop": {
+    "value": 0.99,
+    "unit": "fraction",
+    "basis": "vendor",
+    "low": 0.98,
+    "high": 1.0,
+    "source": "https://www.opencompute.org/wp-content/uploads/2026/07/6ed62fe254cf2297a3e0f5716faa4dd1ad5dae20.pdf",
+    "note": "Thermal loss to the room is 550 W with a closed lid at 55 °C setpoint, about 0.5% of 100 kW."
+  },
+  "coolantId": "coolant.dielectric-oil",
+  "supplyRangeC": {
+    "min": {
+      "value": 18,
+      "unit": "°C",
+      "basis": "vendor",
+      "source": "https://www.opencompute.org/wp-content/uploads/2026/07/6ed62fe254cf2297a3e0f5716faa4dd1ad5dae20.pdf",
+      "note": "Water inlet requirement minimum."
+    },
+    "max": {
+      "value": 36,
+      "unit": "°C",
+      "basis": "vendor",
+      "source": "https://www.opencompute.org/wp-content/uploads/2026/07/6ed62fe254cf2297a3e0f5716faa4dd1ad5dae20.pdf",
+      "note": "Water inlet requirement maximum."
+    }
+  },
+  "deltaTK": {
+    "value": 5,
+    "unit": "K",
+    "basis": "vendor",
+    "source": "https://www.opencompute.org/wp-content/uploads/2026/07/6ed62fe254cf2297a3e0f5716faa4dd1ad5dae20.pdf",
+    "note": "Expected 5 K water outlet increase at rated flow."
+  },
+  "pressureDropKpa": {
+    "value": 130,
+    "unit": "kPa",
+    "basis": "vendor",
+    "low": 40,
+    "high": 160,
+    "source": "https://www.opencompute.org/wp-content/uploads/2026/07/6ed62fe254cf2297a3e0f5716faa4dd1ad5dae20.pdf",
+    "note": "Water head loss per in-tank CDU: 40 kPa at 5 m³/h, 130 kPa at 9 m³/h."
+  },
+  "addedWeightKgPerRack": {
+    "value": 1762,
+    "unit": "kg",
+    "basis": "vendor",
+    "source": "https://www.opencompute.org/wp-content/uploads/2026/07/6ed62fe254cf2297a3e0f5716faa4dd1ad5dae20.pdf",
+    "note": "Pod plus SmartCoolant, before IT hardware (empty pod 800 kg, 1,187 L fluid). Max floor load 19 kN/m² with IT."
+  },
+  "formFactor": "tank",
+  "tankFootprintM2PerRack": {
+    "value": 2.22,
+    "unit": "m²",
+    "basis": "vendor",
+    "source": "https://www.opencompute.org/wp-content/uploads/2026/07/6ed62fe254cf2297a3e0f5716faa4dd1ad5dae20.pdf",
+    "note": "Tank footprint 2.28 x 0.97 m; one tank holds 39 OU, about one rack. Operational footprint with service space is 7.4 m² per tank in a deployment."
+  },
+  "requiresCdu": false,
+  "pumpPowerFraction": {
+    "value": 0.016,
+    "unit": "fraction",
+    "basis": "vendor",
+    "low": 0.011,
+    "high": 0.016,
+    "source": "https://www.opencompute.org/wp-content/uploads/2026/07/6ed62fe254cf2297a3e0f5716faa4dd1ad5dae20.pdf",
+    "note": "Power consumption per kW IT: 0.016 at 50 kW, 0.011 at 70 kW (two in-tank CDUs, 1.6 kW nominal)."
+  },
+  "capexUsdPerKw": {
+    "value": 1000,
+    "unit": "USD/kW",
+    "basis": "estimate",
+    "low": 600,
+    "high": 1500,
+    "note": "Tank with in-tank CDUs at roughly 50,000 to 80,000 USD plus ~1,200 L of synthetic fluid at 20 to 40 USD/L, over ~100 kW."
+  },
+  "installWeeks": {
+    "value": 8,
+    "unit": "week",
+    "basis": "estimate",
+    "low": 6,
+    "high": 12,
+    "note": "Floor reinforcement checks, tank placement, fluid fill and IT integration."
+  },
+  "leadTimeWeeks": {
+    "value": 16,
+    "unit": "week",
+    "basis": "estimate",
+    "low": 12,
+    "high": 26,
+    "note": "Built-to-order tanks plus immersion-qualified servers."
+  },
+  "risks": [
+    "immersion-single-phase",
+    "coolants",
+    "liquid-cooling-operations"
+  ],
+  "status": "emerging"
+}

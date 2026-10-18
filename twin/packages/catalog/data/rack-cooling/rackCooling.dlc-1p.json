@@ -1,0 +1,129 @@
+{
+  "id": "rackCooling.dlc-1p",
+  "kind": "rackCooling",
+  "name": "Direct-to-chip, single-phase",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "lenovo-gb300",
+      "url": "https://lenovopress.lenovo.com/3dtours/gb300nvl72",
+      "title": "Lenovo GB300 NVL72 3D tour (18 kW air / 118 kW liquid)"
+    },
+    {
+      "id": "upsite-w",
+      "url": "https://www.upsite.com/blog/major-changes-to-ashraes-fifth-edition-of-thermal-guidelines-part-3-liquid-cooling-chapter-updates/",
+      "title": "Upsite: ASHRAE 5th edition liquid cooling classes W17 to W+"
+    },
+    {
+      "id": "vertiv-ra",
+      "url": "https://www.intelligentcio.com/north-america/2024/10/17/vertiv-codevelops-with-nvidia-complete-power-and-cooling-blueprint-for-nvidia-gb200-nvl72-platform/",
+      "title": "Vertiv and NVIDIA GB200 NVL72 7 MW reference architecture (132 kW per rack)"
+    },
+    {
+      "id": "introl-dlc",
+      "url": "https://introl.com/blog/direct-to-chip-cooling-pue-below-12-implementation",
+      "title": "Introl: direct-to-chip cooling implementation (capex, CDU pressures)"
+    }
+  ],
+  "summary": "Cold plates on GPUs, CPUs and switches carry about 85% of rack heat into a PG25 technical loop fed by a CDU. Works with warm facility water up to 45 °C, which lets dry coolers do most of the heat rejection. The remaining ~15% still needs air.",
+  "category": "dlc-1p",
+  "maxRackW": {
+    "value": 250000,
+    "unit": "W",
+    "basis": "estimate",
+    "low": 132000,
+    "high": 600000,
+    "note": "Shipping DLC racks run 132 to 140 kW (GB300 NVL72); Vera Rubin NVL72 class racks are 190 to 230 kW and NVIDIA's 600 kW Kyber roadmap is still single-phase cold plate. 250 kW is set as the practical rack-manifold limit today."
+  },
+  "toTechnicalLoop": {
+    "value": 0.85,
+    "unit": "fraction",
+    "basis": "oem",
+    "low": 0.85,
+    "high": 0.9,
+    "source": "https://lenovopress.lenovo.com/3dtours/gb300nvl72",
+    "note": "Lenovo GB300 NVL72: 118 kW liquid, 18 kW air (0.87); 85% of the rack is liquid cooled, 90% of compute trays."
+  },
+  "coolantId": "coolant.pg25",
+  "supplyRangeC": {
+    "min": {
+      "value": 17,
+      "unit": "°C",
+      "basis": "textbook",
+      "source": "https://www.upsite.com/blog/major-changes-to-ashraes-fifth-edition-of-thermal-guidelines-part-3-liquid-cooling-chapter-updates/",
+      "note": "ASHRAE W17 class upper bound; colder facility water adds condensation risk without benefit."
+    },
+    "max": {
+      "value": 45,
+      "unit": "°C",
+      "basis": "textbook",
+      "source": "https://www.upsite.com/blog/major-changes-to-ashraes-fifth-edition-of-thermal-guidelines-part-3-liquid-cooling-chapter-updates/",
+      "note": "ASHRAE W45 class upper limit; NVIDIA rates Vera Rubin for 45 °C inlet water."
+    }
+  },
+  "deltaTK": {
+    "value": 10,
+    "unit": "K",
+    "basis": "estimate",
+    "low": 7,
+    "high": 15,
+    "note": "Technical-loop temperature rise. Published flow figures for NVL72 range from ~1.0 to 1.5 L/min per kW, which with PG25 is a 10 to 15 K rise; 10 K is the common design point."
+  },
+  "pressureDropKpa": {
+    "value": 120,
+    "unit": "kPa",
+    "basis": "estimate",
+    "low": 80,
+    "high": 150,
+    "note": "Rack manifold plus cold plates and quick disconnects; secondary reporting cites NVIDIA's GB200 limit as 1.5 bar. CDU pumps deliver 350 to 500 kPa differential (Introl)."
+  },
+  "addedWeightKgPerRack": {
+    "value": 50,
+    "unit": "kg",
+    "basis": "estimate",
+    "low": 30,
+    "high": 80,
+    "note": "Rack manifolds, hoses and ~30 to 40 L of coolant in the rack and branch lines; cold plates are already in the rack's own weight."
+  },
+  "formFactor": "rack",
+  "requiresCdu": true,
+  "pumpPowerFraction": {
+    "value": 0.01,
+    "unit": "fraction",
+    "basis": "estimate",
+    "low": 0.005,
+    "high": 0.02,
+    "note": "CDU pump power per unit of liquid heat. Pumping 0.1 L/s per 10 kW at ~300 kPa with 60% pump efficiency is 0.5 kW per 100 kW; real CDUs run 1 to 2% with controls and margin. Use this or the CDU entry's pumpPowerW, not both."
+  },
+  "capexUsdPerKw": {
+    "value": 100,
+    "unit": "USD/kW",
+    "basis": "estimate",
+    "low": 40,
+    "high": 250,
+    "note": "Rack-level only: in-rack manifolds, hoses and quick disconnects at about 5,000 to 15,000 USD per rack (secondary press) over a 132 kW rack. CDUs, piping and heat rejection are costed separately. Whole-system DLC capex is quoted at 1,500 to 3,000 USD/kW (Introl)."
+  },
+  "installWeeks": {
+    "value": 8,
+    "unit": "week",
+    "basis": "estimate",
+    "low": 6,
+    "high": 12,
+    "note": "Row manifolds, flushing, pressure testing and commissioning of the technical loop."
+  },
+  "leadTimeWeeks": {
+    "value": 20,
+    "unit": "week",
+    "basis": "estimate",
+    "low": 12,
+    "high": 30,
+    "note": "Manifolds and quick disconnects follow GPU rack allocation; 2025-26 DLC parts ran four to seven months."
+  },
+  "risks": [
+    "direct-to-chip-single-phase",
+    "coolants",
+    "liquid-cooling-operations",
+    "buffer-tanks"
+  ],
+  "status": "mainstream"
+}

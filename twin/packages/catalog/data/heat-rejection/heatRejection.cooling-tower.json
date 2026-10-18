@@ -1,0 +1,100 @@
+{
+  "id": "heatRejection.cooling-tower",
+  "kind": "heatRejection",
+  "name": "Evaporative cooling tower",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "deltacooling",
+      "url": "https://deltacooling.com/resources/faqs/how-do-you-calculate-water-loss-in-a-cooling-tower",
+      "title": "Delta Cooling Towers: how to calculate water loss in a cooling tower"
+    }
+  ],
+  "summary": "Water is sprayed through fill while fans pull air across it; evaporation cools the rest of the water to a few kelvin above wet-bulb. The most compact and efficient heat rejection, but it evaporates about 1.5 L per kWh plus blowdown.",
+  "category": "coolingTower",
+  "basis": "wetBulb",
+  "approachK": {
+    "value": 4,
+    "unit": "K",
+    "basis": "textbook",
+    "low": 2.5,
+    "high": 6,
+    "note": "Approach to wet-bulb; ~4 K is the nominal design for large data-center towers (ASHRAE practice), 2.5 K possible with oversized fill. Excludes an isolating plate heat exchanger (another 1 to 2 K)."
+  },
+  "copRef": {
+    "value": null,
+    "unit": "W/W",
+    "basis": "textbook",
+    "note": "No compressor."
+  },
+  "copRefOutdoorC": {
+    "value": null,
+    "unit": "°C",
+    "basis": "textbook",
+    "note": "Not applicable without a compressor."
+  },
+  "copSlopePerK": {
+    "value": null,
+    "unit": "W/W/K",
+    "basis": "textbook",
+    "note": "Not applicable without a compressor."
+  },
+  "economizer": false,
+  "fanPowerFraction": {
+    "value": 0.015,
+    "unit": "fraction",
+    "basis": "estimate",
+    "low": 0.008,
+    "high": 0.025,
+    "note": "Induced-draft tower fans run about 0.03 to 0.09 kW per ton of heat rejected (0.008 to 0.025 W/W)."
+  },
+  "waterLPerKwh": {
+    "value": 1.5,
+    "unit": "L/kWh",
+    "basis": "textbook",
+    "low": 1.3,
+    "high": 1.8,
+    "source": "https://deltacooling.com/resources/faqs/how-do-you-calculate-water-loss-in-a-cooling-tower",
+    "note": "Evaporation: 3.6 MJ per kWh / 2.43 MJ/kg latent heat at ~30 °C = 1.48 kg. Some heat leaves as sensible air heating (lower), while drift adds 0.001 to 0.2% of circulation (higher). Blowdown is added with towerBlowdownFactor."
+  },
+  "unitCapacityW": {
+    "value": 3000000,
+    "unit": "W",
+    "basis": "estimate",
+    "low": 1000000,
+    "high": 6000000,
+    "note": "Typical factory-assembled or field-erected cell size for data-center plants."
+  },
+  "capexUsdPerKw": {
+    "value": 120,
+    "unit": "USD/kW",
+    "basis": "estimate",
+    "low": 70,
+    "high": 200,
+    "note": "Tower cells, plate heat exchanger and water treatment; cheapest per kW of the four because evaporation shrinks the equipment."
+  },
+  "leadTimeWeeks": {
+    "value": 24,
+    "unit": "week",
+    "basis": "estimate",
+    "low": 12,
+    "high": 40,
+    "note": "Modular factory-built cells are faster than chillers; no primary 2025 figure found."
+  },
+  "installWeeks": {
+    "value": 8,
+    "unit": "week",
+    "basis": "estimate",
+    "low": 6,
+    "high": 14,
+    "note": "Basin, piping, water treatment and controls."
+  },
+  "footprintM2PerMw": {
+    "value": 15,
+    "unit": "m²/MW",
+    "basis": "estimate",
+    "low": 8,
+    "high": 25,
+    "note": "Evaporative towers reject several times more heat per square metre than dry coils."
+  }
+}

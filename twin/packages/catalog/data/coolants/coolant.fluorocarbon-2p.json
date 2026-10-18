@@ -1,0 +1,44 @@
+{
+  "id": "coolant.fluorocarbon-2p",
+  "kind": "coolant",
+  "name": "Fluoroketone (Novec 649 class)",
+  "vendor": "3M Novec 649 (discontinued)",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "novec649",
+      "url": "https://multimedia.3m.com/mws/media/569865O/3m-novec-engineered-fluid-649.pdf",
+      "title": "3M Novec 649 Engineered Fluid technical data"
+    }
+  ],
+  "summary": "Engineered fluorinated fluid for two-phase immersion, boiling at 49 °C. Dense, non-conductive and GWP 1, but a PFAS; 3M ended production at the end of 2025 and replacements are still scaling.",
+  "cpJPerKgK": {
+    "value": 1103,
+    "unit": "J/(kg·K)",
+    "basis": "vendor",
+    "source": "https://multimedia.3m.com/mws/media/569865O/3m-novec-engineered-fluid-649.pdf",
+    "note": "Liquid specific heat at 25 °C. Latent heat 88 kJ/kg."
+  },
+  "densityKgM3": {
+    "value": 1600,
+    "unit": "kg/m³",
+    "basis": "vendor",
+    "source": "https://multimedia.3m.com/mws/media/569865O/3m-novec-engineered-fluid-649.pdf",
+    "note": "Liquid density at 25 °C (1674.4 - 2.904 T)."
+  },
+  "viscosityPaS": {
+    "value": 0.00064,
+    "unit": "Pa·s",
+    "basis": "vendor",
+    "source": "https://multimedia.3m.com/mws/media/569865O/3m-novec-engineered-fluid-649.pdf",
+    "note": "Absolute viscosity 0.64 cP at 25 °C."
+  },
+  "dielectric": true,
+  "glycolFraction": {
+    "value": 0,
+    "unit": "fraction",
+    "basis": "textbook",
+    "note": "No glycol."
+  },
+  "twoPhase": true
+}

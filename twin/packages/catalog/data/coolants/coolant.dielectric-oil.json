@@ -1,0 +1,50 @@
+{
+  "id": "coolant.dielectric-oil",
+  "kind": "coolant",
+  "name": "Synthetic dielectric oil",
+  "vendor": "Calumet CalChill 60 (representative)",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "calchill",
+      "url": "https://calumet.com/brochures/CalChill",
+      "title": "Calumet CalChill immersion cooling fluid brochure"
+    }
+  ],
+  "summary": "Hydrocarbon immersion fluid (gas-to-liquid or PAO class). Non-conductive and non-PFAS, with about half the heat capacity of water and several times its viscosity.",
+  "cpJPerKgK": {
+    "value": 1988,
+    "unit": "J/(kg·K)",
+    "basis": "vendor",
+    "low": 1935,
+    "high": 2107,
+    "source": "https://calumet.com/brochures/CalChill",
+    "note": "CalChill 60 at 50 °C (ASTM E1269); CalChill 70 is 1935; Lubrizol CompuZol grades list 1810 to 2107."
+  },
+  "densityKgM3": {
+    "value": 823,
+    "unit": "kg/m³",
+    "basis": "vendor",
+    "low": 813,
+    "high": 916,
+    "source": "https://calumet.com/brochures/CalChill",
+    "note": "At 50 °C (ASTM D4052). Ester-type fluids run up to ~916 kg/m³."
+  },
+  "viscosityPaS": {
+    "value": 0.0064,
+    "unit": "Pa·s",
+    "basis": "calculated",
+    "low": 0.0047,
+    "high": 0.01,
+    "source": "https://calumet.com/brochures/CalChill",
+    "note": "Kinematic 7.7 cSt at 40 °C x ~830 kg/m³ = 6.4 mPa·s. CalChill 70 is 12.1 cSt."
+  },
+  "dielectric": true,
+  "glycolFraction": {
+    "value": 0,
+    "unit": "fraction",
+    "basis": "textbook",
+    "note": "No glycol."
+  },
+  "twoPhase": false
+}

@@ -1,0 +1,108 @@
+{
+  "id": "heatRejection.adiabatic-dry-cooler",
+  "kind": "heatRejection",
+  "name": "Adiabatic dry cooler",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "schneider-45c",
+      "url": "https://www.techtarget.com/it-infrastructure/news/366651212/AI-data-centers-can-run-hot-to-stay-cool-report",
+      "title": "TechTarget on Schneider Electric 32 C vs 45 C TCS modeling in Dallas and Paris"
+    }
+  ],
+  "summary": "A dry cooler with wetted pads or sprays that pre-cool the inlet air toward wet-bulb on hot hours. Runs dry most of the year and spends water only when it is hot, which avoids most trim-chiller hours.",
+  "category": "adiabaticDryCooler",
+  "basis": "dryBulb",
+  "approachK": {
+    "value": 7,
+    "unit": "K",
+    "basis": "press",
+    "low": 5,
+    "high": 10,
+    "source": "https://www.techtarget.com/it-infrastructure/news/366651212/AI-data-centers-can-run-hot-to-stay-cool-report",
+    "note": "Same coil approach as the dry cooler; in adiabatic mode the engine applies it to wet-bulb. Real pads reach 80 to 90% saturation, so the true air temperature is 1 to 2 K above wet-bulb in Dallas summer, which this slightly flatters."
+  },
+  "copRef": {
+    "value": null,
+    "unit": "W/W",
+    "basis": "textbook",
+    "note": "No compressor."
+  },
+  "copRefOutdoorC": {
+    "value": null,
+    "unit": "°C",
+    "basis": "textbook",
+    "note": "Not applicable without a compressor."
+  },
+  "copSlopePerK": {
+    "value": null,
+    "unit": "W/W/K",
+    "basis": "textbook",
+    "note": "Not applicable without a compressor."
+  },
+  "economizer": false,
+  "fanPowerFraction": {
+    "value": 0.02,
+    "unit": "fraction",
+    "basis": "estimate",
+    "low": 0.01,
+    "high": 0.03,
+    "note": "Same fan class as a dry cooler."
+  },
+  "waterLPerKwh": {
+    "value": 1.0,
+    "unit": "L/kWh",
+    "basis": "estimate",
+    "low": 0.5,
+    "high": 1.7,
+    "note": "Only during adiabatic hours. Air through the coil per kWh at ~10 K air rise is 3600 / (1.006 x 10) = 360 kg; pre-cooling it 7 to 10 K evaporates 360 x 1.006 x 8 / 2450 = 1.2 kg. Minus pad efficiency gains, plus bleed. Schneider's Paris model averaged 0.07 L/kWh over a year because adiabatic hours are few."
+  },
+  "adiabaticAboveC": {
+    "value": 25,
+    "unit": "°C",
+    "basis": "estimate",
+    "low": 22,
+    "high": 28,
+    "note": "Set where the dry coil alone stops meeting a 32 °C supply (32 - 7 K approach); vendors default to switch-on points of about 22 to 28 °C."
+  },
+  "unitCapacityW": {
+    "value": 1000000,
+    "unit": "W",
+    "basis": "estimate",
+    "low": 200000,
+    "high": 2500000,
+    "note": "Same unit sizes as dry coolers with a wetted-pad kit."
+  },
+  "capexUsdPerKw": {
+    "value": 200,
+    "unit": "USD/kW",
+    "basis": "estimate",
+    "low": 130,
+    "high": 300,
+    "note": "Dry cooler plus pads, water treatment and controls, about a third more per kW."
+  },
+  "leadTimeWeeks": {
+    "value": 30,
+    "unit": "week",
+    "basis": "estimate",
+    "low": 16,
+    "high": 45,
+    "note": "Dry cooler lead time plus water-treatment skid."
+  },
+  "installWeeks": {
+    "value": 8,
+    "unit": "week",
+    "basis": "estimate",
+    "low": 6,
+    "high": 12,
+    "note": "Dry cooler install plus water supply, drain and treatment."
+  },
+  "footprintM2PerMw": {
+    "value": 45,
+    "unit": "m²/MW",
+    "basis": "estimate",
+    "low": 30,
+    "high": 70,
+    "note": "Pre-cooling lets a smaller coil hit the same summer design point than a pure dry cooler (60 m²/MW)."
+  }
+}

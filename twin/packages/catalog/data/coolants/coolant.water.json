@@ -1,0 +1,35 @@
+{
+  "id": "coolant.water",
+  "kind": "coolant",
+  "name": "Treated water",
+  "asOf": "2026-10-18",
+  "summary": "Deionized or inhibited water. Best heat capacity of any coolant here, but it can freeze outdoors and conducts electricity if it leaks onto IT.",
+  "cpJPerKgK": {
+    "value": 4181,
+    "unit": "J/(kg·K)",
+    "basis": "textbook",
+    "note": "Liquid water at 25 °C."
+  },
+  "densityKgM3": {
+    "value": 997,
+    "unit": "kg/m³",
+    "basis": "textbook",
+    "note": "Liquid water at 25 °C."
+  },
+  "viscosityPaS": {
+    "value": 0.00089,
+    "unit": "Pa·s",
+    "basis": "textbook",
+    "low": 0.00065,
+    "high": 0.001,
+    "note": "0.89 mPa·s at 25 °C; 0.65 at 40 °C, 1.00 at 20 °C."
+  },
+  "dielectric": false,
+  "glycolFraction": {
+    "value": 0,
+    "unit": "fraction",
+    "basis": "textbook",
+    "note": "No glycol."
+  },
+  "twoPhase": false
+}

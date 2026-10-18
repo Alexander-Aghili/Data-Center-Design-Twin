@@ -1,0 +1,119 @@
+{
+  "id": "rackCooling.rdhx-passive",
+  "kind": "rackCooling",
+  "name": "Passive rear-door heat exchanger",
+  "vendor": "USystems (Legrand) ColdLogik CL21 class",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "cl21",
+      "url": "https://www.legrand.com/datacenter/sites/g/files/ocwmcr716/files/2023-11/cl21_datasheet.pdf",
+      "title": "USystems ColdLogik CL21 Smart Passive RDHx data sheet"
+    }
+  ],
+  "summary": "A water coil replaces the rack's rear door and the server fans push hot exhaust through it. No fans of its own, so capacity depends on server airflow and needs cool water, roughly 20 to 30 kW per rack.",
+  "category": "rdhx",
+  "maxRackW": {
+    "value": 25000,
+    "unit": "W",
+    "basis": "vendor",
+    "low": 22000,
+    "high": 29000,
+    "source": "https://www.legrand.com/datacenter/sites/g/files/ocwmcr716/files/2023-11/cl21_datasheet.pdf",
+    "note": "CL21 Smart Passive with 14 °C water in / 20 °C out at 6,000 m³/h server airflow: 22 kW at 35 °C air-on, 29 kW at 40 °C air-on. Vertiv markets its passive Liebert DCD up to 50 kW but no duty table was found."
+  },
+  "toTechnicalLoop": {
+    "value": 0,
+    "unit": "fraction",
+    "basis": "textbook",
+    "note": "The door sits on facility water directly; nothing goes to a CDU technical loop."
+  },
+  "toFacilityWaterAtRack": {
+    "value": 1.0,
+    "unit": "fraction",
+    "basis": "vendor",
+    "low": 0.9,
+    "high": 1.0,
+    "source": "https://www.legrand.com/datacenter/sites/g/files/ocwmcr716/files/2023-11/cl21_datasheet.pdf",
+    "note": "Sized to neutralize the rack's exhaust; real capture falls below 1.0 when server airflow or water temperature is outside the duty table."
+  },
+  "coolantId": "coolant.water",
+  "supplyRangeC": {
+    "min": {
+      "value": 14,
+      "unit": "°C",
+      "basis": "vendor",
+      "source": "https://www.legrand.com/datacenter/sites/g/files/ocwmcr716/files/2023-11/cl21_datasheet.pdf",
+      "note": "Rated duty is at 14 °C water in; colder water risks condensation on the door."
+    },
+    "max": {
+      "value": 20,
+      "unit": "°C",
+      "basis": "estimate",
+      "note": "Passive doors lose capacity fast as water warms because the server exhaust temperature fixes the air side; above ~20 °C the door cannot cool to room-neutral."
+    }
+  },
+  "deltaTK": {
+    "value": 6,
+    "unit": "K",
+    "basis": "vendor",
+    "source": "https://www.legrand.com/datacenter/sites/g/files/ocwmcr716/files/2023-11/cl21_datasheet.pdf",
+    "note": "Duty table: water 14 °C in, 20 °C out."
+  },
+  "pressureDropKpa": {
+    "value": 30,
+    "unit": "kPa",
+    "basis": "vendor",
+    "low": 2.3,
+    "high": 30,
+    "source": "https://www.legrand.com/datacenter/sites/g/files/ocwmcr716/files/2023-11/cl21_datasheet.pdf",
+    "note": "Fluid pressure drop at max duty (6,000 m³/h, 40 °C air-on); 2.3 kPa at the smallest duty point."
+  },
+  "addedWeightKgPerRack": {
+    "value": 104,
+    "unit": "kg",
+    "basis": "vendor",
+    "low": 88,
+    "high": 125,
+    "source": "https://www.legrand.com/datacenter/sites/g/files/ocwmcr716/files/2023-11/cl21_datasheet.pdf",
+    "note": "Wet weight including interface frame, 750 mm wide 42U door; 600 mm 42U is 88 kg and 800 mm 52U is 125 kg."
+  },
+  "formFactor": "rack",
+  "requiresCdu": false,
+  "pumpPowerFraction": {
+    "value": 0,
+    "unit": "fraction",
+    "basis": "vendor",
+    "source": "https://www.legrand.com/datacenter/sites/g/files/ocwmcr716/files/2023-11/cl21_datasheet.pdf",
+    "note": "No fans or pumps in the door ('zero operational costs'); server fans and the facility pump do the work."
+  },
+  "capexUsdPerKw": {
+    "value": 400,
+    "unit": "USD/kW",
+    "basis": "estimate",
+    "low": 250,
+    "high": 600,
+    "note": "A passive door costs roughly 6,000 to 15,000 USD installed with hoses; divided by about 25 kW."
+  },
+  "installWeeks": {
+    "value": 3,
+    "unit": "week",
+    "basis": "estimate",
+    "low": 2,
+    "high": 6,
+    "note": "Door swap plus flexible hoses to under-floor or overhead branch piping, per row."
+  },
+  "leadTimeWeeks": {
+    "value": 12,
+    "unit": "week",
+    "basis": "estimate",
+    "low": 8,
+    "high": 20,
+    "note": "Built-to-order coils; typical quoted lead times for RDHx are two to four months."
+  },
+  "risks": [
+    "rear-door-heat-exchanger",
+    "liquid-cooling-operations"
+  ],
+  "status": "mainstream"
+}
