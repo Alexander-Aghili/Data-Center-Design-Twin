@@ -102,6 +102,26 @@ describe('HTTP routes', () => {
     expect(targetState.history.last).toBe('Imported plan "Default hall"')
   })
 
+  it('runs real commands against the built-in registry and catalog', async () => {
+    const app = await createApp({ dataDir: tempDataDir() })
+    apps.push(app)
+    const before = (await app.inject({ method: 'GET', url: '/api/state' })).json()
+    const bad = await app.inject({
+      method: 'POST',
+      url: '/api/command',
+      payload: { command: { type: 'placeRacks', payload: { groupId: 'nope', rowId: 'R1', slots: [0] } } },
+    })
+    expect(bad.statusCode).toBe(400)
+    expect(bad.json().error).toContain('nope')
+    expect((await app.inject({ method: 'GET', url: '/api/state' })).json()).toEqual(before)
+
+    const ok = await app.inject({ method: 'POST', url: '/api/command', payload: { command: rename('Real hall') } })
+    expect(ok.statusCode).toBe(200)
+    const after = (await app.inject({ method: 'GET', url: '/api/state' })).json()
+    expect(after.plan.name).toBe('Real hall')
+    expect(after.evaluation).toEqual(before.evaluation)
+  })
+
   it('persisted plan reloads after restart', async () => {
     const dataDir = tempDataDir()
     const first = await createApp({ dataDir, builtins: testBuiltins(), registry: testRegistry() })
@@ -122,6 +142,7 @@ describe('HTTP routes', () => {
     const dataDir = tempDataDir()
     mkdirSync(join(dataDir, 'briefs'))
     writeFileSync(join(dataDir, 'briefs', '2026-10-18T15-00-00-openfoam.md'), '# Brief\n')
+    writeFileSync(join(dataDir, 'outside.md'), 'not a brief\n')
     const app = await makeApp(dataDir)
 
     const ok = await app.inject({ method: 'GET', url: '/api/brief/file/2026-10-18T15-00-00-openfoam.md' })
@@ -131,7 +152,12 @@ describe('HTTP routes', () => {
 
     expect((await app.inject({ method: 'GET', url: '/api/brief/file/missing.md' })).statusCode).toBe(404)
     expect((await app.inject({ method: 'GET', url: '/api/brief/file/plan.json' })).statusCode).toBe(400)
-    expect((await app.inject({ method: 'GET', url: '/api/brief/file/..%2Fplan.md' })).statusCode).toBe(400)
+    for (const attempt of ['..%2Foutside.md', '..%5Coutside.md', '%2Fetc%2Fpasswd.md', '.md%00.md']) {
+      const res = await app.inject({ method: 'GET', url: `/api/brief/file/${attempt}` })
+      expect(res.statusCode, attempt).toBe(400)
+      expect(res.body).not.toContain('not a brief')
+    }
+    expect((await app.inject({ method: 'GET', url: '/api/brief/file/..' })).statusCode).toBe(404)
   })
 
   it('GET /api/brief returns the deterministic brief for openfoam and rejects other targets', async () => {

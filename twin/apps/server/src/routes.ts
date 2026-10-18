@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { resolve, sep } from 'node:path'
 import { snapshotCatalog } from '@twin/catalog'
 import { formatIssues } from '@twin/commands'
 import { CommandSchema, PlanSchema, type ToolCallResponse } from '@twin/schema'
@@ -35,6 +35,7 @@ function fileSlug(name: string): string {
 
 export function registerRoutes(app: FastifyInstance, deps: { store: PlanStore; agent: AgentRuntime; dataDir: string }): void {
   const { store, agent, dataDir } = deps
+  const briefsDir = resolve(dataDir, 'briefs')
 
   app.get('/api/health', async () => ({ ok: true }))
 
@@ -83,9 +84,12 @@ export function registerRoutes(app: FastifyInstance, deps: { store: PlanStore; a
 
   app.get<{ Params: { name: string } }>('/api/brief/file/:name', async (request, reply) => {
     const { name } = request.params
-    if (!BRIEF_FILE_NAME.test(name)) return reply.code(400).send({ ok: false, error: `Not a brief file name: ${name}` })
+    const file = resolve(briefsDir, name)
+    if (!BRIEF_FILE_NAME.test(name) || !file.startsWith(briefsDir + sep)) {
+      return reply.code(400).send({ ok: false, error: `Not a brief file name: ${name}` })
+    }
     try {
-      const text = await readFile(join(dataDir, 'briefs', name), 'utf8')
+      const text = await readFile(file, 'utf8')
       return reply.type(MARKDOWN).header('content-disposition', `attachment; filename="${name}"`).send(text)
     } catch {
       return reply.code(404).send({ ok: false, error: `No brief named ${name}` })
