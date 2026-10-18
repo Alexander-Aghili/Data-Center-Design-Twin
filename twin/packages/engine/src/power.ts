@@ -215,10 +215,12 @@ export function powerBudget(
     return g ? rackPeakW(g.rack) : r.powerW
   }
 
-  // Hourly budget: IT at nominal power (energy), plus optics, cooling and misc loads, through the loss chain.
+  // Hourly budget: IT at nominal power (energy), plus optics, leaf switches in hall positions (sized with their
+  // typical power), cooling and misc loads, through the loss chain.
   const opticsW = Number.isFinite(network.network.opticsW) ? network.network.opticsW : 0
-  const itW = racks.reduce((s, r) => s + r.powerW, 0) + opticsW
-  const itPeakW = racks.reduce((s, r) => s + peakOf(r), 0) + opticsW
+  const switchW = equipment.filter((e) => e.category === 'leaf').reduce((s, e) => s + e.loadW, 0)
+  const itW = racks.reduce((s, r) => s + r.powerW, 0) + opticsW + switchW
+  const itPeakW = racks.reduce((s, r) => s + peakOf(r), 0) + opticsW + switchW
   const facilityAt = (it: number, cooling: number) => (it + cooling + misc * it) / chain
   const coolingW = toHours(rejection.hourly.coolingW, hours)
   const itSeries = Array.from({ length: hours }, () => itW)

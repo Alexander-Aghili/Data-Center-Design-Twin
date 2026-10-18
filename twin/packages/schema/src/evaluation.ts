@@ -7,7 +7,7 @@ export type Status = z.infer<typeof StatusSchema>
 
 export const CHECK_KINDS = [
   'cooling.rackHeatLimit', 'cooling.crahCapacity', 'cooling.cduCapacity', 'cooling.cduPositions', 'cooling.manifoldBalance',
-  'cooling.coolantTemp', 'cooling.heatRejection', 'cooling.rideThrough', 'cooling.waterPeakDay', 'cooling.leakExposure',
+  'cooling.coolantTemp', 'cooling.airInletTemp', 'cooling.heatRejection', 'cooling.rideThrough', 'cooling.waterPeakDay', 'cooling.leakExposure',
   'power.gridWorstHour', 'power.busway', 'power.trainingSwing', 'power.ups', 'power.transformer', 'power.inputCompat',
   'layout.floorBay', 'layout.pointLoad',
   'network.copperReach', 'network.leafPorts',

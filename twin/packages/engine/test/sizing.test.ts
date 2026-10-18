@@ -147,11 +147,14 @@ describe('plant, electrical and network sizing', () => {
 
   it('UPS modules and busways use the power checks loads: UPS = IT peak / distribution efficiency', () => {
     const result = run(makePlan([airHall]))
-    // Peak 80 × 30 kW = 2.4 MW plus optics, / 0.98 ≈ 2.5 MW over 500 kW modules kept at 80%: 7 + 1.
+    // Peak 80 × 30 kW = 2.4 MW plus optics and leaf switches, / 0.98 ≈ 2.5 MW over 500 kW modules kept at 80%: 7 + 1.
     expect(item(result, 'ups')).toMatchObject({ modelId: 'ups.500kw', count: 8, positionIds: ['elec-1'] })
     const ctx = makeCtx(makePlan([airHall]))
     const opticsW = networkFabric(ctx, makeRacks(ctx)).network.opticsW
-    expect(item(result, 'ups')!.loadW).toBeCloseTo((2_400_000 + opticsW) / 0.98, 6)
+    // Leaf switches: leaf-1 holds 40 and leaf-2 10 (see the leaf test), 940 W each.
+    const leafW = (40 + 10) * 940
+    expect(item(result, 'leaf:leaf-1')!.loadW + item(result, 'leaf:leaf-2')!.loadW).toBe(leafW)
+    expect(item(result, 'ups')!.loadW).toBeCloseTo((2_400_000 + opticsW + leafW) / 0.98, 6)
     // Row R1: 480 kW peak at 415 V and pf 0.95 is 703 A: one 1250 A busway (56%) plus a spare.
     expect(item(result, 'busway:R1')).toMatchObject({ modelId: 'busway.1250a', count: 2, loadW: 480_000 })
     expect(item(result, 'transformer')).toMatchObject({ modelId: 'transformer.3mva', positionIds: ['elec-1'] })

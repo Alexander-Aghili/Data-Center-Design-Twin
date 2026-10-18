@@ -64,6 +64,16 @@ describe('demo: the spec cascade, replayed as commands', () => {
       for (const r of cascade.racks.filter((x) => x.groupId === 'g2')) expect(r.supplyC!).toBeLessThanOrEqual(45)
     })
 
+    it('the warm shared loop pushes the air-cooled inference racks past ASHRAE A1', () => {
+      expect(check(onAir, 'cooling.airInletTemp:g1').status).toBe('pass')
+      const inlet = check(cascade, 'cooling.airInletTemp:g1')
+      expect(inlet.status).toBe('fail')
+      expect(inlet.value).toBe(DEMO_SUPPLY_C + builtins.rules.crahCoilApproachK.value!)
+      expect(inlet.explanation).toContain(`supplies ${DEMO_SUPPLY_C}\u00a0°C water`)
+      expect(inlet.causes.map((c) => c.path)).toContain('cooling.facilitySupplyC')
+      expect(cascade.checks.some((c) => c.id === 'cooling.airInletTemp:g2')).toBe(false)
+    })
+
     it('a raised-floor bay under rows R3–R5 goes over its rating (heavier racks plus coolant)', () => {
       expect(gb300Bays(cascade).some((c) => c.status === 'fail')).toBe(true)
     })
@@ -91,6 +101,7 @@ describe('demo: the spec cascade, replayed as commands', () => {
     it('the new effects show up as worsened checks for the agent to speak about', () => {
       const worsened = diffEvaluations(onAir, cascade).worsened.map((c) => c.id)
       expect(worsened).toContain('power.gridWorstHour:site')
+      expect(worsened).toContain('cooling.airInletTemp:g1')
       expect(worsened.some((id) => id.startsWith('layout.floorBay:'))).toBe(true)
     })
   })

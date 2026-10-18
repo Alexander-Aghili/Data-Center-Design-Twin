@@ -7,7 +7,7 @@ describe('setSiteInput', () => {
   it('sets numeric inputs and summarizes them in display units', () => {
     const grid = run(plan(), 'setSiteInput', { field: 'gridCapacityW', value: 12_500_000 })
     expect(grid.plan.site.gridCapacityW).toBe(12_500_000)
-    expect(grid.summary).toBe('Grid capacity set to 12.5 MW (was 10.4 MW)')
+    expect(grid.summary).toBe('Grid capacity set to 12.5 MW (was 10.6 MW)')
     const water = run(plan(), 'setSiteInput', { field: 'waterAllowanceM3PerDay', value: 0 })
     expect(water.plan.site.waterAllowanceM3PerDay).toBe(0)
     expect(water.summary).toBe('Water allowance set to 0 m³/day (was 120 m³/day)')

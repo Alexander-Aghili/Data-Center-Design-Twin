@@ -498,12 +498,12 @@ function buswayAmpsPerW(e: EquipmentEntry | undefined): number | null {
 
 /**
  * UPS modules, busways per row and transformers, with the loads the power checks use (Task 7), so that
- * auto-sized units pass them: racks at catalog peak plus optics; UPS = IT peak / distribution efficiency;
+ * auto-sized units pass them: racks at catalog peak plus optics and leaf switches; UPS = IT peak / distribution efficiency;
  * busway design current = row peak / (√3·V·pf) / oversubscription allowance (rack peak already is the electrical
  * peak, so no peak-to-average factor); transformers =
  * facility power at the worst cooling hour, in VA at the busway power factor.
  */
-function electricalFills(ctx: EvalContext, racks: RackResult[], coolingItems: SizedEquipment[]): Fill[] {
+function electricalFills(ctx: EvalContext, racks: RackResult[], coolingItems: SizedEquipment[], switchW: number): Fill[] {
   const redundancy = ctx.plan.power.redundancy
   const peakOf = (r: RackResult) => {
     const rack = groupEntries(ctx, r.groupId).rack
@@ -512,7 +512,7 @@ function electricalFills(ctx: EvalContext, racks: RackResult[], coolingItems: Si
   const rackPeak = sumBy(racks, peakOf)
   if (rackPeak <= 0) return []
   const opticsW = networkFabric(ctx, racks).network.opticsW
-  const itPeakW = rackPeak + (Number.isFinite(opticsW) ? opticsW : 0)
+  const itPeakW = rackPeak + (Number.isFinite(opticsW) ? opticsW : 0) + switchW
   const electrical = ctx.plan.hall.positions.filter((p) => p.kind === 'electrical')
   const upsLoad = itPeakW / (rule(ctx, 'distributionEfficiency') ?? 1)
   const upsCandidates = equipmentCandidates(ctx, 'ups', 'moduleW', (w) => w)
@@ -609,7 +609,9 @@ export function sizeEquipment(ctx: EvalContext, racks: RackResult[], air: AirSid
     sumBy(liquid.racks, (r) => methodPumpW(ctx, r)) * balancingFactor(ctx)
   const plant = plantFill(ctx, racks, hallW)
   const cooling: Fill[] = [...cdus, ...crahs, ...(plant ? [plant] : [])]
-  const fills = [...cooling, ...electricalFills(ctx, racks, cooling.map((f) => f.item)), ...leafFills(ctx, racks)]
+  const leaves = leafFills(ctx, racks)
+  const switchW = sumBy(leaves, (f) => f.item.loadW)
+  const fills = [...cooling, ...electricalFills(ctx, racks, cooling.map((f) => f.item), switchW), ...leaves]
   return {
     equipment: [...fills.map((f) => f.item), ...bufferTank(ctx, racks)],
     checks: [
