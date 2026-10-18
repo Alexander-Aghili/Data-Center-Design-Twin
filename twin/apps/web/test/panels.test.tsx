@@ -106,13 +106,13 @@ describe('LayerList', () => {
   it('shows the issue count per layer from checks', () => {
     render(<LayerList />)
     const cooling = screen.getByRole('button', { name: /^Cooling/ })
-    expect(cooling.getAttribute('aria-label')).toBe('Cooling, owner LH, 2 failing')
+    expect(cooling.getAttribute('aria-label')).toBe('Cooling, Mechanical engineer, 2 failing')
     expect(cooling.getAttribute('aria-current')).toBe('true')
     expect(within(cooling).getByText('2')).toBeTruthy()
-    expect(screen.getByRole('button', { name: /^Power/ }).getAttribute('aria-label')).toBe('Power, owner DC, 1 warning')
-    expect(screen.getByRole('button', { name: /^Layout/ }).getAttribute('aria-label')).toBe('Layout, owner MS, 1 warning')
-    expect(screen.getByRole('button', { name: /^Workload/ }).getAttribute('aria-label')).toBe('Workload, owner AK, no issues')
-    expect(screen.getByRole('button', { name: /^Site/ }).getAttribute('aria-label')).toBe('Site, fixed inputs, no issues')
+    expect(screen.getByRole('button', { name: /^Power/ }).getAttribute('aria-label')).toBe('Power, Electrical engineer, 1 warning')
+    expect(screen.getByRole('button', { name: /^Layout/ }).getAttribute('aria-label')).toBe('Layout, Facility planner, 1 warning')
+    expect(screen.getByRole('button', { name: /^Workload/ }).getAttribute('aria-label')).toBe('Workload, Product and compute buyer, no issues')
+    expect(screen.getByRole('button', { name: /^Site/ }).getAttribute('aria-label')).toBe('Site, Fixed inputs, no issues')
   })
 
   it('switches the active layer', () => {
@@ -128,6 +128,19 @@ describe('Totals', () => {
     expect(screen.getByText('5,640')).toBeTruthy()
     expect(screen.getByText('Not buildable as drawn: 2 failing checks')).toBeTruthy()
     expect(screen.getByRole('row', { name: /Capex/ }).textContent).toContain('$184M')
+  })
+
+  it('marks a limit row with the check status shape and word, not only the meter color', () => {
+    const evaluation = demoEvaluation()
+    const checks = evaluation.checks.map((c) => (c.kind === 'power.gridWorstHour' ? { ...c, status: 'fail' as const } : c))
+    store.setState({ evaluation: { ...evaluation, checks } })
+    render(<Totals allOpen={false} onToggleAll={() => {}} />)
+    const facility = screen.getByRole('row', { name: /Facility power, worst hour/ })
+    expect(facility.querySelector('th [data-status="fail"] svg')).toBeTruthy()
+    expect(within(facility).getByText('Fail:')).toBeTruthy()
+    expect(facility.querySelector('.meter-rule')?.getAttribute('data-status')).toBe('fail')
+    const water = screen.getByRole('row', { name: /Water, peak day/ })
+    expect(water.querySelector('th .status-mark')).toBeNull()
   })
 
   it('shows unknown PUE as a dash, never 0', () => {
@@ -147,6 +160,20 @@ describe('AllVariables', () => {
     expect(within(dialog).getByRole('row', { name: /Heat to air/ }).textContent).toContain('6.8 MW')
     fireEvent.keyDown(dialog, { key: 'Escape' })
     expect(onClose).toHaveBeenCalled()
+  })
+
+  it('is modal: focus starts in the filter and Tab wraps inside the drawer', () => {
+    render(<AllVariables onClose={() => {}} />)
+    const dialog = screen.getByRole('dialog', { name: 'All variables' })
+    expect(dialog.getAttribute('aria-modal')).toBe('true')
+    const search = screen.getByRole('searchbox')
+    expect(document.activeElement).toBe(search)
+    const last = within(dialog).getAllByRole('button').at(-1) as HTMLElement
+    last.focus()
+    fireEvent.keyDown(last, { key: 'Tab' })
+    expect(document.activeElement).toBe(search)
+    fireEvent.keyDown(search, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(last)
   })
 
   it('filters variables by name', () => {
@@ -169,6 +196,17 @@ describe('App', () => {
     expect(within(screen.getByRole('main')).getByRole('dialog', { name: 'All variables' })).toBeTruthy()
     fireEvent.click(toggle)
     expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('returns focus to the All variables button when the drawer closes with Escape', () => {
+    render(<App />)
+    const toggle = screen.getByRole('button', { name: 'All variables' })
+    toggle.focus()
+    fireEvent.click(toggle)
+    expect(document.activeElement).toBe(screen.getByRole('searchbox'))
+    fireEvent.keyDown(screen.getByRole('searchbox'), { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(document.activeElement).toBe(toggle)
   })
 
   it('undoes on Cmd+Z and redoes on Shift+Cmd+Z, but not while typing', () => {

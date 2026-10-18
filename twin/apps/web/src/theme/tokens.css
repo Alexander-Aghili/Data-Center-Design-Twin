@@ -14,6 +14,7 @@
 
   /* ink */
   --ink: #172026;
+  --ink-hover: #2a363d;
   --graphite: #59656c;
   --hairline: #c6cfd3;
   --ink-inverse: #ffffff;
@@ -72,8 +73,7 @@
   --col-right: 360px;
   --strip-h: 168px;
 
-  /* layering inside the center column */
-  --z-overlay: 10;
+  /* the drawer sits over the scene and its annotations */
   --z-drawer: 20;
 
   /* motion: only in answer to a person's action */

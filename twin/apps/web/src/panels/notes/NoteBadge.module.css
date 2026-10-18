@@ -1,0 +1,64 @@
+.badge {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  padding: 2px;
+  margin: -2px;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  cursor: pointer;
+  line-height: 0;
+}
+
+.flag {
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+  fill: none;
+  stroke: var(--ink);
+}
+
+.count {
+  font-family: var(--font);
+  font-size: 9.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  fill: var(--ink);
+}
+
+.plus {
+  stroke: var(--hairline);
+  stroke-width: 1.2;
+}
+
+.badge[data-importance='must'] .flag {
+  fill: var(--ink);
+}
+
+.badge[data-importance='must'] .count {
+  fill: var(--panel);
+}
+
+.badge[data-importance='fyi'] .flag {
+  stroke: var(--graphite);
+  stroke-dasharray: 2 1.5;
+}
+
+.badge[data-importance='fyi'] .count {
+  fill: var(--graphite);
+}
+
+.badge[data-importance='none'] .flag {
+  stroke: var(--hairline);
+}
+
+.badge[data-importance='none']:hover .flag,
+.badge[data-importance='none']:hover .plus,
+.badge[data-importance='none'][aria-expanded='true'] .flag,
+.badge[data-importance='none'][aria-expanded='true'] .plus {
+  stroke: var(--graphite);
+}
+
+.badge[aria-expanded='true'] {
+  background: var(--clay-mid);
+}

@@ -1,8 +1,19 @@
+import { fileURLToPath } from 'node:url'
 import { SERVER_PORT } from '@twin/schema'
-import Fastify from 'fastify'
+import { createApp } from './app'
+import { loadApiKey } from './env'
 
-const app = Fastify({ logger: true })
+/** `twin/.data/` (git-ignored): plan.json, conversation.json and generated briefs. */
+const dataDir = fileURLToPath(new URL('../../../.data/', import.meta.url))
 
-app.get('/api/health', async () => ({ ok: true }))
+const hasApiKey = loadApiKey()
+const app = await createApp({ dataDir, logger: true })
+app.log.info({ dataDir, hasApiKey }, hasApiKey ? 'API key loaded' : 'No API key in .env; the agent is unavailable')
 
-await app.listen({ port: SERVER_PORT, host: '127.0.0.1' })
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  process.once(signal, () => {
+    void app.close().then(() => process.exit(0))
+  })
+}
+
+await app.listen({ port: Number(process.env.PORT ?? SERVER_PORT), host: '127.0.0.1' })
