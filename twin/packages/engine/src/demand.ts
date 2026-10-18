@@ -1,4 +1,5 @@
 import { num, type Check, type RackResult } from '@twin/schema'
+import { withUnit } from './causes'
 import type { EvalContext } from './context'
 import type { PowerResult } from './power'
 
@@ -12,8 +13,7 @@ export interface DemandResult {
  */
 const SWING_LIMIT_FRACTION = 0.9
 
-const fmt = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 })
-const unit = (n: number, u: string) => `${fmt.format(n)} ${u}`
+const unit = (n: number, u: string) => withUnit(n, u, 0)
 
 function rowObjectIds(racks: RackResult[], rowId: string): string[] {
   return racks.filter((r) => r.rowId === rowId).map((r) => r.objectId)

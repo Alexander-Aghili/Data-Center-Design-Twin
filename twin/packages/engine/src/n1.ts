@@ -1,6 +1,7 @@
 import { num, type Check, type CheckKind, type Evaluation, type SizedEquipment, type Status } from '@twin/schema'
 import type { EvalContext } from './context'
 import { isPlant } from './cost'
+import { STATUS_ORDER } from './diff'
 
 type WorstFailure = NonNullable<Check['worstFailure']>
 
@@ -15,7 +16,6 @@ interface Scenario {
   ownLoad: (checkUnit: string) => number | null
 }
 
-const STATUS_ORDER: Record<Status, number> = { pass: 0, unknown: 1, warn: 2, fail: 3 }
 const suffix = (key: string) => key.slice(key.indexOf(':') + 1)
 
 /** "row R3" / "rows R3, R4" from the line's positions or key, else "zone <key suffix>". */

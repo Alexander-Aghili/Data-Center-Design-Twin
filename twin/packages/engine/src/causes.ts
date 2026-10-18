@@ -1,5 +1,6 @@
 import type { Bay, Cause, Check, CheckKind, LayerId, Placement, Plan } from '@twin/schema'
 import type { EvalContext } from './context'
+import { footprintCenter } from './cost'
 
 /** A plan-wide decision a check can depend on, keyed by its dot path in the plan. */
 type PlanPath =
@@ -43,7 +44,7 @@ const CAUSE_TABLE: Record<CheckKind, Ref[]> = {
 
 const nbsp = ' '
 const number = (n: number, digits = 1) => new Intl.NumberFormat('en-US', { maximumFractionDigits: digits }).format(n)
-const withUnit = (n: number, unit: string, digits = 1) => `${number(n, digits)}${nbsp}${unit}`
+export const withUnit = (n: number, unit: string, digits = 1) => `${number(n, digits)}${nbsp}${unit}`
 
 const PURPOSE = { training: 'Training', inference: 'Inference', mixed: 'Mixed' } as const
 const CONTAINMENT = { none: 'No containment', hotAisle: 'Hot-aisle containment', coldAisle: 'Cold-aisle containment' } as const
@@ -93,13 +94,8 @@ const cause = (layer: LayerId, path: string, label: string, value: string): Caus
 /** Placements whose footprint center lies inside the bay (same rule as the floor-load module). */
 function placementsInBay(ctx: EvalContext, bay: Bay): Placement[] {
   return ctx.plan.placements.filter((pl) => {
-    const row = ctx.plan.hall.rows.find((r) => r.id === pl.rowId)
-    if (!row) return false
-    const typeId = ctx.plan.rackGroups.find((g) => g.id === pl.groupId)?.rackTypeId
-    const slotsWide = (typeId ? ctx.catalog.get(typeId, 'rack')?.slotsWide : undefined) ?? 1
-    const x = row.x + (pl.slot + slotsWide / 2) * row.slotPitchM
-    const z = row.z + row.rackDepthM / 2
-    return x >= bay.x && x < bay.x + bay.w && z >= bay.z && z < bay.z + bay.d
+    const c = footprintCenter(ctx, pl)
+    return c !== null && c.x >= bay.x && c.x < bay.x + bay.w && c.z >= bay.z && c.z < bay.z + bay.d
   })
 }
 

@@ -31,11 +31,12 @@ function pipingInstallWeeks(ctx: EvalContext): number {
   return val(ctx.rules[key]) ?? 0
 }
 
-function rackCenter(ctx: EvalContext, rack: RackResult): { x: number; z: number } | null {
+/** Center of a rack's footprint in hall coordinates; null when its row is missing. */
+export function footprintCenter(ctx: EvalContext, rack: { rowId: string; slot: number; groupId: string }): { x: number; z: number } | null {
   const row = ctx.plan.hall.rows.find((r) => r.id === rack.rowId)
   if (!row) return null
   const group = ctx.plan.rackGroups.find((g) => g.id === rack.groupId)
-  const slotsWide = (group && ctx.catalog.get(group.rackTypeId, 'rack')?.slotsWide) ?? 1
+  const slotsWide = (group ? ctx.catalog.get(group.rackTypeId, 'rack')?.slotsWide : undefined) ?? 1
   return { x: row.x + (rack.slot + slotsWide / 2) * row.slotPitchM, z: row.z + row.rackDepthM / 2 }
 }
 
@@ -96,6 +97,7 @@ function plantItem(ctx: EvalContext, racks: RackResult[], equipment: SizedEquipm
   ]
 }
 
+/** The heat rejection line: key "plant", or any line whose model is a heat rejection entry. */
 export function isPlant(ctx: EvalContext, eq: SizedEquipment): boolean {
   return eq.key === 'plant' || (eq.modelId !== null && ctx.catalog.get(eq.modelId, 'heatRejection') !== undefined)
 }
@@ -164,7 +166,7 @@ function pipingLengthM(ctx: EvalContext, racks: RackResult[], equipment: SizedEq
   let length = 0
   for (const rack of racks) {
     if (rack.liquidW <= 0) continue
-    const center = rackCenter(ctx, rack)
+    const center = footprintCenter(ctx, rack)
     const serving = positionsOf(cdus).filter((p) => p.servesRows.includes(rack.rowId))
     if (!center || serving.length === 0) continue
     length += Math.min(...serving.map((p) => manhattan(center, p))) + slack

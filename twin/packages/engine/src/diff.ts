@@ -1,6 +1,6 @@
 import type { Check, EvalDiff, Evaluation, Headline, Status } from '@twin/schema'
 
-const STATUS_ORDER: Record<Status, number> = { pass: 0, unknown: 1, warn: 2, fail: 3 }
+export const STATUS_ORDER: Record<Status, number> = { pass: 0, unknown: 1, warn: 2, fail: 3 }
 /** Utilization change inside warn/fail that counts as worse or better. */
 const UTILIZATION_STEP = 0.05
 /** Absorbs float noise so a 0.85 → 0.90 move counts as a full step. */
