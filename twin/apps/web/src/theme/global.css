@@ -1,6 +1,6 @@
 /*
  * Global styles and shared primitives. One class per job, low specificity, no element-type selectors
- * inside components. Primitives other panels can use: .section-title, .btn (+ --primary, --quiet),
+ * inside components. Primitives other panels can use: .section-title, .btn (+ --primary, --secondary, --quiet, --icon),
  * .input, .link-button, .data-table (+ .num), .empty-note, .visually-hidden, .status-mark.
  */
 
@@ -57,6 +57,7 @@ button {
 :focus-visible {
   outline: var(--focus-ring);
   outline-offset: 2px;
+  box-shadow: var(--focus-halo);
 }
 
 .visually-hidden {
@@ -87,6 +88,7 @@ button {
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-2);
   height: 28px;
   padding: 0 var(--space-3);
@@ -98,7 +100,8 @@ button {
   cursor: pointer;
   transition:
     background-color var(--dur-fast) var(--ease),
-    border-color var(--dur-fast) var(--ease);
+    border-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
 }
 
 .btn:hover:enabled {
@@ -112,16 +115,38 @@ button {
   cursor: default;
 }
 
+/* The one action that moves the person forward: king blue. */
 .btn--primary {
-  background: var(--ink);
-  border-color: var(--ink);
+  background: var(--action);
+  border-color: var(--action);
   color: var(--ink-inverse);
 }
 
-.btn--primary:hover {
-  background: var(--ink-hover);
+.btn--primary:hover:enabled {
+  background: var(--action-hover);
+  border-color: var(--action-hover);
 }
 
+/* Actions people expect next to it: baby blue. */
+.btn--secondary {
+  background: var(--action-soft);
+  border-color: var(--action-soft);
+  color: var(--action-soft-ink);
+}
+
+.btn--secondary:hover:enabled {
+  background: var(--action-soft-hover);
+  border-color: var(--action-soft-hover);
+}
+
+.btn--primary:disabled,
+.btn--secondary:disabled {
+  background: var(--clay-mid);
+  border-color: var(--clay-mid);
+  color: var(--graphite);
+}
+
+/* Destructive and incidental actions: text only. */
 .btn--quiet {
   background: transparent;
   border-color: transparent;
@@ -139,6 +164,13 @@ button {
   color: var(--ink);
 }
 
+/* A square button holding only an icon; give it an aria-label. */
+.btn--icon {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
+
 .input {
   height: 28px;
   padding: 0 var(--space-2);
@@ -153,6 +185,7 @@ button {
 
 .input:focus-visible {
   outline-offset: 0;
+  border-color: var(--action);
 }
 
 .link-button {
@@ -208,24 +241,28 @@ button {
 
 /* ---------- shell ---------- */
 
+/* Top bar over three columns: the collapsible layer card, the scene, the summary and agent. */
 .shell {
+  position: relative;
   display: grid;
-  grid-template-columns: var(--col-left) minmax(0, 1fr) var(--col-right);
+  grid-template-columns: auto minmax(0, 1fr) var(--col-right);
   grid-template-rows: var(--topbar-h) minmax(0, 1fr);
   grid-template-areas:
     'top top top'
-    'layers scene side';
+    'card scene side';
   height: 100%;
   min-width: 1100px;
   background: var(--paper);
 }
 
+/* ---------- top bar ---------- */
+
 .topbar {
   grid-area: top;
   display: flex;
   align-items: center;
-  gap: var(--space-4);
-  padding: 0 var(--space-3) 0 var(--space-4);
+  gap: var(--space-3);
+  padding: 0 var(--space-3) 0 var(--space-2);
   background: var(--panel);
   border-bottom: var(--rule);
   min-width: 0;
@@ -235,6 +272,7 @@ button {
   display: flex;
   align-items: baseline;
   gap: var(--space-3);
+  flex: 0 1 auto;
   min-width: 0;
 }
 
@@ -253,22 +291,123 @@ button {
   white-space: nowrap;
 }
 
+.topbar__status {
+  padding: 1px var(--space-2);
+  border: var(--rule);
+  border-radius: var(--radius-pill);
+}
+
 .topbar__actions {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 2px;
   margin-left: auto;
 }
 
-.topbar__divider {
-  width: 1px;
-  height: 20px;
-  margin: 0 var(--space-1);
-  background: var(--hairline);
+/* ---------- layer tabs: a segmented control, king blue on the active layer ---------- */
+
+.layer-tabs {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  margin-left: var(--space-3);
+  padding: 3px;
+  border: var(--rule);
+  border-radius: 8px;
+  background: var(--paper);
 }
 
-.layer-column {
-  grid-area: layers;
+.layer-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 30px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--ink);
+  font-weight: var(--weight-medium);
+  font-stretch: var(--stretch-label);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
+}
+
+.layer-tab:hover {
+  background: var(--action-soft);
+  color: var(--action-soft-ink);
+}
+
+.layer-tab[aria-selected='true'] {
+  background: var(--action);
+  color: var(--ink-inverse);
+  font-weight: var(--weight-semibold);
+}
+
+.layer-tab .status-mark {
+  gap: 3px;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+/* On king blue the shapes go white: the shape and the count still say fail or warning. */
+.layer-tab[aria-selected='true'] .status-mark__shape {
+  color: currentColor;
+}
+
+/* ---------- ⋯ menu ---------- */
+
+.more-menu {
+  position: relative;
+}
+
+.more-menu__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: var(--z-menu);
+  display: grid;
+  min-width: 200px;
+  padding: var(--space-1);
+  background: var(--panel-raised);
+  border: var(--rule);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgb(23 32 38 / 0.14);
+}
+
+.more-menu__panel .io {
+  display: grid;
+  gap: 0;
+}
+
+.more-menu__panel .btn {
+  justify-content: flex-start;
+  width: 100%;
+  height: 34px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.more-menu__panel .btn:hover:enabled {
+  border-color: transparent;
+  background: var(--action-soft);
+  color: var(--action-soft-ink);
+}
+
+/* The panel only hides when closed; what its buttons opened stays on screen. */
+.more-menu__panel dialog,
+.more-menu__panel .io-report {
+  visibility: visible;
+}
+
+/* ---------- layer card (left) ---------- */
+
+.layer-card {
+  grid-area: card;
+  width: var(--col-left);
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -276,6 +415,12 @@ button {
   background: var(--panel);
   border-right: var(--rule);
 }
+
+.layer-card[hidden] {
+  display: none;
+}
+
+/* ---------- scene (center) ---------- */
 
 .center {
   grid-area: scene;
@@ -293,15 +438,130 @@ button {
   min-height: 0;
 }
 
+/* Chrome floats over the canvas; only its controls take the pointer, so the scene stays draggable around them. */
+.scene-overlays,
+.scene-dock {
+  position: absolute;
+  left: var(--space-3);
+  right: var(--space-3);
+  z-index: var(--z-scene-chrome);
+  pointer-events: none;
+}
+
+.scene-overlays {
+  top: var(--space-3);
+}
+
+/* With the card collapsed, an open inspector sits over the scene's left edge: keep the pills and rack bar beside it. */
+.shell[data-card='closed']:has(.inspector-dock .dt-inspector) :is(.scene-overlays, .scene-dock) {
+  left: calc(var(--inspector-w) + var(--space-3));
+}
+
+.scene-overlays .layer-header {
+  min-height: 0;
+  padding: 0;
+  pointer-events: none;
+}
+
+.scene-overlays .layer-header > * {
+  pointer-events: auto;
+}
+
+.scene-overlays .overlay-switch {
+  border-radius: var(--radius-pill);
+  background: var(--panel-raised);
+  box-shadow: 0 1px 3px rgb(23 32 38 / 0.1);
+}
+
+.scene-overlays .overlay-switch__option {
+  height: 28px;
+  padding: 0 var(--space-3);
+  border-right: 0;
+  font-size: var(--text-sm);
+}
+
+.scene-overlays .overlay-switch__option:first-child {
+  padding-left: 14px;
+}
+
+.scene-overlays .overlay-switch__option:last-child {
+  padding-right: 14px;
+}
+
+.scene-overlays .overlay-switch__option[aria-checked='true'] {
+  background: var(--action-soft);
+  color: var(--action-soft-ink);
+  font-weight: var(--weight-semibold);
+}
+
+.scene-overlays .overlay-switch__option[aria-checked='true']:focus-visible {
+  outline-color: var(--action);
+}
+
+.scene-overlays .layer-header__hint {
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: rgb(238 242 242 / 0.85);
+}
+
+.scene-dock {
+  bottom: var(--space-3);
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.scene-dock > * {
+  pointer-events: auto;
+}
+
+.scene-dock__schematic {
+  flex: none;
+  margin-left: auto;
+}
+
 .strip-slot {
   flex: none;
   height: var(--strip-h);
   border-top: var(--rule);
+  background: var(--panel);
 }
 
-.strip-slot:empty {
-  display: none;
+/* ---------- inspector: a drawer over the layer card ---------- */
+
+@keyframes inspector-in {
+  from {
+    transform: translateX(-12px);
+    opacity: 0;
+  }
 }
+
+/* Spans the card and scene columns, so the drawer has room when the card is collapsed too. */
+.inspector-dock {
+  grid-row: 2;
+  grid-column: 1 / 3;
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-drawer);
+  pointer-events: none;
+}
+
+.inspector-dock .dt-inspector {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: auto;
+  width: var(--inspector-w);
+  max-width: 100%;
+  border: 0;
+  border-right: 1px solid var(--graphite);
+  border-radius: 0;
+  box-shadow: 6px 0 18px rgb(23 32 38 / 0.1);
+  pointer-events: auto;
+  animation-name: inspector-in;
+}
+
+/* ---------- summary and agent (right) ---------- */
 
 .side {
   grid-area: side;
@@ -312,93 +572,22 @@ button {
   border-left: var(--rule);
 }
 
-.totals-region {
+.summary-region {
   flex: 0 1 auto;
+  max-height: 60%;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 14px var(--space-4) var(--space-2);
+  padding: 14px var(--space-4) var(--space-3);
 }
 
 .agent-region {
   flex: 1 1 0;
-  min-height: 280px;
+  min-height: 240px;
   display: flex;
   flex-direction: column;
   background: var(--panel-raised);
   border-top: var(--rule);
-}
-
-/* ---------- layer list ---------- */
-
-.layer-list {
-  display: grid;
-  gap: 1px;
-  margin: 0 calc(-1 * var(--space-2));
-}
-
-.layer-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-  height: 34px;
-  padding: 0 var(--space-2);
-  border: 0;
-  border-radius: var(--radius-control);
-  background: transparent;
-  color: var(--ink);
-  text-align: left;
-  cursor: pointer;
-  transition: background-color var(--dur-fast) var(--ease);
-}
-
-.layer-row:hover {
-  background: var(--hover);
-}
-
-.layer-row[aria-current='true'] {
-  background: var(--ink);
-  color: var(--ink-inverse);
-}
-
-.layer-row__owner {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--floor);
-  color: var(--ink);
-  font-size: 10px;
-  font-weight: var(--weight-semibold);
-  font-stretch: var(--stretch-label);
-  letter-spacing: 0.02em;
-}
-
-.layer-row[aria-current='true'] .layer-row__owner {
-  background: var(--ink-inverse);
-}
-
-.layer-row__name {
-  font-weight: var(--weight-medium);
-}
-
-.layer-row__issues {
-  display: flex;
-  gap: var(--space-3);
-  margin-left: auto;
-  font-weight: var(--weight-semibold);
-  font-size: var(--text-sm);
-}
-
-.layer-row[aria-current='true'] [data-status='fail'] .status-mark__shape {
-  color: var(--heat-on-ink);
-}
-
-.layer-row[aria-current='true'] [data-status='warn'] .status-mark__shape {
-  color: var(--warning-on-ink);
 }
 
 /* ---------- totals ---------- */

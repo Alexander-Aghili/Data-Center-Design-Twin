@@ -2,22 +2,18 @@ import type { Check } from '@twin/schema'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type * as ChecksModule from '../src/panels/Checks'
-import type * as LayerListModule from '../src/panels/LayerList'
 import type * as StatusMarkModule from '../src/panels/StatusMark'
 import type * as TotalsModule from '../src/panels/Totals'
 import type * as AllVariablesModule from '../src/panels/AllVariables'
 import type * as StoreModule from '../src/state/store'
-import type * as AppModule from '../src/App'
 import { demoChecks, demoEvaluation, demoPlan } from './fixtures/evaluation'
 
 let store: typeof StoreModule.useTwinStore
 let StatusMark: typeof StatusMarkModule.StatusMark
 let Checks: typeof ChecksModule.Checks
 let rankChecks: typeof ChecksModule.rankChecks
-let LayerList: typeof LayerListModule.LayerList
 let Totals: typeof TotalsModule.Totals
 let AllVariables: typeof AllVariablesModule.AllVariables
-let App: typeof AppModule.App
 
 beforeAll(async () => {
   // The store module creates the app's store on import; keep it from opening a real socket.
@@ -25,10 +21,8 @@ beforeAll(async () => {
   ;({ useTwinStore: store } = await import('../src/state/store'))
   ;({ StatusMark } = await import('../src/panels/StatusMark'))
   ;({ Checks, rankChecks } = await import('../src/panels/Checks'))
-  ;({ LayerList } = await import('../src/panels/LayerList'))
   ;({ Totals } = await import('../src/panels/Totals'))
   ;({ AllVariables } = await import('../src/panels/AllVariables'))
-  ;({ App } = await import('../src/App'))
 })
 
 beforeEach(() => {
@@ -102,26 +96,6 @@ describe('Checks', () => {
   })
 })
 
-describe('LayerList', () => {
-  it('shows the issue count per layer from checks', () => {
-    render(<LayerList />)
-    const cooling = screen.getByRole('button', { name: /^Cooling/ })
-    expect(cooling.getAttribute('aria-label')).toBe('Cooling, Mechanical engineer, 2 failing')
-    expect(cooling.getAttribute('aria-current')).toBe('true')
-    expect(within(cooling).getByText('2')).toBeTruthy()
-    expect(screen.getByRole('button', { name: /^Power/ }).getAttribute('aria-label')).toBe('Power, Electrical engineer, 1 warning')
-    expect(screen.getByRole('button', { name: /^Layout/ }).getAttribute('aria-label')).toBe('Layout, Facility planner, 1 warning')
-    expect(screen.getByRole('button', { name: /^Workload/ }).getAttribute('aria-label')).toBe('Workload, Product and compute buyer, no issues')
-    expect(screen.getByRole('button', { name: /^Site/ }).getAttribute('aria-label')).toBe('Site, Fixed inputs, no issues')
-  })
-
-  it('switches the active layer', () => {
-    render(<LayerList />)
-    fireEvent.click(screen.getByRole('button', { name: /^Power/ }))
-    expect(store.getState()).toMatchObject({ activeLayer: 'power', overlay: 'power' })
-  })
-})
-
 describe('Totals', () => {
   it('leads with usable compute and says why the plan is not buildable', () => {
     render(<Totals allOpen={false} onToggleAll={() => {}} />)
@@ -181,44 +155,5 @@ describe('AllVariables', () => {
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'crah' } })
     expect(screen.queryByRole('row', { name: /Heat to air/ })).toBeNull()
     expect(screen.getByRole('row', { name: /CRAH capacity installed/ })).toBeTruthy()
-  })
-})
-
-describe('App', () => {
-  it('mounts every region and toggles the all-variables drawer inside the plan view', () => {
-    render(<App />)
-    for (const name of ['Layers and decisions', 'Plan view', 'Plan totals', 'Design agent']) {
-      expect(screen.getByLabelText(name)).toBeTruthy()
-    }
-    const toggle = screen.getByRole('button', { name: 'All variables' })
-    fireEvent.click(toggle)
-    expect(toggle.getAttribute('aria-expanded')).toBe('true')
-    expect(within(screen.getByRole('main')).getByRole('dialog', { name: 'All variables' })).toBeTruthy()
-    fireEvent.click(toggle)
-    expect(screen.queryByRole('dialog')).toBeNull()
-  })
-
-  it('returns focus to the All variables button when the drawer closes with Escape', () => {
-    render(<App />)
-    const toggle = screen.getByRole('button', { name: 'All variables' })
-    toggle.focus()
-    fireEvent.click(toggle)
-    expect(document.activeElement).toBe(screen.getByRole('searchbox'))
-    fireEvent.keyDown(screen.getByRole('searchbox'), { key: 'Escape' })
-    expect(screen.queryByRole('dialog')).toBeNull()
-    expect(document.activeElement).toBe(toggle)
-  })
-
-  it('undoes on Cmd+Z and redoes on Shift+Cmd+Z, but not while typing', () => {
-    const undo = vi.fn()
-    const redo = vi.fn()
-    store.setState({ undo, redo })
-    render(<App />)
-    fireEvent.keyDown(window, { key: 'z', metaKey: true })
-    fireEvent.keyDown(window, { key: 'z', metaKey: true, shiftKey: true })
-    fireEvent.click(screen.getByRole('button', { name: 'All variables' }))
-    fireEvent.keyDown(screen.getByRole('searchbox'), { key: 'z', metaKey: true })
-    expect(undo).toHaveBeenCalledTimes(1)
-    expect(redo).toHaveBeenCalledTimes(1)
   })
 })

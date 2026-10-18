@@ -1,0 +1,220 @@
+/*
+ * Right-panel summary. Cards sit on the panel as raised paper; color appears only on the status marks
+ * and gauges of numbers a check flags, and in king blue on the two things a person can act on.
+ * Action tokens fall back to their hex until the shell defines them on :root.
+ */
+
+.summary {
+  display: grid;
+  gap: 10px;
+}
+
+.summary__verdict {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  font-stretch: var(--stretch-label);
+  line-height: var(--leading-tight);
+  text-wrap: balance;
+}
+
+/* ---------- KPI cards ---------- */
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+}
+
+/* Each card spans four rows of the shared grid, so labels, figures and gauges line up across a pair
+   even when one label wraps. */
+.kpi {
+  display: grid;
+  grid-row: span 4;
+  grid-template-rows: subgrid;
+  row-gap: 0;
+  align-content: start;
+  min-width: 0;
+  padding: 9px 10px 10px;
+  border: var(--rule);
+  border-radius: var(--radius-control);
+  background: var(--panel-raised);
+}
+
+:where(.kpi) dd {
+  margin: 0;
+}
+
+.kpi__label,
+.kpi__label .status-mark > :last-child {
+  text-wrap: balance;
+}
+
+.kpi__label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  font-stretch: var(--stretch-label);
+  line-height: var(--leading-tight);
+  color: var(--graphite);
+}
+
+.kpi[data-status] .kpi__label {
+  color: var(--ink);
+}
+
+.kpi__figure {
+  align-self: end;
+  margin-top: 8px;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.kpi__value {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  font-stretch: var(--stretch-display);
+  font-variant-numeric: proportional-nums;
+  letter-spacing: -0.01em;
+}
+
+.kpi__unit {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  font-stretch: var(--stretch-label);
+  color: var(--graphite);
+}
+
+.kpi__context {
+  margin-top: 5px;
+  font-size: var(--text-xs);
+  font-stretch: var(--stretch-label);
+  line-height: var(--leading-tight);
+  color: var(--graphite);
+}
+
+/* Thin gauge: the unfilled track is a light step of the fill, so the state reads across the whole bar. */
+.kpi__gauge {
+  align-self: end;
+  height: 4px;
+  margin-top: 8px;
+  border-radius: 2px;
+  background: var(--floor);
+  overflow: hidden;
+}
+
+.kpi__gauge-fill {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--graphite);
+}
+
+.kpi__gauge[data-status='warn'] {
+  background: color-mix(in srgb, var(--warning) 22%, var(--panel-raised));
+}
+
+.kpi__gauge[data-status='warn'] .kpi__gauge-fill {
+  background: var(--warning);
+}
+
+.kpi__gauge[data-status='fail'] {
+  background: color-mix(in srgb, var(--heat) 20%, var(--panel-raised));
+}
+
+.kpi__gauge[data-status='fail'] .kpi__gauge-fill {
+  background: var(--heat);
+}
+
+/* ---------- issues disclosure and the all-variables link ---------- */
+
+.summary__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 28px;
+}
+
+.summary__disclosure,
+.summary__all {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease);
+}
+
+.summary__disclosure {
+  margin-left: calc(-1 * var(--space-2));
+  color: var(--ink);
+}
+
+.summary__disclosure:hover,
+.summary__all:hover {
+  background: var(--action-soft, #e3eeff);
+}
+
+.summary__chevron {
+  flex: none;
+  color: var(--graphite);
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+.summary__disclosure[aria-expanded='true'] .summary__chevron {
+  transform: rotate(90deg);
+}
+
+.summary__all {
+  margin: 0 calc(-1 * var(--space-2)) 0 auto;
+  color: var(--action, #1f4ed8);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--action, #1f4ed8) 35%, transparent);
+  text-underline-offset: 3px;
+}
+
+.summary__all:hover {
+  color: var(--action-soft-ink, #1a3e9e);
+  text-decoration-color: currentColor;
+}
+
+.issues {
+  display: grid;
+  margin-top: -6px;
+}
+
+.issue {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  width: calc(100% + 2 * var(--space-2));
+  margin: 0 calc(-1 * var(--space-2));
+  padding: 5px var(--space-2);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease);
+}
+
+.issue:hover {
+  background: var(--action-soft, #e3eeff);
+}
+
+.issue[aria-current='true'] {
+  background: var(--action-soft, #e3eeff);
+  box-shadow: inset 2px 0 0 var(--action, #1f4ed8);
+  color: var(--action-soft-ink, #1a3e9e);
+}
+
+.issue__use {
+  margin-left: auto;
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}

@@ -7,7 +7,7 @@ export const PALETTE = {
   ink: '#172026',
   graphite: '#59656C',
   hairline: '#C6CFD3',
-  supply: '#2D6CDF',
+  supply: '#1E88C8',
   return: '#E0922A',
   heat: '#D23B2A',
   /** Pale cool midpoint of the temperature ramp, between supply and return (OKLab L 0.82). */

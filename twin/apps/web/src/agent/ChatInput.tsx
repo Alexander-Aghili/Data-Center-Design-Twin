@@ -57,7 +57,7 @@ export function ChatInput() {
       <span id="ag-input-hint" className="visually-hidden">
         Enter sends the message, Shift+Enter starts a new line.
       </span>
-      <button type="submit" className="btn btn--quiet" disabled={disabled || !text.trim()}>
+      <button type="submit" className="btn btn--primary" disabled={disabled || !text.trim()}>
         Send
       </button>
     </form>

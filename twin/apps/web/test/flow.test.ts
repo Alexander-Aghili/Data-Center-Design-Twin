@@ -257,8 +257,8 @@ describe('flow color', () => {
     expect(supplyReturnColor(55, scale)).toBe(PALETTE.return)
     // Halfway is the neutral hairline gray, not the mauve a straight blue–amber blend would give.
     expect(supplyReturnColor(30, scale)).toBe(PALETTE.hairline)
-    // A quarter of the way: the mean of supply #2D6CDF and hairline #C6CFD3.
-    expect(supplyReturnColor(25, scale)).toBe('#7A9ED9')
+    // A quarter of the way: the mean of supply #1E88C8 and hairline #C6CFD3.
+    expect(supplyReturnColor(25, scale)).toBe('#72ACCE')
     expect(supplyReturnColor(35, scale)).toBe('#D3B17F')
     expect(supplyReturnColor(30, { lo: 30, hi: 30 })).toBe(PALETTE.supply)
   })
