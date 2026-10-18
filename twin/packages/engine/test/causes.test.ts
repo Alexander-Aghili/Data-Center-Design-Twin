@@ -72,7 +72,7 @@ describe('attachCauses', () => {
       { layer: 'compute', path: 'rackGroups.g2.rackTypeId', label: 'Rack type (Training block): GB300 NVL72', value: 'GB300 NVL72' },
       { layer: 'cooling', path: 'rackGroups.g2.coolingMethodId', label: 'Cooling method (Training block): Direct-to-chip, single-phase', value: 'Direct-to-chip, single-phase' },
       { layer: 'site', path: 'hall.floor.type', label: 'Floor type: Raised floor', value: 'Raised floor' },
-      { layer: 'site', path: 'hall.bays.B3-4.ratingKnM2', label: 'Bay B3-4 rating: 7.2 kN/m²', value: '7.2 kN/m²' },
+      { layer: 'site', path: 'hall.bays.B3-4.ratingKnM2', label: 'Bay B3-4 rating: 7.3 kN/m²', value: '7.3 kN/m²' },
     ])
   })
 
@@ -100,6 +100,9 @@ describe('attachCauses', () => {
       check('power.gridWorstHour', { kind: 'site', id: 'site', objectIds: [] }),
     ])
     expect(paths(row!)).toContain('rackGroups.g1.rackTypeId')
+    // Busway feeds are counted under redundancy; the design current no longer depends on the purpose.
+    expect(paths(row!)).toContain('power.redundancy')
+    expect(paths(row!)).not.toContain('workload.purpose')
     expect(paths(row!)).not.toContain('rackGroups.g2.rackTypeId')
     expect(paths(group!)).not.toContain('rackGroups.g1.rackTypeId')
     expect(paths(cdu!)).toEqual(expect.arrayContaining(['rackGroups.g2.coolingMethodId', 'power.redundancy']))
@@ -116,7 +119,7 @@ describe('attachCauses', () => {
     expect(byPath(heat!, 'cooling.heatRejectionId')).toMatchObject({ value: 'Air-cooled chiller', label: 'Heat rejection: Air-cooled chiller' })
     expect(byPath(heat!, 'site.climateId')?.value).toBe('Dallas, Texas')
     expect(byPath(heat!, 'power.redundancy')?.value).toBe('N+1')
-    expect(byPath(grid!, 'site.gridCapacityW')?.value).toBe('10 MW')
+    expect(byPath(grid!, 'site.gridCapacityW')?.value).toBe('10.6 MW')
   })
 
   it('falls back to the catalog id when an entry is missing', () => {

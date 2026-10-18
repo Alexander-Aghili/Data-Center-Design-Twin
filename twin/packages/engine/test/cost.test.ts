@@ -271,6 +271,16 @@ describe('demand.leadTime check', () => {
     expect(lead.subject.objectIds).toEqual(['eq:transformer:0'])
   })
 
+  it('uses singular and plural correctly, with a non-breaking space before the unit', () => {
+    const quick = equipmentEntry('busway.quick', 'Quick busway', 'busway', { ratingA: 1250, voltageV: 415, powerFactor: 0.95, capexUsdPerM: 600, leadTimeWeeks: 1 })
+    const twin = equipmentEntry('ups.quick', 'Quick UPS', 'ups', { moduleW: 500_000, efficiency: 0.967, capexUsdPerKw: 250, leadTimeWeeks: 1 })
+    const one = costAndSchedule(context((p) => (p.cooling.bufferTankM3 = 0), [quick, twin]), [], [sized('busway:R3', 'busway', quick.id, 1), sized('ups', 'ups', twin.id, 1)])
+    const lead = one.checks.find((c) => c.kind === 'demand.leadTime')!
+    expect(lead.explanation).toBe('Build-out takes 1\u00a0week. Quick busway and Quick UPS set the critical path: 1\u00a0week lead time.')
+    const single = costAndSchedule(context(), racks, equipment).checks.find((c) => c.kind === 'demand.leadTime')!
+    expect(single.explanation).toContain('3 MVA pad-mount transformer sets the critical path: 52\u00a0weeks lead time.')
+  })
+
   it('is unknown when an item on order has no lead time', () => {
     const unknownLead = equipmentEntry('transformer.custom', 'Custom transformer', 'transformer', {
       ratingVa: 3_000_000, efficiency: 0.99, capexUsd: 150_000, leadTimeWeeks: null,

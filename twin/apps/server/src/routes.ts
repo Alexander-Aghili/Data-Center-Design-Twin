@@ -1,8 +1,9 @@
 import { readFile } from 'node:fs/promises'
 import { resolve, sep } from 'node:path'
 import { snapshotCatalog } from '@twin/catalog'
-import { formatIssues } from '@twin/commands'
-import { CommandSchema, PlanSchema, type ToolCallResponse } from '@twin/schema'
+import { formatIssues, parsePlan } from '@twin/commands'
+import { makeCatalogIndex } from '@twin/engine'
+import { CommandError, CommandSchema, type Plan, type ToolCallResponse } from '@twin/schema'
 import type { FastifyInstance, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { generateBrief } from './brief/openfoam'
@@ -13,6 +14,7 @@ const BRIEF_FILE_NAME = /^[\w.-]+\.md$/
 const MARKDOWN = 'text/markdown; charset=utf-8'
 
 const CommandBody = z.object({ command: CommandSchema })
+const CommandsBody = z.object({ commands: z.array(CommandSchema).min(1) })
 const ImportBody = z.object({ plan: z.unknown() })
 const ChatBody = z.object({ text: z.string().min(1) })
 const ToolBody = z.object({ input: z.unknown().optional() }).optional()
@@ -48,6 +50,14 @@ export function registerRoutes(app: FastifyInstance, deps: { store: PlanStore; a
     return reply.code(result.ok ? 200 : 400).send(result)
   })
 
+  /** All or nothing, as one undo step (used for catalog pack imports). */
+  app.post('/api/commands', async (request, reply) => {
+    const body = parse(CommandsBody, request.body, reply, 'body')
+    if (!body.ok) return reply
+    const result = store.dispatchAll(body.data.commands, 'user')
+    return reply.code(result.ok ? 200 : 400).send(result)
+  })
+
   app.post('/api/undo', async (_request, reply) =>
     store.undo() ? { ok: true } : reply.code(409).send({ ok: false, error: 'Nothing to undo' }),
   )
@@ -64,12 +74,15 @@ export function registerRoutes(app: FastifyInstance, deps: { store: PlanStore; a
   app.post('/api/plan/import', async (request, reply) => {
     const body = parse(ImportBody, request.body, reply, 'body')
     if (!body.ok) return reply
-    const plan = PlanSchema.safeParse(body.data.plan)
-    if (!plan.success) {
-      const issues = formatIssues(plan.error, 'plan').split('\n')
-      return reply.code(400).send({ ok: false, error: issues.join('\n'), issues })
+    let plan: Plan
+    try {
+      plan = parsePlan(body.data.plan, makeCatalogIndex(store.builtins().entries))
+    } catch (err) {
+      if (!(err instanceof CommandError)) throw err
+      // The first line is the heading ("The file is not a valid plan:"); the rest are `path: problem` lines.
+      return reply.code(400).send({ ok: false, error: err.message, issues: err.message.split('\n').slice(1) })
     }
-    store.replace(plan.data)
+    store.replace(plan)
     return { ok: true }
   })
 
@@ -91,7 +104,8 @@ export function registerRoutes(app: FastifyInstance, deps: { store: PlanStore; a
     try {
       const text = await readFile(file, 'utf8')
       return reply.type(MARKDOWN).header('content-disposition', `attachment; filename="${name}"`).send(text)
-    } catch {
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
       return reply.code(404).send({ ok: false, error: `No brief named ${name}` })
     }
   })

@@ -7,7 +7,7 @@ describe('overrideEquipment', () => {
   it('fixes model, count and positions, merging into an existing override', () => {
     const first = run(plan(), 'overrideEquipment', { key: 'cdu:R3', modelId: EQUIPMENT.CDU_1200KW, count: 2 })
     expect(first.plan.overrides).toEqual([{ key: 'cdu:R3', modelId: EQUIPMENT.CDU_1200KW, count: 2 }])
-    expect(first.summary).toBe('cdu:R3 fixed to model cdu.1200kw, count 2')
+    expect(first.summary).toBe('cdu:R3 fixed to model CDU 1.2 MW, count 2')
     const second = run(first.plan, 'overrideEquipment', { key: 'cdu:R3', positionIds: ['cdu-E3'] })
     expect(second.plan.overrides).toEqual([{ key: 'cdu:R3', modelId: EQUIPMENT.CDU_1200KW, count: 2, positionIds: ['cdu-E3'] }])
     expect(second.summary).toBe('cdu:R3 fixed to position cdu-E3')

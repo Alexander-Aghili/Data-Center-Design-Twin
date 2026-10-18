@@ -41,6 +41,7 @@ export function ChatInput() {
       }}
     >
       <textarea
+        className="input"
         aria-label="Message the design agent"
         aria-describedby="ag-input-hint"
         rows={rows}
@@ -50,10 +51,10 @@ export function ChatInput() {
         onChange={(e) => setText(e.target.value)}
         onKeyDown={onKeyDown}
       />
-      <span id="ag-input-hint" hidden>
+      <span id="ag-input-hint" className="visually-hidden">
         Enter sends the message, Shift+Enter starts a new line.
       </span>
-      <button type="submit" className="ag-input__send" disabled={disabled || !text.trim()}>
+      <button type="submit" className="btn btn--quiet" disabled={disabled || !text.trim()}>
         Send
       </button>
     </form>

@@ -7,7 +7,7 @@ describe('setSiteInput', () => {
   it('sets numeric inputs and summarizes them in display units', () => {
     const grid = run(plan(), 'setSiteInput', { field: 'gridCapacityW', value: 12_500_000 })
     expect(grid.plan.site.gridCapacityW).toBe(12_500_000)
-    expect(grid.summary).toBe('Grid capacity set to 12.5 MW (was 10 MW)')
+    expect(grid.summary).toBe('Grid capacity set to 12.5 MW (was 10.6 MW)')
     const water = run(plan(), 'setSiteInput', { field: 'waterAllowanceM3PerDay', value: 0 })
     expect(water.plan.site.waterAllowanceM3PerDay).toBe(0)
     expect(water.summary).toBe('Water allowance set to 0 m³/day (was 120 m³/day)')
@@ -18,7 +18,7 @@ describe('setSiteInput', () => {
   it('sets the climate from the catalog', () => {
     const result = run(plan(), 'setSiteInput', { field: 'climateId', value: CLIMATE.STOCKHOLM })
     expect(result.plan.site.climateId).toBe(CLIMATE.STOCKHOLM)
-    expect(result.summary).toBe('Climate set to climate.stockholm')
+    expect(result.summary).toBe('Climate set to Stockholm')
   })
 
   it('rejects wrong value types, unknown climates and out-of-range numbers', () => {
@@ -37,15 +37,15 @@ describe('setFloor and setBayRating', () => {
     expect(slab.plan.hall.bays.every((b) => b.ratingKnM2 === 24)).toBe(true)
     expect(slab.summary).toBe('Floor set to slab, all bays rated 24 kN/m²')
     const raised = run(plan(), 'setFloor', { type: 'raised' })
-    expect(raised.plan.hall.bays[0]?.ratingKnM2).toBe(7.2)
+    expect(raised.plan.hall.bays[0]?.ratingKnM2).toBe(7.3)
     expect(raised.summary).toBe('Floor set to raised floor')
   })
 
   it('rates one bay', () => {
     const result = run(plan(), 'setBayRating', { bayId: 'B3-2', ratingKnM2: 12 })
     expect(result.plan.hall.bays.find((b) => b.id === 'B3-2')?.ratingKnM2).toBe(12)
-    expect(result.plan.hall.bays.find((b) => b.id === 'B3-3')?.ratingKnM2).toBe(7.2)
-    expect(result.summary).toBe('Bay B3-2 rated 12 kN/m² (was 7.2 kN/m²)')
+    expect(result.plan.hall.bays.find((b) => b.id === 'B3-3')?.ratingKnM2).toBe(7.3)
+    expect(result.summary).toBe('Bay B3-2 rated 12 kN/m² (was 7.3 kN/m²)')
     expectRejected(plan(), 'setBayRating', { bayId: 'B40-1', ratingKnM2: 12 }, 'Unknown bay "B40-1". Bays run from B1-1 to B12-10 (column-row).')
   })
 })

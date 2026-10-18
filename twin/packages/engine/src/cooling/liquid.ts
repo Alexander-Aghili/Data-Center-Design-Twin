@@ -1,4 +1,4 @@
-import { COOLANT, num, type Check, type CoolantEntry, type Metric, type RackCoolingEntry, type RackResult, type Row, type RowLoad, type Status } from '@twin/schema'
+import { num, type Check, type Metric, type RackCoolingEntry, type RackResult, type Row, type RowLoad, type Status } from '@twin/schema'
 import type { EvalContext } from '../context'
 import {
   balancingFactor,
@@ -6,6 +6,7 @@ import {
   cduPumpW,
   fmt,
   groupEntries,
+  loopFlow,
   loopW,
   makeCheck,
   methodPumpW,
@@ -40,19 +41,14 @@ interface Loop {
 }
 
 /**
- * ṁ = Q / (cp·ΔT) with the loop fluid's catalog properties. Two-phase loops (R-2p) boil near-isothermally, so
- * the method's ΔT is the facility-water rise: the flow is facility water's, at the facility supply temperature.
+ * One rack's loop at design flow (`loopFlow`). Two-phase loops (R-2p) carry facility water at the facility
+ * supply temperature; single-phase CDU loops run at the facility supply plus the CDU approach.
  */
 function loopOf(ctx: EvalContext, rack: RackResult, cdus: Map<string, CduFill>): Loop | null {
   const method = groupEntries(ctx, rack.groupId).method
-  const heatW = loopW(rack)
-  if (!method || heatW <= 0) return null
-  const coolant = method.coolantId ? ctx.catalog.get(method.coolantId, 'coolant') : undefined
-  const twoPhase = coolant?.twoPhase ?? false
-  const fluid: CoolantEntry | undefined = twoPhase ? ctx.catalog.get(COOLANT.WATER, 'coolant') : coolant
-  const cp = fluid ? num(fluid.cpJPerKgK) : null
-  const rho = fluid ? num(fluid.densityKgM3) : null
-  const deltaTK = num(method.deltaTK)
+  const flow = loopFlow(ctx, rack)
+  if (!method || !flow) return null
+  const { twoPhase, designLps } = flow
   const facility = ctx.plan.cooling.facilitySupplyC
   let supplyC: number | null = facility
   if (method.requiresCdu && !twoPhase) {
@@ -62,9 +58,9 @@ function loopOf(ctx: EvalContext, rack: RackResult, cdus: Map<string, CduFill>):
   return {
     rack,
     method,
-    heatW,
-    deltaTK,
-    designLps: cp && rho && deltaTK ? (heatW / (cp * deltaTK) / rho) * 1000 : null,
+    heatW: loopW(rack),
+    deltaTK: num(method.deltaTK),
+    designLps,
     supplyC,
     twoPhase,
   }
@@ -86,11 +82,11 @@ function manifoldShares(ctx: EvalContext, row: Row, loops: Loop[]): Map<Loop, nu
   const ordered = loops.toSorted((a, b) => (feedsFromEast(ctx, row) ? b.rack.slot - a.rack.slot : a.rack.slot - b.rack.slot))
   const h = ctx.plan.cooling.flowBalancing ? 0 : (rule(ctx, 'manifoldHeaderLossFraction') ?? 0)
   const n = ordered.length
-  const raw = ordered.map((_, k) => (n > 1 ? 1 - (h * k) / (n - 1) : 1))
+  const raw = ordered.map((loop, k) => ({ loop, share: n > 1 ? 1 - (h * k) / (n - 1) : 1 }))
   const design = sumBy(ordered, (l) => l.designLps ?? 0)
-  const delivered = sumBy(ordered.map((l, k) => (l.designLps ?? 0) * raw[k]!), (v) => v)
+  const delivered = sumBy(raw, ({ loop, share }) => (loop.designLps ?? 0) * share)
   const scale = delivered > 0 ? design / delivered : 1
-  ordered.forEach((l, k) => shares.set(l, raw[k]! * scale))
+  for (const { loop, share } of raw) shares.set(loop, share * scale)
   return shares
 }
 
@@ -118,9 +114,10 @@ function manifoldCheck(row: Row, shares: number[], loops: Loop[], balanced: bool
 function coolantTempChecks(ctx: EvalContext, loops: Loop[]): Check[] {
   return ctx.plan.rackGroups.flatMap((group) => {
     const members = loops.filter((l) => l.rack.groupId === group.id)
-    if (members.length === 0) return []
+    const [first] = members
+    if (!first) return []
     const { rack } = groupEntries(ctx, group.id)
-    const method = members[0]!.method
+    const { method, twoPhase } = first
     const supplies = members.map((l) => l.supplyC)
     const value = supplies.includes(null) ? null : Math.max(...supplies.map((s) => s ?? 0))
     const rackMax = rack ? num(rack.maxCoolantSupplyC) : null
@@ -130,7 +127,7 @@ function coolantTempChecks(ctx: EvalContext, loops: Loop[]): Check[] {
     const limit = limits.length > 0 ? Math.min(...limits) : null
     let status: Status = 'unknown'
     if (value !== null && limit !== null) status = value > limit ? 'fail' : methodMin !== null && value < methodMin ? 'warn' : 'pass'
-    const approach = method.requiresCdu && !members[0]!.twoPhase ? ' plus the CDU approach' : ''
+    const approach = method.requiresCdu && !twoPhase ? ' plus the CDU approach' : ''
     const binding = limit === rackMax ? `${rack?.name ?? 'the rack'} accepts` : `${method.name} is rated for`
     const explanation =
       value === null || limit === null

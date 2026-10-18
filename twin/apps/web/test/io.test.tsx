@@ -1,5 +1,5 @@
 import type { Command, Plan } from '@twin/schema'
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { createDefaultPlan } from '../../../packages/catalog/src/defaultPlan'
 import type { ImportExport as ImportExportType } from '../src/io/ImportExport'
@@ -27,6 +27,13 @@ function setup(send: (cmd: Command) => Promise<void>) {
   render(<ImportExport />)
   return { plan, send: spy }
 }
+
+const quantity = (value: number, unit: string) => ({ value, unit, basis: 'user' as const })
+const coolant = (id: string, over: Record<string, unknown> = {}) => ({
+  id, kind: 'coolant' as const, name: id, asOf: '2026-10-18', summary: '', custom: true,
+  cpJPerKgK: quantity(4000, 'J/(kg·K)'), densityKgM3: quantity(1000, 'kg/m³'), viscosityPaS: quantity(0.001, 'Pa·s'),
+  dielectric: false, glycolFraction: quantity(0, 'fraction'), twoPhase: false, ...over,
+})
 
 function pick(json: string, name = 'upload.json') {
   const input = screen.getByLabelText('Import file')
@@ -80,36 +87,31 @@ describe('plan import and export', () => {
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:plan')
   })
 
-  it('catalog pack import (array of entries) adds each via addCatalogEntry', async () => {
-    const { send } = setup((cmd) =>
-      (cmd.payload as { entry: { id: string } }).entry.id === 'coolant.bad'
-        ? Promise.reject(new Error('payload.entry.cpJPerKgK: Invalid input'))
-        : Promise.resolve(),
-    )
-    const coolant = (id: string) => ({ id, kind: 'coolant', name: id, asOf: '2026-10-18', summary: '' })
-    pick(JSON.stringify([coolant('coolant.a'), coolant('coolant.b'), coolant('coolant.bad')]), 'pack.json')
-
-    const alert = await screen.findByRole('alert')
-    expect(send.mock.calls.map(([c]) => [c.type, (c.payload as { entry: { id: string } }).entry.id])).toEqual([
+  it('catalog pack import adds or updates every entry as one undo step', async () => {
+    const sendAll = vi.fn((_: Command[]) => Promise.resolve())
+    useTwinStore.setState({ sendAll })
+    const { plan } = setup(() => Promise.resolve())
+    const mine = coolant('coolant.mine', { custom: true })
+    useTwinStore.setState({ plan: { ...plan, catalog: { ...plan.catalog, [mine.id]: mine } } })
+    pick(JSON.stringify([coolant('coolant.a'), { ...mine, name: 'Mine v2' }]), 'pack.json')
+    await screen.findByRole('status')
+    expect(sendAll).toHaveBeenCalledTimes(1)
+    expect(sendAll.mock.calls[0]![0].map((c) => [c.type, (c.payload as { entry: { id: string } }).entry.id])).toEqual([
       ['addCatalogEntry', 'coolant.a'],
-      ['addCatalogEntry', 'coolant.b'],
-      ['addCatalogEntry', 'coolant.bad'],
+      ['updateCatalogEntry', 'coolant.mine'],
     ])
-    expect(within(alert).getByText('Added 2 of 3 entries from pack.json.')).toBeTruthy()
-    expect(within(alert).getByRole('listitem').textContent).toBe('coolant.bad: cpJPerKgK: Invalid input')
+    expect(screen.getByRole('status').textContent).toContain('Added or updated 2 entries from pack.json.')
   })
 
-  it('a pack entry already in the plan as a custom entry is updated', async () => {
-    const { plan, send } = setup(() => Promise.resolve())
-    const mine = { id: 'coolant.mine', kind: 'coolant' as const, name: 'Mine', asOf: '2026-10-18', summary: '', custom: true,
-      cpJPerKgK: { value: 4000, unit: 'J/(kg·K)', basis: 'user' as const }, densityKgM3: { value: 1000, unit: 'kg/m³', basis: 'user' as const },
-      viscosityPaS: { value: 0.001, unit: 'Pa·s', basis: 'user' as const }, dielectric: false,
-      glycolFraction: { value: 0, unit: 'fraction', basis: 'user' as const }, twoPhase: false }
-    useTwinStore.setState({ plan: { ...plan, catalog: { ...plan.catalog, [mine.id]: mine } } })
-    pick(JSON.stringify([{ ...mine, name: 'Mine v2' }]), 'pack.json')
-    await screen.findByRole('status')
-    await waitFor(() => expect(send).toHaveBeenCalledTimes(1))
-    expect(send.mock.calls[0][0].type).toBe('updateCatalogEntry')
-    expect(screen.getByRole('status').textContent).toContain('Updated 1 entry from pack.json.')
+  it('a catalog pack with an invalid entry imports nothing and lists the problems by entry', async () => {
+    const sendAll = vi.fn((_: Command[]) => Promise.resolve())
+    useTwinStore.setState({ sendAll })
+    setup(() => Promise.resolve())
+    const { cpJPerKgK: _, ...bad } = coolant('coolant.bad')
+    pick(JSON.stringify([coolant('coolant.a'), bad]), 'pack.json')
+    const alert = await screen.findByRole('alert')
+    expect(sendAll).not.toHaveBeenCalled()
+    expect(within(alert).getByText('pack.json was not imported. Your current plan is unchanged.')).toBeTruthy()
+    expect(within(alert).getByRole('listitem').textContent).toMatch(/^coolant\.bad: cpJPerKgK: /)
   })
 })

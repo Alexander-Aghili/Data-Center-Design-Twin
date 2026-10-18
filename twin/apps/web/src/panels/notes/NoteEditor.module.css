@@ -81,7 +81,7 @@
   padding: 6px 8px;
   border: var(--rule);
   border-radius: var(--radius);
-  background: #fff;
+  background: var(--ink-inverse);
   font: inherit;
   line-height: 1.4;
   color: var(--ink);

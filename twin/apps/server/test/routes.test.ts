@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Plan } from '@twin/schema'
 import type { FastifyInstance } from 'fastify'
@@ -50,6 +50,21 @@ describe('HTTP routes', () => {
     expect(malformed.json()).toMatchObject({ ok: false, error: expect.stringContaining('command') })
   })
 
+  it('POST /api/commands applies all commands as one undo step, or none of them', async () => {
+    const app = await makeApp()
+    const before = (await app.inject({ method: 'GET', url: '/api/state' })).json()
+    const bad = await app.inject({ method: 'POST', url: '/api/commands', payload: { commands: [rename('Hall B'), rename('')] } })
+    expect(bad.statusCode).toBe(400)
+    expect(bad.json()).toMatchObject({ ok: false, error: expect.stringMatching(/name/) })
+    expect((await app.inject({ method: 'GET', url: '/api/state' })).json()).toEqual(before)
+
+    const res = await app.inject({ method: 'POST', url: '/api/commands', payload: { commands: [rename('Hall B'), rename('Hall C')] } })
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toEqual({ ok: true, summaries: ['Plan renamed to Hall B', 'Plan renamed to Hall C'] })
+    await app.inject({ method: 'POST', url: '/api/undo' })
+    expect((await app.inject({ method: 'GET', url: '/api/state' })).json().plan.name).toBe('Default hall')
+  })
+
   it('POST /api/undo and /api/redo move through history', async () => {
     const app = await makeApp()
     expect((await app.inject({ method: 'POST', url: '/api/undo' })).statusCode).toBe(409)
@@ -73,14 +88,31 @@ describe('HTTP routes', () => {
     const body = res.json()
     expect(body.ok).toBe(false)
     expect(body.issues).toEqual(
-      expect.arrayContaining([expect.stringMatching(/^plan\.schemaVersion: /), expect.stringMatching(/^plan\.site\.climateId: /)]),
+      expect.arrayContaining([expect.stringMatching(/^schemaVersion: /), expect.stringMatching(/^site\.climateId: /)]),
     )
-    expect(body.error).toBe(body.issues.join('\n'))
+    expect(body.error).toBe(['The file is not a valid plan:', ...body.issues].join('\n'))
     expect((await app.inject({ method: 'GET', url: '/api/state' })).json()).toEqual(before)
 
     const partial = await app.inject({ method: 'POST', url: '/api/plan/import', payload: { plan: { name: 'Half' } } })
     expect(partial.statusCode).toBe(400)
     expect(partial.json().issues.length).toBeGreaterThan(1)
+  })
+
+  it('POST /api/plan/import rejects overlapping placements with path: problem, state unchanged', async () => {
+    const app = await makeApp()
+    const before = (await app.inject({ method: 'GET', url: '/api/state' })).json()
+    const plan: Plan = before.plan
+    const overlapping = { ...plan, placements: [...plan.placements, { ...plan.placements[0]! }] }
+    const res = await app.inject({ method: 'POST', url: '/api/plan/import', payload: { plan: overlapping } })
+    expect(res.statusCode).toBe(400)
+    const { issues } = res.json()
+    expect(issues).toEqual([expect.stringMatching(new RegExp(`^placements\\.${plan.placements.length}: `))])
+    expect((await app.inject({ method: 'GET', url: '/api/state' })).json()).toEqual(before)
+
+    const unknownRow = { ...plan, placements: [{ ...plan.placements[0]!, rowId: 'R99', id: 'R99-00' }] }
+    const res2 = await app.inject({ method: 'POST', url: '/api/plan/import', payload: { plan: unknownRow } })
+    expect(res2.statusCode).toBe(400)
+    expect(res2.json().issues).toContain('placements.0.rowId: unknown row "R99"')
   })
 
   it('export then import round-trip yields identical evaluation', async () => {
@@ -131,10 +163,19 @@ describe('HTTP routes', () => {
     expect((await second.inject({ method: 'GET', url: '/api/state' })).json().plan.name).toBe('Survives restart')
   })
 
+  it('close() resolves even when the final plan write fails', async () => {
+    const dataDir = tempDataDir()
+    const app = await createApp({ dataDir, builtins: testBuiltins(), registry: testRegistry() })
+    await app.inject({ method: 'POST', url: '/api/command', payload: { command: rename('Unsaved') } })
+    rmSync(dataDir, { recursive: true })
+    writeFileSync(dataDir, 'a file where the data directory should be')
+    await expect(app.close()).resolves.toBeUndefined()
+  })
+
   it('GET /api/catalog returns the built-ins', async () => {
     const app = await makeApp()
     const body = (await app.inject({ method: 'GET', url: '/api/catalog' })).json()
-    expect(body.entries).toEqual([])
+    expect(body.entries.length).toBeGreaterThan(0)
     expect(Object.keys(body.rules).length).toBeGreaterThan(0)
   })
 
@@ -158,6 +199,11 @@ describe('HTTP routes', () => {
       expect(res.body).not.toContain('not a brief')
     }
     expect((await app.inject({ method: 'GET', url: '/api/brief/file/..' })).statusCode).toBe(404)
+
+    mkdirSync(join(dataDir, 'briefs', 'folder.md'))
+    const unreadable = await app.inject({ method: 'GET', url: '/api/brief/file/folder.md' })
+    expect(unreadable.statusCode).toBe(500)
+    expect(unreadable.json().ok).toBe(false)
   })
 
   it('GET /api/brief returns the deterministic brief for openfoam and rejects other targets', async () => {

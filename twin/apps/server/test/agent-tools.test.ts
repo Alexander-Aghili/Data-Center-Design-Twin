@@ -389,6 +389,24 @@ describe('what-if and proposals', () => {
     expect(okJson(outcome).proposalId).toBe(proposal.id)
   })
 
+  it('a proposal cloud takes the worst status of the checks on its objects, so a fix for a failure draws in red', async () => {
+    const { run, views, store } = setup()
+    const failing = store.state().evaluation.checks.find((c) => c.status === 'fail')!
+    const propose = (objectIds: string[]) =>
+      run('propose_change', {
+        title: 'Rename',
+        rationale: 'Test',
+        commands: [{ type: 'renamePlan', payload: { name: 'X' } }],
+        respectsNotes: [],
+        violatesNotes: [],
+        annotate: { objectIds, label: 'Here' },
+      })
+    await propose(failing.subject.objectIds)
+    await propose(['obj-cooling.crahCapacity:Z1'])
+    await propose(['obj-cooling.coolantTemp:g1'])
+    expect(views.map((v) => (v.type === 'annotate' ? v.annotation.severity : null))).toEqual(['problem', 'warning', 'info'])
+  })
+
   it('propose_change without annotate emits no view action, and invalid commands create no proposal', async () => {
     const { run, views, proposals } = setup()
     const base = { title: 'T', rationale: 'R', respectsNotes: [], violatesNotes: [] }
@@ -525,6 +543,14 @@ describe('read', () => {
     expect(missing.ok).toBe(false)
   })
 
+  it('list_catalog names what it listed', async () => {
+    const { run } = setup()
+    const outcome = await run('list_catalog', { kind: 'rackCooling' })
+    expect(outcome.ok && outcome.summary).toMatch(/^Listed \d+ rack cooling methods?$/)
+    const all = await run('list_catalog', {})
+    expect(all.ok && all.summary).toMatch(/^Listed \d+ catalog entr(y|ies)$/)
+  })
+
   it('list_catalog and get_catalog_entry read the plan catalog merged over the built-ins', async () => {
     const { run, store } = setup()
     const custom = { id: 'coolant.test', kind: 'coolant', name: 'Test glycol', asOf: '2026-10', summary: 'A test coolant', custom: true } as const
@@ -562,6 +588,28 @@ describe('view', () => {
       { type: 'annotate', annotation: { tag: 2, objectIds: ['b'], label: 'Second', severity: 'warning' } },
       { type: 'clearAnnotations' },
     ])
+  })
+
+  it('annotate maps placement ids, row ids, bay ids and equipment keys to scene object ids', async () => {
+    const { run, views, store } = setup()
+    const { plan, evaluation } = store.state()
+    const first = plan.placements[0]!
+    const rowRacks = evaluation.racks.filter((r) => r.rowId === first.rowId).map((r) => r.objectId)
+    const bayRacks = evaluation.racks.filter((r) => r.bayId === 'B3-2').map((r) => r.objectId)
+    await run('annotate', { objectIds: [first.id, `rack:${first.id}`], label: 'One rack', severity: 'problem' })
+    await run('annotate', { objectIds: [first.rowId], label: 'A row', severity: 'problem' })
+    await run('annotate', { objectIds: ['B3-2', 'crah:Z3'], label: 'Bay and CRAH', severity: 'warning' })
+    await run('propose_change', {
+      title: 'Rename',
+      rationale: 'Test',
+      commands: [{ type: 'renamePlan', payload: { name: 'X' } }],
+      respectsNotes: [],
+      violatesNotes: [],
+      annotate: { objectIds: [first.id], label: 'Here' },
+    })
+    const ids = views.map((v) => (v.type === 'annotate' ? v.annotation.objectIds : []))
+    expect(ids).toEqual([[`rack:${first.id}`], rowRacks, [...bayRacks, 'crah-3'], [`rack:${first.id}`]])
+    expect(rowRacks.length).toBeGreaterThan(1)
   })
 })
 

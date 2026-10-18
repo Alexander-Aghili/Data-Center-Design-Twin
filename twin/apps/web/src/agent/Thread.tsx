@@ -20,10 +20,11 @@ function buildItems(events: AgentEvent[]): ThreadItem[] {
   const messageFor = (id: string): AgentMessageModel => {
     let message = messages.get(id)
     if (!message) {
-      message = { id, severity: 'info', streaming: true, parts: [], sources: [] }
+      message = { id, version: 0, severity: 'info', streaming: true, parts: [], sources: [] }
       messages.set(id, message)
       items.push({ kind: 'agent', message })
     }
+    message.version += 1
     return message
   }
 
@@ -50,6 +51,7 @@ function buildItems(events: AgentEvent[]): ThreadItem[] {
         const call = calls.get(e.callId)
         if (!call) return
         call.part.result = { ok: e.ok, summary: e.summary }
+        call.message.version += 1
         call.message.sources.push({ name: call.part.name, numbers: e.numbers })
         return
       }
@@ -90,6 +92,8 @@ const STICK_PX = 32
 export function Thread() {
   const thread = useTwinStore((s) => s.thread)
   const annotations = useTwinStore((s) => s.annotations)
+  const online = useTwinStore((s) => s.connection === 'online')
+  const resetChat = useTwinStore((s) => s.resetChat)
   const items = useMemo(() => buildItems(thread), [thread])
   const streaming = items.some((it) => it.kind === 'agent' && it.message.streaming)
   const log = useRef<HTMLDivElement>(null)
@@ -97,12 +101,21 @@ export function Thread() {
 
   useLayoutEffect(() => {
     const el = log.current
+    // Sending a message means the person wants the reply in view, wherever they had scrolled.
+    if (thread.at(-1)?.kind === 'userMessage') stick.current = true
     if (el && stick.current) el.scrollTop = el.scrollHeight
   }, [thread])
 
   return (
     <div className="ag-thread">
-      <h2 className="ag-thread__title">Design agent</h2>
+      <div className="ag-thread__head">
+        <h2 className="ag-thread__title">Design agent</h2>
+        {online && items.length > 0 && (
+          <button type="button" className="btn btn--quiet ag-thread__reset" onClick={resetChat}>
+            New conversation
+          </button>
+        )}
+      </div>
       <div
         ref={log}
         className="ag-thread__log"

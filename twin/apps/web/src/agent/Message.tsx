@@ -1,5 +1,6 @@
 import type { Proposal, Severity } from '@twin/schema'
-import type { ReactNode } from 'react'
+import { memo, useMemo, type ReactNode } from 'react'
+import { DISPLAY_UNIT_FACTORS, MONEY_SUFFIX_FACTORS } from '../format'
 import { DeltaTag } from './DeltaTag'
 import { ProposalCard } from './ProposalCard'
 import { ToolCallLine, type ToolCallPart } from './ToolCallLine'
@@ -19,6 +20,8 @@ export interface GroundingSource {
 
 export interface AgentMessageModel {
   id: string
+  /** Bumped by every event folded into this message, so unchanged messages skip re-rendering. */
+  version: number
   severity: Severity
   streaming: boolean
   parts: MessagePart[]
@@ -30,7 +33,12 @@ const SEVERITY_MARK: Record<Exclude<Severity, 'info'>, { mark: string; label: st
   warning: { mark: '▲', label: 'Warning' },
 }
 
-export function AgentMessage({ message, tag }: { message: AgentMessageModel; tag?: number }) {
+interface AgentMessageProps {
+  message: AgentMessageModel
+  tag?: number
+}
+
+export const AgentMessage = memo(function AgentMessage({ message, tag }: AgentMessageProps) {
   const { severity, parts, streaming, sources } = message
   const last = parts.length - 1
   return (
@@ -45,7 +53,7 @@ export function AgentMessage({ message, tag }: { message: AgentMessageModel; tag
             <DeltaTag tag={tag} severity={severity} />
           )}
           <span className="ag-msg__rule" aria-hidden="true" />
-          <span className="ag-sr">{SEVERITY_MARK[severity].label}</span>
+          <span className="visually-hidden">{SEVERITY_MARK[severity].label}</span>
         </div>
       )}
       <div className="ag-msg__body">
@@ -67,15 +75,20 @@ export function AgentMessage({ message, tag }: { message: AgentMessageModel; tag
       </div>
     </article>
   )
+}, sameMessage)
+
+function sameMessage(a: AgentMessageProps, b: AgentMessageProps): boolean {
+  return a.message.id === b.message.id && a.message.version === b.message.version && a.tag === b.tag
 }
 
 export function UserMessage({ text }: { text: string }) {
   return <p className="ag-user">{text}</p>
 }
 
+/** Errors sit inside the thread's live log, which announces them; an alert role would announce them twice. */
 export function ErrorLine({ message }: { message: string }) {
   return (
-    <p className="ag-error" role="alert">
+    <p className="ag-error">
       <span className="ag-error__mark" aria-hidden="true">
         ✕
       </span>
@@ -84,9 +97,21 @@ export function ErrorLine({ message }: { message: string }) {
   )
 }
 
+/** Only files this app serves under /api/ are offered for download. */
+function appFilePath(href: string): string | null {
+  try {
+    const url = new URL(href, window.location.origin)
+    return url.origin === window.location.origin && url.pathname.startsWith('/api/') ? `${url.pathname}${url.search}` : null
+  } catch {
+    return null
+  }
+}
+
 function DownloadLink({ label, href }: { label: string; href: string }) {
+  const path = appFilePath(href)
+  if (!path) return <p className="ag-link ag-link--withheld">{`${label} (not offered: the link points outside this app)`}</p>
   return (
-    <a className="ag-link" href={href} download>
+    <a className="ag-link" href={path} download>
       <svg aria-hidden="true" width="12" height="12" viewBox="0 0 12 12">
         <path d="M6 1v7M3 5.5 6 8.5 9 5.5M1.5 11h9" />
       </svg>
@@ -142,7 +167,7 @@ function closeOpenMarks(text: string): string {
 }
 
 function Markdown({ text, sources, streaming }: { text: string; sources: GroundingSource[]; streaming: boolean }) {
-  const blocks = parseBlocks(streaming ? closeOpenMarks(text) : text)
+  const blocks = useMemo(() => parseBlocks(streaming ? closeOpenMarks(text) : text), [text, streaming])
   const inline = (s: string, isLast: boolean) => (
     <>
       {renderInline(s, sources)}
@@ -173,28 +198,25 @@ function renderInline(text: string, sources: GroundingSource[]): ReactNode[] {
 
 /* Grounding marks: a number is marked when a tool result of the same message holds a value that displays as it. */
 
-const NUMBER =
-  /(?<![\p{L}\p{N}.,])([+\-−]?\$?)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d+))?(?:([kMB])(?![\p{L}\p{N}]))?(?:([  ]?)(%|°C|kN\/m²|kW|MW|GW|W|kg|t|m³\/day|m³|mm|m|L\/s|L\/min|K|weeks?|hours?|h)(?![\p{L}\p{N}]))?/gu
+const escapeRegExp = (t: string) => t.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')
 
-const SUFFIX_FACTOR: Record<string, number> = { k: 1e3, M: 1e6, B: 1e9 }
+/** Units from format.ts, longest first so "kN/m²" wins over "kN". */
+const UNITS = Object.keys(DISPLAY_UNIT_FACTORS)
+  .sort((a, b) => b.length - a.length)
+  .map(escapeRegExp)
+  .join('|')
 
-/** Display value = SI value / factor. Percent may show a fraction (utilization) or a value already in percent. */
-const UNIT_FACTORS: Record<string, number[]> = {
-  '%': [0.01, 1],
-  kW: [1e3],
-  MW: [1e6],
-  GW: [1e9],
-  t: [1e3],
-  mm: [1e-3],
-  'L/min': [1 / 60],
-}
+const NUMBER = new RegExp(
+  `(?<![\\p{L}\\p{N}.,])([+\\-−]?\\$?)(\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.(\\d+))?(?:([kKMB])(?![\\p{L}\\p{N}]))?(?:([ \\u00a0]?)(${UNITS})(?![\\p{L}\\p{N}]))?`,
+  'gu',
+)
 
 function displaysAs(value: number, shown: number, decimals: number, factor: number): boolean {
   const scale = 10 ** decimals
   return Math.round((Math.abs(value) / factor) * scale) / scale === shown
 }
 
-function findSource(shown: number, decimals: number, factors: number[], sources: GroundingSource[]): string | undefined {
+function findSource(shown: number, decimals: number, factors: readonly number[], sources: GroundingSource[]): string | undefined {
   return sources.find((s) => s.numbers.some((n) => factors.some((f) => displaysAs(n, shown, decimals, f))))?.name
 }
 
@@ -207,7 +229,7 @@ function groundNumbers(text: string, sources: GroundingSource[]): ReactNode[] {
     const display = `${prefix}${int}${decimals ? `.${decimals}` : ''}${suffix}${space ? ' ' : ''}${unit}`
     // Bare single-digit counts ("rows 3–5") match too many tool values to mean anything.
     const meaningful = Boolean(unit || suffix || decimals || prefix.includes('$')) || shown >= 10
-    const factors = (UNIT_FACTORS[unit] ?? [1]).map((f) => f * (SUFFIX_FACTOR[suffix] ?? 1))
+    const factors = (DISPLAY_UNIT_FACTORS[unit] ?? [1]).map((f) => f * (MONEY_SUFFIX_FACTORS[suffix.toUpperCase()] ?? 1))
     const source = meaningful ? findSource(shown, decimals.length, factors, sources) : undefined
     out.push(text.slice(at, m.index))
     out.push(

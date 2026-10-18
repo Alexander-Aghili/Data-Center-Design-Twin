@@ -1,3 +1,6 @@
+import { loadBuiltins } from '@twin/catalog'
+import { applyCommand } from '@twin/commands'
+import { makeCatalogIndex } from '@twin/engine'
 import type { Command, Plan } from '@twin/schema'
 import { useRef, useState, type ChangeEvent } from 'react'
 import { StatusMark } from '../panels/StatusMark'
@@ -43,27 +46,39 @@ function entryId(item: unknown, index: number): string {
   return typeof id === 'string' && id ? id : `Entry ${index + 1}`
 }
 
-/** Adds each pack entry; one already in the plan as a custom entry is updated instead. Entries are independent. */
-async function importPack(items: unknown[], file: string, plan: Plan | null, send: (c: Command) => Promise<void>): Promise<ImportReport> {
+/**
+ * Adds each pack entry, or updates one already in the plan as a custom entry, as one undo step. The pack is tried
+ * against the current plan first, so a bad entry is named and nothing is imported.
+ */
+async function importPack(items: unknown[], file: string, plan: Plan | null, sendAll: (c: Command[]) => Promise<void>): Promise<ImportReport> {
+  const notImported = (problems: string[]): ImportReport => ({ ok: false, title: `${file} was not imported. Your current plan is unchanged.`, lines: problems })
+  let tried = plan
   let added = 0
-  let updated = 0
+  const commands: Command[] = []
   const failures: string[] = []
   for (const [i, item] of items.entries()) {
     const id = entryId(item, i)
     const update = plan?.catalog[id]?.custom === true
+    const command: Command = { type: update ? 'updateCatalogEntry' : 'addCatalogEntry', payload: { entry: item } }
+    commands.push(command)
+    if (!update) added += 1
+    if (!tried) continue
     try {
-      await send({ type: update ? 'updateCatalogEntry' : 'addCatalogEntry', payload: { entry: item } })
-      if (update) updated += 1
-      else added += 1
+      tried = applyCommand(tried, command, makeCatalogIndex([...loadBuiltins().entries, ...Object.values(tried.catalog)])).plan
     } catch (error) {
       failures.push(...lines(messageOf(error)).map((l) => `${id}: ${l.replace(/^payload\.entry\./, '')}`))
     }
   }
-  const done = added + updated
+  if (failures.length > 0) return notImported(failures)
+  try {
+    await sendAll(commands)
+  } catch (error) {
+    return notImported(lines(messageOf(error)))
+  }
+  const updated = items.length - added
   const verb = updated === 0 ? 'Added' : added === 0 ? 'Updated' : 'Added or updated'
-  const counted = done === items.length ? `${done}` : `${done} of ${items.length}`
   const noun = items.length === 1 ? 'entry' : 'entries'
-  return { ok: failures.length === 0, title: `${verb} ${counted} ${noun} from ${file}.`, lines: failures }
+  return { ok: true, title: `${verb} ${items.length} ${noun} from ${file}.`, lines: [] }
 }
 
 async function importPlan(json: unknown, file: string, send: (c: Command) => Promise<void>): Promise<ImportReport> {
@@ -80,6 +95,7 @@ async function importPlan(json: unknown, file: string, send: (c: Command) => Pro
 export function ImportExport() {
   const plan = useTwinStore((s) => s.plan)
   const send = useTwinStore((s) => s.send)
+  const sendAll = useTwinStore((s) => s.sendAll)
   const [report, setReport] = useState<ImportReport | null>(null)
   const [busy, setBusy] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -100,7 +116,7 @@ export function ImportExport() {
     const pack = packEntries(json)
     // Read the plan now, not from the render that opened the file picker.
     const current = useTwinStore.getState().plan
-    setReport(pack ? await importPack(pack, file.name, current, send) : await importPlan(json, file.name, send))
+    setReport(pack ? await importPack(pack, file.name, current, sendAll) : await importPlan(json, file.name, send))
     setBusy(false)
   }
 

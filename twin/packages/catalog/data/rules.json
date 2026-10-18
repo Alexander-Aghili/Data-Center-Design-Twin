@@ -29,6 +29,14 @@
     "high": 20,
     "note": "Containment stops bypass, so CRAH return air runs 25 to 35 °F (14 to 19 K) above supply."
   },
+  "crahCoilApproachK": {
+    "value": 6,
+    "unit": "K",
+    "basis": "estimate",
+    "low": 4,
+    "high": 8,
+    "note": "Chilled-water CRAH coils deliver supply air about 4 to 8 K above the entering water temperature (coil approach), so an 18 °C facility loop gives roughly 24 °C room supply air. Estimated from typical coil selections; used to derive rack air inlet temperature."
+  },
   "distributionEfficiency": {
     "value": 0.98,
     "unit": "fraction",
@@ -199,20 +207,22 @@
     "note": "Same pipe overhead plus hangers, seismic bracing and drip trays; roughly a third more than under-floor."
   },
   "raisedFloorInstallWeeks": {
-    "value": 6,
-    "unit": "week",
-    "basis": "estimate",
-    "low": 4,
-    "high": 10,
-    "note": "Under-floor runs are easy to route but must be coordinated with pedestals and cable trays per hall."
-  },
-  "overheadInstallWeeks": {
     "value": 8,
     "unit": "week",
     "basis": "estimate",
     "low": 6,
     "high": 12,
-    "note": "Overhead adds structural supports and drip trays before pipe can be hung."
+    "source": "https://www.youtube.com/watch?v=8J-GUnfSqeE",
+    "note": "Estimate. Piping under a raised floor is slower to build than overhead, as the Jane Street hall tour describes; it has to be coordinated with pedestals, cable trays and leak-detection rope. Set about two weeks above the overhead value."
+  },
+  "overheadInstallWeeks": {
+    "value": 6,
+    "unit": "week",
+    "basis": "estimate",
+    "low": 4,
+    "high": 10,
+    "source": "https://www.youtube.com/watch?v=8J-GUnfSqeE",
+    "note": "Estimate. Overhead piping is faster to build than under a raised floor, as the Jane Street hall tour describes, but has no under-floor leak containment. Hangers and drip trays are included."
   },
   "routingSlackM": {
     "value": 3,

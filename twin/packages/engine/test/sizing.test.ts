@@ -4,8 +4,10 @@ import { airSide } from '../src/cooling/air'
 import { liquidSide } from '../src/cooling/liquid'
 import { evaluate } from '../src/evaluate'
 import { networkFabric } from '../src/network'
+import { makeCatalogIndex } from '../src/context'
 import { sizeEquipment } from '../src/sizing'
 import { airRack, builtinEntries, gb300, makeCtx, makePlan, makeRacks, rules } from './coolingFixture'
+import { builtins, demoPlan } from './integrationFixture'
 
 const dlc = { id: 'g2', rackTypeId: gb300.id, coolingMethodId: RACK_COOLING.DLC_1P, rows: ['R3'], slots: 16 }
 const airHall = { id: 'g1', rackTypeId: airRack.id, coolingMethodId: RACK_COOLING.AIR_CONTAINED, rows: ['R1', 'R2', 'R3', 'R4', 'R5'], slots: 16 }
@@ -23,37 +25,45 @@ const item = (r: ReturnType<typeof run>, key: string) => r.equipment.find((e) =>
 const check = (r: ReturnType<typeof run>, id: string) => r.checks.find((c) => c.id === id)
 
 describe('CDU sizing', () => {
-  it('N+1: ceil(liquidW_row / capacity) + 1, smallest model that fits the row positions', () => {
-    // cdu.1200kw needs 2 + 1 = 3 units but cdu-E3 holds 2, so cdu.2000kw (1 + 1 = 2) is the smallest that fits.
+  it('N+1: max(ceil(heat / capacity), ceil(flow / max flow)) + 1, smallest model that fits the row positions', () => {
+    // 1.795 MW of PG25 at 10 K is 44.6 L/s. Kept at 80%: cdu.1200kw needs max(2, 3) + 1 = 4 units, more than
+    // cdu-E3's 3; cdu.2000kw needs max(2 for heat, 2 for flow) + 1 = 3. On heat alone it would have been 2.
     const result = run(makePlan([dlc]))
     expect(item(result, 'cdu:R3')).toEqual({
       key: 'cdu:R3',
       category: 'cdu',
       modelId: 'cdu.2000kw',
-      count: 2,
-      required: 2,
+      count: 3,
+      required: 3,
       positionIds: ['cdu-E3'],
       autoSized: true,
       loadW: dlcLoadW,
-      capacityW: 2_000_000,
-      objectIds: ['eq:cdu:R3:0', 'eq:cdu:R3:1'],
+      capacityW: 4_000_000,
+      objectIds: ['eq:cdu:R3:0', 'eq:cdu:R3:1', 'eq:cdu:R3:2'],
     })
     expect(check(result, 'cooling.cduPositions:R3')!.status).toBe('pass')
     const capacity = check(result, 'cooling.cduCapacity:cdu:R3')!
     expect(capacity.value).toBeCloseTo(dlcLoadW, 6)
-    expect(capacity.limit).toBe(2_000_000)
-    expect(capacity.utilization).toBeCloseTo(dlcLoadW / 2_000_000, 9)
+    expect(capacity.limit).toBe(4_000_000)
+    expect(capacity.status).toBe('pass')
+    expect(capacity.explanation).not.toMatch(/past their rating/)
   })
 
-  it('N adds nothing and 2N doubles', () => {
+  it('flow sets the count when it needs more units than heat (N: 3 × cdu.1200kw for 44.6 L/s, heat alone needs 2)', () => {
     const n = item(run(makePlan([dlc], { power: { ...makePlan([]).power, redundancy: 'N' } })), 'cdu:R3')!
-    expect([n.modelId, n.count]).toEqual(['cdu.1200kw', 2])
+    expect([n.modelId, n.count, n.required]).toEqual(['cdu.1200kw', 3, 3])
+  })
+
+  it('2N doubles the working units', () => {
+    // cdu.2000kw at full rating needs max(1 for heat, 2 for flow) = 2 working units, so 4 under 2N; cdu-E3 holds 3.
     const twoN = item(run(makePlan([dlc], { power: { ...makePlan([]).power, redundancy: '2N' } })), 'cdu:R3')!
-    expect([twoN.modelId, twoN.count, twoN.required]).toEqual(['cdu.2000kw', 2, 2])
+    expect([twoN.modelId, twoN.count, twoN.required]).toEqual(['cdu.2000kw', 3, 4])
   })
 
   it('cduPositions fails with advice naming the row and the free positions when positions run out', () => {
-    const result = run(makePlan([{ ...dlc, slots: 24 }]))
+    const plan = makePlan([{ ...dlc, slots: 24 }])
+    plan.hall.positions = plan.hall.positions.map((p) => (p.id === 'cdu-E3' ? { ...p, capacity: 2 } : p))
+    const result = run(plan)
     const cdu = item(result, 'cdu:R3')!
     expect([cdu.modelId, cdu.required, cdu.count]).toEqual(['cdu.2000kw', 3, 2])
     const positions = check(result, 'cooling.cduPositions:R3')!
@@ -68,9 +78,9 @@ describe('CDU sizing', () => {
   })
 
   it('a CDU flow above the rated flow raises the capacity check to at least a warning', () => {
-    const result = run(makePlan([dlc]))
+    const result = run(makePlan([dlc], { overrides: [{ key: 'cdu:R3', modelId: 'cdu.2000kw', count: 2 }] }))
     const capacity = check(result, 'cooling.cduCapacity:cdu:R3')!
-    // 1.7952 MW of PG25 at 10 K is 44.6 L/s against 40 L/s for one cdu.2000kw.
+    // 1.7952 MW of PG25 at 10 K is 44.6 L/s against 40 L/s for the one working cdu.2000kw.
     expect(capacity.status).toBe('warn')
     expect(capacity.explanation).toMatch(/L\/s/)
   })
@@ -137,20 +147,50 @@ describe('plant, electrical and network sizing', () => {
 
   it('UPS modules and busways use the power checks loads: UPS = IT peak / distribution efficiency', () => {
     const result = run(makePlan([airHall]))
-    // Peak 80 × 30 kW = 2.4 MW plus optics, / 0.98 ≈ 2.5 MW over 500 kW modules kept at 80%: 7 + 1.
+    // Peak 80 × 30 kW = 2.4 MW plus optics and leaf switches, / 0.98 ≈ 2.5 MW over 500 kW modules kept at 80%: 7 + 1.
     expect(item(result, 'ups')).toMatchObject({ modelId: 'ups.500kw', count: 8, positionIds: ['elec-1'] })
     const ctx = makeCtx(makePlan([airHall]))
     const opticsW = networkFabric(ctx, makeRacks(ctx)).network.opticsW
-    expect(item(result, 'ups')!.loadW).toBeCloseTo((2_400_000 + opticsW) / 0.98, 6)
-    // Row R1: 480 kW peak at 415 V and pf 0.95 is 703 A, × 1.3 (mixed) = 914 A: one 1250 A busway (73%) plus a spare.
+    // Leaf switches: leaf-1 holds 40 and leaf-2 10 (see the leaf test), 940 W each.
+    const leafW = (40 + 10) * 940
+    expect(item(result, 'leaf:leaf-1')!.loadW + item(result, 'leaf:leaf-2')!.loadW).toBe(leafW)
+    expect(item(result, 'ups')!.loadW).toBeCloseTo((2_400_000 + opticsW + leafW) / 0.98, 6)
+    // Row R1: 480 kW peak at 415 V and pf 0.95 is 703 A: one 1250 A busway (56%) plus a spare.
     expect(item(result, 'busway:R1')).toMatchObject({ modelId: 'busway.1250a', count: 2, loadW: 480_000 })
     expect(item(result, 'transformer')).toMatchObject({ modelId: 'transformer.3mva', positionIds: ['elec-1'] })
   })
 
+  it('busway design current is the row peak current with no peak-to-average factor, as the power check uses', () => {
+    // 20 racks × 30 kW peak = 600 kW is 879 A: one 1250 A feed within 80%, plus a spare. A × 1.3 factor would give
+    // 1,142 A and two working feeds.
+    const result = run(makePlan([{ ...airHall, rows: ['R1'], slots: 20 }]))
+    expect(item(result, 'busway:R1')).toMatchObject({ modelId: 'busway.1250a', count: 2, required: 2 })
+  })
+
+  it('gives up UPS headroom before it starves the transformers of electrical positions', () => {
+    // GB300 demo hall: UPS 8.71 MW needs 18 + 1 modules at full load or 22 + 1 at 80%; transformers 12.4 MVA need
+    // 5 + 1 at full or 6 + 1 at 80%. In 26 units, 23 headroom UPS modules would leave room for only 3 transformers.
+    const base = demoPlan()
+    const plan: Plan = {
+      ...base,
+      hall: { ...base.hall, positions: base.hall.positions.map((p) => (p.kind === 'electrical' ? { ...p, capacity: 26 } : p)) },
+    }
+    const ev = evaluate(plan, builtins)
+    const units = (key: string) => ev.equipment.find((e) => e.key === key)!
+    expect(units('ups')).toMatchObject({ count: 19, required: 19 })
+    expect(units('transformer')).toMatchObject({ count: 7, required: 7 })
+    expect(ev.checks.find((c) => c.id === 'power.transformer:transformer')!.status).not.toBe('fail')
+    expect(ev.checks.find((c) => c.id === 'power.ups:ups')!.status).not.toBe('fail')
+  })
+
   it('leaves per leaf position: downlinks plus downlinks / oversubscription, capped by the position capacity', () => {
     const result = run(makePlan([airHall]))
-    // leaf-1 serves R1–R4: 64 racks × 16 ports = 1024 downlinks + 1024 uplinks at 1:1 = 32 leaves of 64 ports; it holds 1.
-    expect(item(result, 'leaf:leaf-1')).toMatchObject({ modelId: 'leaf.64x800g', required: 32, count: 1, positionIds: ['leaf-1'] })
+    // leaf-1 serves R1–R4: 64 racks × 16 ports = 1024 downlinks + 1024 uplinks at 1:1 = 32 leaves of 64 ports,
+    // 40 kept at the 80% warning threshold; the position holds 64.
+    expect(item(result, 'leaf:leaf-1')).toMatchObject({ modelId: 'leaf.64x800g', required: 40, count: 40, positionIds: ['leaf-1'] })
+    // GB300 racks on R1–R4: 64 × 72 ports = 4608 downlinks + 4608 uplinks = 144 leaves, capped at the 64 the position holds.
+    const dense = run(makePlan([{ ...dlc, rows: ['R1', 'R2', 'R3', 'R4'] }]))
+    expect(item(dense, 'leaf:leaf-1')).toMatchObject({ required: 144, count: 64 })
   })
 
   it('keys and categories match what the rejection, power and cost modules read', () => {
@@ -161,6 +201,19 @@ describe('plant, electrical and network sizing', () => {
     )
     expect(item(result, 'cdu:R6')!.modelId).toBe('cdu.2000kw')
     expect(item(result, 'crah:Z1')!.modelId).toBe('crah.400kw')
+  })
+
+  it('a bufferTank override sets the tank model, count and position; without one the tank is auto-sized', () => {
+    const cooling = { ...makePlan([]).cooling, bufferTankM3: 20 }
+    const auto = run(makePlan([dlc], { cooling }))
+    expect(item(auto, 'bufferTank')).toMatchObject({ modelId: 'bufferTank.standard', count: 1, positionIds: ['plant-1'], autoSized: true })
+
+    const custom = { ...builtinEntries.find((e) => e.id === 'bufferTank.standard')!, id: 'bufferTank.custom', name: 'Custom tank', custom: true }
+    const plan = makePlan([dlc], { cooling, overrides: [{ key: 'bufferTank', modelId: 'bufferTank.custom', count: 2 }] })
+    const ctx = { ...makeCtx(plan), catalog: makeCatalogIndex([...builtinEntries, custom]) }
+    const racks = makeRacks(ctx)
+    const tank = sizeEquipment(ctx, racks, airSide(ctx, racks), liquidSide(ctx, racks)).equipment.find((e) => e.key === 'bufferTank')
+    expect(tank).toMatchObject({ modelId: 'bufferTank.custom', count: 2, autoSized: false, objectIds: ['eq:bufferTank:0', 'eq:bufferTank:1'] })
   })
 
   it('an empty hall sizes nothing and raises no checks', () => {

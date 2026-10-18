@@ -1,14 +1,11 @@
-import type { CatalogEntry, Check, EquipmentPosition, Evaluation, Plan, RackResult, Row, SizedEquipment } from '@twin/schema'
-import rules from '../../../../packages/catalog/data/rules.json' with { type: 'json' }
-import { DASH, bullets, code, fixed, hourOfYear, kelvin, range, table, watts } from './format.js'
+import { loadBuiltins } from '@twin/catalog'
+import { num, type Builtins, type CatalogEntry, type Check, type EquipmentPosition, type Evaluation, type Plan, type RackResult, type Row, type SizedEquipment } from '@twin/schema'
+import { DASH, bullets, code, fixed, hourOfYear, kelvin, range, significant, table, watts } from './format.js'
 
 // ---------------------------------------------------------------------------
 // Constants (each with its source)
 // ---------------------------------------------------------------------------
 
-/** The app's air properties. The CFD must use the same ρ and cp, or the rack energy balance will not close. */
-const RHO = rules.airDensity.value
-const CP = rules.airCp.value
 // Dry air at 300 K: μ = 184.6e-7 N·s/m², Pr = 0.707 (Incropera, Fundamentals of Heat and Mass Transfer, Table A.4).
 const MU = 1.846e-5
 const PR = 0.707
@@ -52,9 +49,25 @@ interface RackGeo {
   z1: number
   height: number
   inletFace: Face
+  inletC: number | null
+  outletC: number | null
   deltaTK: number | null
   airflowM3s: number | null
   patch: string
+}
+
+/**
+ * Air properties and temperatures for the model. ρ and cp are the app's rules: the CFD must use the same
+ * values, or the rack energy balance will not close.
+ */
+interface Air {
+  rho: number | null
+  cp: number | null
+  /** The app's room-air temperature rise, used where the evaluation has no per-rack air temperatures. */
+  hallDeltaTK: number | null
+  supplyC: number
+  /** True when the supply temperature is the brief's assumption rather than the evaluation's rack inlet. */
+  supplyAssumed: boolean
 }
 
 interface Aisle {
@@ -83,13 +96,13 @@ interface Zone {
 interface Model {
   plan: Plan
   evaluation: Evaluation
+  air: Air
   racks: RackGeo[]
   zones: Zone[]
   hotAisles: Aisle[]
   coldAisles: Aisle[]
   blanks: { row: Row; slots: string }[]
   openHotSides: Row[]
-  supplyC: number | null
 }
 
 const patchName = (id: string) => id.replace(/[^A-Za-z0-9]+/g, '_')
@@ -101,7 +114,7 @@ function rackEntry(plan: Plan, groupId: string): Extract<CatalogEntry, { kind: '
   return entry?.kind === 'rack' ? entry : undefined
 }
 
-function rackGeo(plan: Plan, rack: RackResult): RackGeo | null {
+function rackGeo(plan: Plan, air: Air, rack: RackResult): RackGeo | null {
   const row = plan.hall.rows.find((r) => r.id === rack.rowId)
   if (!row) return null
   const entry = rackEntry(plan, rack.groupId)
@@ -109,8 +122,12 @@ function rackGeo(plan: Plan, rack: RackResult): RackGeo | null {
   const heightMm = entry?.heightMm.value
   const x0 = row.x + rack.slot * row.slotPitchM
   const { airInletC, airOutletC } = rack
-  const deltaTK = airInletC !== null && airOutletC !== null && airOutletC > airInletC ? airOutletC - airInletC : null
-  const airflowM3s = rack.airW === 0 ? 0 : deltaTK === null ? null : rack.airW / (RHO * CP * deltaTK)
+  const fromApp = airInletC !== null && airOutletC !== null && airOutletC > airInletC
+  const deltaTK = fromApp ? airOutletC - airInletC : air.hallDeltaTK
+  const inletC = airInletC ?? air.supplyC
+  const outletC = fromApp ? airOutletC : deltaTK === null ? null : inletC + deltaTK
+  const airflowM3s =
+    rack.airW === 0 ? 0 : deltaTK === null || air.rho === null || air.cp === null ? null : rack.airW / (air.rho * air.cp * deltaTK)
   return {
     rack,
     row,
@@ -120,6 +137,8 @@ function rackGeo(plan: Plan, rack: RackResult): RackGeo | null {
     z1: row.z + row.rackDepthM,
     height: typeof heightMm === 'number' ? heightMm / 1000 : FALLBACK_RACK_HEIGHT_M,
     inletFace: row.hotAisle === 'south' ? 'north' : 'south',
+    inletC,
+    outletC,
     deltaTK,
     airflowM3s,
     patch: `rack_${patchName(rack.placementId)}`,
@@ -130,8 +149,8 @@ function sumOrNull(values: (number | null)[]): number | null {
   return values.some((v) => v === null) ? null : sum(values as number[])
 }
 
-function flowWeighted(racks: RackGeo[], pick: (r: RackResult) => number | null): number | null {
-  const pairs = racks.map((g) => [g.airflowM3s, pick(g.rack)] as const)
+function flowWeighted(racks: RackGeo[], pick: (g: RackGeo) => number | null): number | null {
+  const pairs = racks.map((g) => [g.airflowM3s, pick(g)] as const)
   const weight = sum(pairs.map(([f, v]) => (f !== null && v !== null ? f : 0)))
   if (weight <= 0) return null
   return sum(pairs.map(([f, v]) => (f !== null && v !== null ? f * v : 0))) / weight
@@ -141,7 +160,9 @@ function minMax(values: number[]): [number | null, number | null] {
   return values.length ? [Math.min(...values), Math.max(...values)] : [null, null]
 }
 
-function zones(plan: Plan, evaluation: Evaluation, racks: RackGeo[]): Zone[] {
+/** CRAH zones in evaluation order. A rack belongs to the first zone that serves its row, so no rack is counted twice. */
+function zones(plan: Plan, evaluation: Evaluation, racks: RackGeo[], builtins: readonly CatalogEntry[]): Zone[] {
+  const assigned = new Set<RackGeo>()
   return evaluation.equipment
     .filter((eq) => eq.category === 'crah')
     .map((eq) => {
@@ -149,10 +170,12 @@ function zones(plan: Plan, evaluation: Evaluation, racks: RackGeo[]): Zone[] {
         .map((id) => plan.hall.positions.find((p) => p.id === id))
         .filter((p): p is EquipmentPosition => p !== undefined)
       const served = new Set(positions.flatMap((p) => p.servesRows))
-      const zoneRacks = racks.filter((g) => served.has(g.rack.rowId))
-      const model = eq.modelId ? plan.catalog[eq.modelId] : undefined
+      const zoneRacks = racks.filter((g) => served.has(g.rack.rowId) && !assigned.has(g))
+      for (const g of zoneRacks) assigned.add(g)
+      // Auto-sized models are not always in the plan's snapshot; the plan's copy wins over the built-in one.
+      const model = eq.modelId ? (plan.catalog[eq.modelId] ?? builtins.find((e) => e.id === eq.modelId)) : undefined
       const equipment = model?.kind === 'equipment' ? model : undefined
-      const [supplyC, supplyMaxC] = minMax(zoneRacks.map((g) => g.rack.airInletC).filter((v): v is number => v !== null))
+      const [supplyC, supplyMaxC] = minMax(zoneRacks.map((g) => g.inletC).filter((v): v is number => v !== null))
       return {
         eq,
         positions,
@@ -160,7 +183,7 @@ function zones(plan: Plan, evaluation: Evaluation, racks: RackGeo[]): Zone[] {
         flowM3s: sumOrNull(zoneRacks.map((g) => g.airflowM3s)),
         supplyC,
         supplyMaxC,
-        returnC: flowWeighted(zoneRacks, (r) => r.airOutletC),
+        returnC: flowWeighted(zoneRacks, (g) => g.outletC),
         ratedPerUnitM3s: equipment?.params['airflowM3s']?.value ?? null,
         modelName: equipment?.name ?? eq.modelId ?? DASH,
         datasheet: equipment?.sources?.[0]?.url ?? null,
@@ -211,8 +234,25 @@ function freeSlots(row: Row, racks: RackGeo[]): string | null {
   return runs.length ? runs.join(', ') : null
 }
 
+function airProperties(plan: Plan, evaluation: Evaluation, rules: Builtins['rules']): Air {
+  const ruleDeltaT = num(plan.cooling.containment === 'none' ? rules.airDeltaTK : rules.airDeltaTKContained)
+  const metricDeltaT = evaluation.metrics.find((x) => x.id === 'cooling.airDeltaTK')?.value ?? null
+  const [appSupplyC] = minMax(evaluation.racks.map((r) => r.airInletC).filter((v): v is number => v !== null))
+  return {
+    rho: num(rules.airDensity),
+    cp: num(rules.airCp),
+    hallDeltaTK: metricDeltaT ?? ruleDeltaT,
+    // Without rack inlet temperatures from the app: the bottom of the ASHRAE recommended envelope,
+    // but never below the facility water supply that feeds the CRAH coils.
+    supplyC: appSupplyC ?? Math.max(ASHRAE_INLET_MIN_C, plan.cooling.facilitySupplyC),
+    supplyAssumed: appSupplyC === null,
+  }
+}
+
 function buildModel(plan: Plan, evaluation: Evaluation): Model {
-  const racks = evaluation.racks.map((r) => rackGeo(plan, r)).filter((g): g is RackGeo => g !== null)
+  const builtins = loadBuiltins()
+  const air = airProperties(plan, evaluation, builtins.rules)
+  const racks = evaluation.racks.map((r) => rackGeo(plan, air, r)).filter((g): g is RackGeo => g !== null)
   const hotAisles = aisles(plan.hall.rows, racks, 'hot')
   const coldAisles = aisles(plan.hall.rows, racks, 'cold')
   const contained = plan.cooling.containment === 'hotAisle' ? hotAisles : plan.cooling.containment === 'coldAisle' ? coldAisles : []
@@ -223,17 +263,16 @@ function buildModel(plan: Plan, evaluation: Evaluation): Model {
   })
   const hotRows = new Set(hotAisles.flatMap((a) => a.rows))
   const openHotSides = [...new Set(racks.map((g) => g.row))].filter((row) => !hotRows.has(row))
-  const [supplyC] = minMax(racks.map((g) => g.rack.airInletC).filter((v): v is number => v !== null))
   return {
     plan,
     evaluation,
+    air,
     racks,
-    zones: zones(plan, evaluation, racks),
+    zones: zones(plan, evaluation, racks, builtins.entries),
     hotAisles,
     coldAisles,
     blanks,
     openHotSides,
-    supplyC,
   }
 }
 
@@ -356,7 +395,10 @@ function heatSources(m: Model): string {
   return [
     '## Heat sources',
     '',
-    `Rack airflow is the app's air heat divided by ρ·cp·ΔT, with ρ = ${RHO} kg/m³ and cp = ${CP} J/(kg·K) (the app's rules) and ΔT = outlet minus inlet temperature from the evaluation. ` +
+    `Rack airflow is the app's air heat divided by ρ·cp·ΔT, with ρ = ${fixed(m.air.rho, 3)} kg/m³ and cp = ${fixed(m.air.cp, 0)} J/(kg·K) from the app's rules. ` +
+      (m.racks.some((g) => g.rack.airInletC === null || g.rack.airOutletC === null)
+        ? `Where the evaluation has no rack air temperatures, ΔT is the app's room-air temperature rise (${fixed(m.air.hallDeltaTK, 1)} K) and the inlet is the CRAH supply temperature. `
+        : 'ΔT is outlet minus inlet temperature from the evaluation. ') +
       'x and z give the rack footprint. The inlet face is the cold side; the hot face is opposite.',
     '',
     table(['Item', 'Value'], [
@@ -377,8 +419,8 @@ function heatSources(m: Model): string {
             g.inletFace,
             watts(g.rack.airW),
             fixed(g.airflowM3s, 3),
-            fixed(g.rack.airInletC, 1),
-            fixed(g.rack.airOutletC, 1),
+            fixed(g.inletC, 1),
+            fixed(g.outletC, 1),
             fixed(g.deltaTK, 1),
           ]),
         )
@@ -418,9 +460,13 @@ function boundaryConditions(m: Model): string {
       ? crahTable(m)
       : 'The evaluation sized no CRAH units. Run the app\'s evaluation with racks placed before using this brief.',
     '',
-    'Zone supply flow is the sum of the airflow of the racks in the rows the zone serves, so supply and rack flows balance. ' +
-      'Running units share it equally. Rated per unit is the catalog airflow of the model and is the ceiling for the N-1 run. ' +
-      'The supply temperature is the rack inlet temperature the app assumes in that zone (with containment, rack inlet equals CRAH supply).',
+    'Zone supply flow is the sum of the airflow of the racks the zone serves, so supply and rack flows balance. Each rack counts in one zone only. ' +
+      'Running units share the flow equally. Rated per unit is the catalog airflow of the model and is the ceiling for the N-1 run.',
+    '',
+    m.air.supplyAssumed
+      ? `The app does not compute a supply air temperature. This brief assumes ${fixed(m.air.supplyC, 1)} °C: the bottom of the ASHRAE recommended inlet envelope (${ASHRAE_INLET_MIN_C} °C), and never below the ${fixed(m.plan.cooling.facilitySupplyC, 1)} °C facility water supply. ` +
+        'Replace it with the CRAH supply setpoint of the real units. With constant-property Boussinesq air the temperature field shifts with the supply temperature, so the rise above supply stays valid.'
+      : 'The supply temperature is the rack inlet temperature the app gives for that zone (with containment, rack inlet equals CRAH supply).',
     '',
   ]
   if (m.zones.some((z) => z.supplyMaxC !== null && z.supplyC !== null && z.supplyMaxC > z.supplyC)) {
@@ -491,7 +537,7 @@ function boundaryConditions(m: Model): string {
           `    {`,
           `        ${sample.patch}_in { fraction 1; offset ${fixed(sample.deltaTK, 2)}; timeDelay 0; }`,
           `    }`,
-          `    value           uniform ${kelvin(sample.rack.airOutletC)};`,
+          `    value           uniform ${kelvin(sample.outletC)};`,
           `}`,
           ``,
           `// 0/p_rgh: fixedFluxPressure on both rack patches`,
@@ -554,7 +600,7 @@ function boundaryConditions(m: Model): string {
 }
 
 function solverSetup(m: Model): string {
-  const t0 = m.supplyC
+  const t0 = m.air.supplyC
   const t0K = t0 === null ? null : t0 + 273.15
   return [
     '## Solver setup',
@@ -584,8 +630,8 @@ function solverSetup(m: Model): string {
         'mixture',
         '{',
         `    specie          { molWeight ${MOL_WEIGHT}; }`,
-        `    equationOfState { rho0 ${RHO}; T0 ${fixed(t0K, 2)}; beta ${t0K === null ? DASH : (1 / t0K).toExponential(4)}; }`,
-        `    thermodynamics  { Cp ${CP}; Hf 0; }`,
+        `    equationOfState { rho0 ${fixed(m.air.rho, 3)}; T0 ${fixed(t0K, 2)}; beta ${t0K === null ? DASH : (1 / t0K).toExponential(4)}; }`,
+        `    thermodynamics  { Cp ${fixed(m.air.cp, 0)}; Hf 0; }`,
         `    transport       { mu ${MU.toExponential()}; Pr ${PR}; }`,
         '}',
         '',
@@ -644,10 +690,28 @@ function meshGuidance(m: Model): string {
   ].join('\n')
 }
 
+function argMax(values: number[]): number | null {
+  let best: number | null = null
+  values.forEach((v, i) => {
+    if (Number.isFinite(v) && (best === null || v > values[best]!)) best = i
+  })
+  return best
+}
+
+/** The hardest hour for the cooling plant: highest cooling power, or the hottest hour when the app reports no cooling power. */
+function coolingWorstHour(hourly: Evaluation['hourly']): { hour: number; basis: string } | null {
+  const byCooling = hourly.coolingW.some((w) => w > 0) ? argMax(hourly.coolingW) : null
+  if (byCooling !== null) return { hour: byCooling, basis: 'the hour with the highest cooling power' }
+  const byOutdoor = argMax(hourly.outdoorC)
+  return byOutdoor === null ? null : { hour: byOutdoor, basis: 'the hottest hour of the weather year' }
+}
+
 function runs(m: Model): string {
   const { evaluation } = m
-  const h = evaluation.headline.worstHour
-  const inRange = Number.isInteger(h) && h >= 0 && h < evaluation.hourly.itW.length
+  const worstHour = coolingWorstHour(evaluation.hourly)
+  const h = worstHour?.hour ?? -1
+  const inRange = worstHour !== null && h < evaluation.hourly.itW.length
+  const gridHour = evaluation.headline.worstHour
   const placedIt = sum(evaluation.racks.map((r) => r.powerW))
   const itAtHour = inRange ? evaluation.hourly.itW[h]! : null
   const scale = itAtHour !== null && placedIt > 0 ? itAtHour / placedIt : null
@@ -667,13 +731,14 @@ function runs(m: Model): string {
     '### 2. Worst hour',
     '',
     inRange
-      ? `The app's worst hour is hour ${h} of the weather year (${hourOfYear(h)}), at ${fixed(evaluation.hourly.outdoorC[h], 1)} °C outdoor dry bulb and ${fixed(evaluation.hourly.wetBulbC[h], 1)} °C wet bulb. ` +
+      ? `Use the cooling worst hour, ${worstHour.basis} in the app's hourly results: hour ${h} of the weather year (${hourOfYear(h)}), at ${fixed(evaluation.hourly.outdoorC[h], 1)} °C outdoor dry bulb and ${fixed(evaluation.hourly.wetBulbC[h], 1)} °C wet bulb. ` +
+        (gridHour !== h ? `This is not the app's headline worst hour (hour ${gridHour}), which is the peak of grid power. ` : 'It is also the app\'s headline worst hour for grid power. ') +
         `IT load that hour is ${watts(itAtHour)} W against ${watts(placedIt)} W placed, a factor of × ${fixed(scale, 3)}. ` +
         'Multiply every rack heat and airflow, and every CRAH supply flow, by that factor and keep ΔT and the supply temperature.'
-      : 'The evaluation has no hourly data for its worst hour, so this run cannot be set up yet.',
+      : 'The evaluation has no hourly results, so this run cannot be set up yet.',
     '',
     rejection
-      ? `The app's heat rejection check is ${rejection.status} (${rejection.title}). If it is not pass, the plant cannot hold the supply temperature at this hour; ask the design agent what supply temperature the plant reaches and use that instead.`
+      ? `The app's heat rejection check is ${rejection.status} (${rejection.title}). If it is not pass, the plant cannot hold the supply temperature at this hour. Read the check's explanation in the app for the shortfall and raise the supply temperature to what the plant can reach.`
       : 'The evaluation has no heat rejection check, so the supply temperature is assumed to hold at this hour.',
     '',
     '### 3. N-1 CRAH',
@@ -726,7 +791,7 @@ function results(m: Model): string {
     cooling.length
       ? table(
           ['App check', 'Status', 'Value', 'Limit', 'Unit'],
-          cooling.map((c) => [c.title, c.status, fixed(c.value, 0), fixed(c.limit, 0), c.unit]),
+          cooling.map((c) => [c.title, c.status, significant(c.value), significant(c.limit), c.unit]),
         )
       : 'The evaluation has no rack heat or CRAH capacity checks.',
   ].join('\n')
@@ -740,6 +805,7 @@ function caveats(m: Model): string {
       ? 'The hall has a raised floor, but the plan holds no plenum depth or tile layout. This model supplies air straight into the room. If the real hall supplies through the floor, add the plenum region and model tiles as porous baffles (`porousBafflePressure`).'
       : 'Overhead ducting and cable trays are not in the plan and are left out; they can block supply jets.',
     'CRAH positions and flows come from the plan. Cabinet and face sizes come from the datasheet, so check them against the units actually bought.',
+    ...(m.air.supplyAssumed ? [`The CRAH supply temperature (${fixed(m.air.supplyC, 1)} °C) is this brief's assumption, not an app result. A real coil supplies air a few kelvin above the water entering it.`] : []),
     'Boussinesq air with constant properties is fine for these temperature rises. It is not valid if any region exceeds roughly 30 K above the supply temperature.',
     'Steady RANS gives a time-averaged picture. Use the transient follow-up of the N-1 run for ride-through questions.',
   ]

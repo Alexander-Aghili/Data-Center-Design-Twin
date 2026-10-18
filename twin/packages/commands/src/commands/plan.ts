@@ -41,7 +41,8 @@ function versionProblem(value: unknown): string | null {
   return `schemaVersion: this app reads schemaVersion ${SCHEMA_VERSION}; the file has ${JSON.stringify(value.schemaVersion)}`
 }
 
-function parsePlan(value: unknown, catalog: CatalogIndex): Plan {
+/** Parses a plan document: schema, version, references and layout. Throws `CommandError` with `path: problem` lines. */
+export function parsePlan(value: unknown, catalog: CatalogIndex): Plan {
   const version = versionProblem(value)
   const parsed = PlanSchema.safeParse(value)
   const lines = parsed.success

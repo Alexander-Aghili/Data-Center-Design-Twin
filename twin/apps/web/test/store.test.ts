@@ -1,4 +1,4 @@
-import type { ClientMsg, Proposal, ServerMsg } from '@twin/schema'
+import type { ClientMsg, Command, Proposal, ServerMsg } from '@twin/schema'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import type { Backend, BackendStatus } from '../src/state/backend'
 import type { createTwinStore as CreateTwinStore } from '../src/state/store'
@@ -13,6 +13,11 @@ class FakeBackend implements Backend {
   }
   send(m: ClientMsg) {
     this.sent.push(m)
+  }
+  batches: Command[][] = []
+  sendAll(commands: Command[]) {
+    this.batches.push(commands)
+    return commands.some((c) => c.type === 'bad') ? Promise.reject(new Error('commands.1: rejected')) : Promise.resolve()
   }
 }
 
@@ -79,6 +84,85 @@ describe('twin store', () => {
     expect(store.getState().proposals.p1?.status).toBe('open')
   })
 
+  it('settling the previewed proposal ends the preview; applying it returns the camera to the hall', () => {
+    const backend = new FakeBackend()
+    const store = createTwinStore({ backend })
+    backend.onMsg({ t: 'agent', event: { kind: 'proposal', messageId: 'm1', proposal } })
+    backend.onMsg({ t: 'agent', event: { kind: 'proposal', messageId: 'm1', proposal: { ...proposal, id: 'p2' } } })
+    store.getState().dispatchView({ type: 'previewProposal', proposalId: 'p1' })
+    store.getState().dispatchView({ type: 'focus', target: { kind: 'rack', id: 'R3-07' } })
+    backend.onMsg({ t: 'agent', event: { kind: 'proposalStatus', proposalId: 'p2', status: 'dismissed' } })
+    expect(store.getState()).toMatchObject({ previewProposalId: 'p1', shot: 'rack' })
+    backend.onMsg({ t: 'agent', event: { kind: 'proposalStatus', proposalId: 'p1', status: 'applied' } })
+    expect(store.getState()).toMatchObject({ previewProposalId: null, shot: 'hall' })
+  })
+
+  it('sendAll hands the commands to the backend as one batch and keeps a rejection in lastError', async () => {
+    const backend = new FakeBackend()
+    const store = createTwinStore({ backend })
+    const rename = { type: 'renamePlan', payload: { name: 'B' } }
+    await store.getState().sendAll([rename, rename])
+    expect(backend.batches).toEqual([[rename, rename]])
+    await expect(store.getState().sendAll([rename, { type: 'bad', payload: {} }])).rejects.toThrow('commands.1: rejected')
+    expect(store.getState().lastError).toBe('commands.1: rejected')
+  })
+
+  it('applying a cooling proposal switches to the cooling layer and starts a pipe fill; other proposals do not', () => {
+    const backend = new FakeBackend()
+    const store = createTwinStore({ backend })
+    const cooling = { ...proposal, id: 'pc', commands: [{ type: 'setCoolingMethod', payload: { groupId: 'g2', coolingMethodId: 'rackCooling.dlc-1p' } }] }
+    const rename = { ...proposal, id: 'pr', commands: [{ type: 'renamePlan', payload: { name: 'B' } }] }
+    for (const p of [cooling, rename]) backend.onMsg({ t: 'agent', event: { kind: 'proposal', messageId: 'm1', proposal: p } })
+    store.getState().dispatchView({ type: 'setLayer', layer: 'compute' })
+    store.getState().dispatchView({ type: 'focus', target: { kind: 'rack', id: 'R4-08' }, shot: 'gpu' })
+    backend.onMsg({ t: 'agent', event: { kind: 'proposalStatus', proposalId: 'pr', status: 'applied' } })
+    expect(store.getState()).toMatchObject({ activeLayer: 'compute', pipeFill: 0, selection: { kind: 'rack', id: 'R4-08' } })
+    backend.onMsg({ t: 'agent', event: { kind: 'proposalStatus', proposalId: 'pc', status: 'applied' } })
+    expect(store.getState()).toMatchObject({ activeLayer: 'cooling', overlay: 'liquid', shot: 'hall', pipeFill: 1, selection: null })
+  })
+
+  it('previewing a proposal pulls the camera back to the hall so its ghost and clouds are in view', () => {
+    const store = createTwinStore({ backend: new FakeBackend() })
+    store.getState().dispatchView({ type: 'setLayer', layer: 'compute' })
+    store.getState().dispatchView({ type: 'previewProposal', proposalId: 'p1' })
+    expect(store.getState()).toMatchObject({ previewProposalId: 'p1', shot: 'hall', activeLayer: 'compute' })
+    store.getState().dispatchView({ type: 'setLayer', layer: 'compute' })
+    store.getState().dispatchView({ type: 'previewProposal', proposalId: null })
+    expect(store.getState()).toMatchObject({ previewProposalId: null, shot: 'gpu' })
+  })
+
+  it('a settled proposal takes its revision cloud with it', () => {
+    const backend = new FakeBackend()
+    const store = createTwinStore({ backend })
+    const marked = { ...proposal, annotationTag: 1 }
+    backend.onMsg({ t: 'agent', event: { kind: 'proposal', messageId: 'm1', proposal: marked } })
+    const cloud = (tag: number) => ({ tag, objectIds: ['rack:R3-00'], label: 'Air limit', severity: 'problem' as const })
+    backend.onMsg({ t: 'view', action: { type: 'annotate', annotation: cloud(1) } })
+    backend.onMsg({ t: 'view', action: { type: 'annotate', annotation: cloud(2) } })
+    backend.onMsg({ t: 'agent', event: { kind: 'proposalStatus', proposalId: 'p1', status: 'applied' } })
+    expect(store.getState().annotations.map((a) => a.tag)).toEqual([2])
+  })
+
+  it('a problem cloud pulls the camera out of a rack close-up so it can be seen; other clouds do not', () => {
+    const store = createTwinStore({ backend: new FakeBackend() })
+    const cloud = (tag: number, severity: 'problem' | 'warning') => ({ tag, objectIds: ['rack:R3-00'], label: 'Air limit', severity })
+    store.getState().dispatchView({ type: 'setLayer', layer: 'compute' })
+    store.getState().dispatchView({ type: 'annotate', annotation: cloud(1, 'warning') })
+    expect(store.getState().shot).toBe('gpu')
+    store.getState().dispatchView({ type: 'annotate', annotation: cloud(2, 'problem') })
+    expect(store.getState().shot).toBe('hall')
+    store.getState().dispatchView({ type: 'setLayer', layer: 'layout' })
+    store.getState().dispatchView({ type: 'annotate', annotation: cloud(3, 'problem') })
+    expect(store.getState().shot).toBe('row')
+  })
+
+  it('resetChat asks the server for a new conversation', () => {
+    const backend = new FakeBackend()
+    const store = createTwinStore({ backend })
+    store.getState().resetChat()
+    expect(backend.sent).toEqual([{ t: 'resetChat' }])
+  })
+
   it('switches to the fallback backend when the first never connects', () => {
     const primary = new FakeBackend()
     const local = new FakeBackend()
@@ -87,5 +171,36 @@ describe('twin store', () => {
     local.onStatus('local')
     primary.onStatus('offline')
     expect(store.getState().connection).toBe('local')
+  })
+})
+
+describe('LocalBackend', () => {
+  it('runs offline on the bundled catalog, without fetching it from the server', async () => {
+    const fetchSpy = vi.fn(() => Promise.reject(new Error('no server')))
+    vi.stubGlobal('fetch', fetchSpy)
+    const { LocalBackend } = await import('../src/state/localBackend')
+    const statuses: BackendStatus[] = []
+    const msgs: ServerMsg[] = []
+    new LocalBackend().connect((m) => msgs.push(m), (s) => statuses.push(s))
+    await vi.waitFor(() => expect(statuses.at(-1)).toBe('local'))
+    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(msgs.find((m) => m.t === 'state')).toBeDefined()
+  })
+
+  it('applies a batch as one undo step, or nothing when a command fails', async () => {
+    const { LocalBackend } = await import('../src/state/localBackend')
+    const msgs: ServerMsg[] = []
+    const local = new LocalBackend()
+    const statuses: BackendStatus[] = []
+    local.connect((m) => msgs.push(m), (s) => statuses.push(s))
+    await vi.waitFor(() => expect(statuses.at(-1)).toBe('local'))
+    const rename = (name: string) => ({ type: 'renamePlan', payload: { name } })
+    await expect(local.sendAll([rename('B'), rename('')])).rejects.toThrow(/name/)
+    await local.sendAll([rename('B'), rename('C')])
+    const states = msgs.filter((m) => m.t === 'state')
+    expect(states).toHaveLength(2)
+    local.send({ t: 'undo' })
+    const last = msgs.at(-1)
+    expect(last?.t === 'state' && last.plan.name).toBe('Default hall')
   })
 })

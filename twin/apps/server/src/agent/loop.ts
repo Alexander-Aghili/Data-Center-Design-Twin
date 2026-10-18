@@ -15,10 +15,8 @@ import { toolResultNumbers, type AgentTool, type ToolOutcome } from './tools/ind
 const MAX_TOKENS = 16000
 /** Model calls allowed in one turn before the loop gives up, so a confused turn cannot run up cost. */
 const MAX_STEPS = 20
-/** Visible retries for a 429 that outlasted the SDK's own retries. */
+/** Visible retries for a 429 that outlasted the SDK's own retries (only before anything streamed). */
 const RATE_LIMIT_RETRIES = 2
-/** Re-issues of a request whose streamed tool input could not be parsed as JSON at all. */
-const JSON_RETRIES = 2
 const BETAS = [
   'server-side-fallback-2026-07-01', // fallbacks: 'default'
   'mid-conversation-output-config-2026-07-01', // per-message effort
@@ -32,15 +30,17 @@ const MESSAGES = {
 }
 
 /**
- * Tool definitions as sent to the API: fixed order, eager input streaming, a cache breakpoint on the
- * last one, and no `$schema` key (zod's JSON Schema output adds it; the API's input_schema has no use for it).
+ * Tool definitions as sent to the API: fixed order, a cache breakpoint on the last one, and no `$schema`
+ * key (zod's JSON Schema output adds it; the API's input_schema has no use for it). Eager input streaming
+ * stays off: tool inputs here are short command payloads that the UI never renders while they stream, and
+ * buffered input is validated by the API, so the SDK never fails on unparseable JSON and no request has
+ * to be re-issued after text was already shown.
  */
 export function toolParams(tools: AgentTool[]): BetaTool[] {
   return tools.map((t, i) => ({
     name: t.name,
     description: t.description,
     input_schema: { ...withoutSchemaKey(t.inputSchema), type: 'object' as const },
-    eager_input_streaming: true,
     ...(i === tools.length - 1 ? { cache_control: { type: 'ephemeral' as const } } : {}),
   }))
 }
@@ -101,10 +101,36 @@ function echoable(content: BetaContentBlock[]): BetaContentBlock[] {
   return content.filter((b, i) => i >= boundary || !declined.has(b.type))
 }
 
-const callSummary = (input: unknown) => {
-  const json = JSON.stringify(input) ?? ''
-  if (json === '{}') return ''
-  return json.length > 120 ? `${json.slice(0, 119)}…` : json
+/** What a running tool call is doing, in words; the result line then says what it found. */
+const CALL_LABELS: Record<string, string> = {
+  get_plan: 'Reading the plan',
+  get_evaluation: 'Reading the evaluation',
+  explain_check: 'Tracing the cause of a check',
+  get_hourly: 'Reading hourly results',
+  list_catalog: 'Searching the catalog',
+  get_catalog_entry: 'Reading a catalog entry',
+  get_notes: 'Reading the notes',
+  search_knowledge: 'Searching the knowledge base',
+  read_knowledge: 'Reading a knowledge article',
+  undo: 'Undoing the last change',
+  redo: 'Redoing the last change',
+  propose_change: 'Drafting a proposal',
+  what_if: 'Trying a change',
+  set_layer: 'Switching the layer',
+  focus: 'Moving the camera',
+  set_overlay: 'Switching the overlay',
+  annotate: 'Marking the drawing',
+  clear_annotations: 'Clearing the marks',
+  generate_simulation_brief: 'Writing the simulation brief',
+  export_plan: 'Exporting the plan',
+}
+
+/** "cmd_setRackType" → "Set rack type"; other tools use their label. */
+function callSummary(name: string): string {
+  const label = CALL_LABELS[name]
+  if (label) return label
+  const words = name.replace(/^cmd_/, '').replace(/_/g, ' ').replace(/([A-Z])/g, ' $1').toLowerCase().trim()
+  return words.charAt(0).toUpperCase() + words.slice(1)
 }
 
 export interface TurnContext {
@@ -124,6 +150,7 @@ class TurnOutput {
   #started = false
   #wroteText = false
   #lastIndex = -1
+  #streamedThisRequest = false
 
   constructor(private readonly ctx: TurnContext) {}
 
@@ -139,6 +166,12 @@ class TurnOutput {
 
   newRequest(): void {
     this.#lastIndex = -1
+    this.#streamedThisRequest = false
+  }
+
+  /** A request that already showed text cannot be retried without repeating that text. */
+  get streamedThisRequest(): boolean {
+    return this.#streamedThisRequest
   }
 
   text(index: number, text: string): void {
@@ -147,6 +180,7 @@ class TurnOutput {
     const separated = this.#wroteText && index !== this.#lastIndex ? `\n\n${text}` : text
     this.#lastIndex = index
     this.#wroteText = true
+    this.#streamedThisRequest = true
     this.ctx.emit({ kind: 'textDelta', messageId: this.ctx.messageId, text: separated })
   }
 
@@ -162,7 +196,6 @@ class TurnOutput {
 
 async function callModel(ctx: TurnContext, out: TurnOutput): Promise<FinalMessage> {
   let rateLimited = 0
-  let badJson = 0
   for (;;) {
     out.newRequest()
     try {
@@ -175,14 +208,12 @@ async function callModel(ctx: TurnContext, out: TurnOutput): Promise<FinalMessag
       }
       return await stream.finalMessage()
     } catch (err) {
-      if (err instanceof Anthropic.RateLimitError && rateLimited < RATE_LIMIT_RETRIES) {
+      if (err instanceof Anthropic.RateLimitError && rateLimited < RATE_LIMIT_RETRIES && !out.streamedThisRequest) {
         const seconds = retryAfterSeconds(err, rateLimited++)
         out.error(`Rate limited, retrying in ${seconds}s`)
         await sleep(seconds * 1000)
         continue
       }
-      // An AnthropicError that is not an API error is the SDK failing to parse streamed tool-input JSON.
-      if (err instanceof Anthropic.AnthropicError && !(err instanceof Anthropic.APIError) && badJson++ < JSON_RETRIES) continue
       throw err
     }
   }
@@ -190,7 +221,7 @@ async function callModel(ctx: TurnContext, out: TurnOutput): Promise<FinalMessag
 
 async function runTool(ctx: TurnContext, out: TurnOutput, block: BetaToolUseBlock): Promise<BetaToolResultBlockParam> {
   out.start()
-  ctx.emit({ kind: 'toolCall', messageId: ctx.messageId, callId: block.id, name: block.name, summary: callSummary(block.input) })
+  ctx.emit({ kind: 'toolCall', messageId: ctx.messageId, callId: block.id, name: block.name, summary: callSummary(block.name) })
   const tool = ctx.tools.find((t) => t.name === block.name)
   let outcome: ToolOutcome
   try {

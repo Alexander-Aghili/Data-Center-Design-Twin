@@ -7,7 +7,7 @@ describe('createRackGroup', () => {
   it('creates the next group id and reports it', () => {
     const result = run(plan(), 'createRackGroup', { name: 'Liquid block', rackTypeId: RACK.GB300_NVL72, coolingMethodId: RACK_COOLING.DLC_1P })
     expect(result.plan.rackGroups.at(-1)).toEqual({ id: 'g3', name: 'Liquid block', rackTypeId: RACK.GB300_NVL72, coolingMethodId: RACK_COOLING.DLC_1P })
-    expect(result.summary).toBe('Created rack group g3 "Liquid block" (rack.gb300-nvl72, rackCooling.dlc-1p)')
+    expect(result.summary).toBe('Created rack group g3 "Liquid block" (GB300 NVL72, Single-phase direct-to-chip)')
   })
 
   it('rejects unknown catalog ids, unsupported cooling and duplicate names', () => {
@@ -19,10 +19,10 @@ describe('createRackGroup', () => {
 })
 
 describe('setRackType', () => {
-  it('switches the rack type and names the rows the group occupies', () => {
+  it('switches the rack type and names the rows the group occupies and the entry, from the catalog when the plan has no copy yet', () => {
     const result = run(plan(), 'setRackType', { groupId: 'g2', rackTypeId: RACK.GB300_NVL72 })
     expect(result.plan.rackGroups.find((g) => g.id === 'g2')?.rackTypeId).toBe(RACK.GB300_NVL72)
-    expect(result.summary).toBe('Training block (rows R3–R5) set to rack.gb300-nvl72')
+    expect(result.summary).toBe('Training block (rows R3–R5) set to GB300 NVL72')
   })
 
   it('names catalog entries already in the plan snapshot', () => {

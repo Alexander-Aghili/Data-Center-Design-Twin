@@ -19,7 +19,7 @@ export function buildTools(deps: ToolDeps): AgentTool[] {
     ...readTools(deps.store),
     ...historyTools(deps.store),
     ...commandTools(deps.store, engine),
-    ...proposeTools({ proposals: deps.proposals, tags, emitView: deps.emitView }),
+    ...proposeTools({ store: deps.store, proposals: deps.proposals, tags, emitView: deps.emitView }),
     ...viewTools({ store: deps.store, emitView: deps.emitView, tags }),
     ...documentTools(deps),
   ]

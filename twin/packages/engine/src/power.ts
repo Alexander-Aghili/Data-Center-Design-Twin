@@ -18,26 +18,57 @@ import type { RejectionResult } from './cooling/rejection'
 import type { NetworkSlice } from './network'
 import { rackPeakW, resolveGroup, type ResolvedGroup } from './racks'
 
+/** What the training-swing check needs per loaded row, from the row's busway model and sizing. */
+export interface BuswayRow {
+  rowId: string
+  /** Σ nominal (average) rack power in the row. */
+  nominalW: number
+  /** Line current per watt, 1 / (√3 · V · pf); null when the busway model lacks voltage or power factor. */
+  ampsPerW: number | null
+  /** Serving feeds × rating, the same limit as the `power.busway` check; null when no rated busway is sized. */
+  capacityA: number | null
+  objectIds: string[]
+}
+
 export interface PowerResult {
   hourly: Pick<HourlySeries, 'itW' | 'facilityW' | 'pue'>
   rows: Pick<RowLoad, 'rowId' | 'buswayLoadA'>[]
+  busways: BuswayRow[]
   checks: Check[]
   metrics: Metric[]
   headline: Partial<Evaluation['headline']>
 }
 
 type Redundancy = Plan['power']['redundancy']
-type Purpose = Plan['workload']['purpose']
 
 const NBSP = ' '
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-const PEAK_TO_AVERAGE: Record<Purpose, RuleKey> = {
-  training: 'peakToAverageTraining',
-  inference: 'peakToAverageInference',
-  mixed: 'peakToAverageMixed',
-}
 const DISTRIBUTION_LABEL: Record<PowerDistribution, string> = { ac54: '54 V AC busbar', dc800: '800 V DC' }
+
+/**
+ * FP8 compute and GPUs of the placed racks. A rack type without an FP8 figure falls back to its GPU's FP8 ×
+ * GPU count; racks with neither count 0 PFLOPS and are tallied in `unknownRacks`.
+ */
+export function placedCompute(ctx: EvalContext, racks: RackResult[]): { pflops: number; gpuCount: number; unknownRacks: number } {
+  let pflops = 0
+  let gpuCount = 0
+  let unknownRacks = 0
+  for (const r of racks) {
+    const rack = resolveGroup(ctx, r.groupId)?.rack
+    if (!rack) {
+      unknownRacks++
+      continue
+    }
+    const gpu = rack.gpuId ? ctx.catalog.get(rack.gpuId, 'gpu') : undefined
+    const gpuPflops = gpu ? num(gpu.fp8Pflops) : null
+    const rackPflops = num(rack.fp8Pflops) ?? (gpuPflops === null ? null : gpuPflops * rack.gpuCount)
+    if (rackPflops === null) unknownRacks++
+    pflops += rackPflops ?? 0
+    gpuCount += rack.gpuCount
+  }
+  return { pflops, gpuCount, unknownRacks }
+}
 
 /** A series of exactly `hours` entries; missing or non-finite entries become `missing` (0 unless given). */
 export function toHours(values: readonly (number | null)[], hours: number): number[]
@@ -184,10 +215,12 @@ export function powerBudget(
     return g ? rackPeakW(g.rack) : r.powerW
   }
 
-  // Hourly budget: IT at nominal power (energy), plus optics, cooling and misc loads, through the loss chain.
+  // Hourly budget: IT at nominal power (energy), plus optics, leaf switches in hall positions (sized with their
+  // typical power), cooling and misc loads, through the loss chain.
   const opticsW = Number.isFinite(network.network.opticsW) ? network.network.opticsW : 0
-  const itW = racks.reduce((s, r) => s + r.powerW, 0) + opticsW
-  const itPeakW = racks.reduce((s, r) => s + peakOf(r), 0) + opticsW
+  const switchW = equipment.filter((e) => e.category === 'leaf').reduce((s, e) => s + e.loadW, 0)
+  const itW = racks.reduce((s, r) => s + r.powerW, 0) + opticsW + switchW
+  const itPeakW = racks.reduce((s, r) => s + peakOf(r), 0) + opticsW + switchW
   const facilityAt = (it: number, cooling: number) => (it + cooling + misc * it) / chain
   const coolingW = toHours(rejection.hourly.coolingW, hours)
   const itSeries = Array.from({ length: hours }, () => itW)
@@ -204,15 +237,7 @@ export function powerBudget(
   const pueWorst = pue[worstHour] ?? null
 
   // Headline: placed compute, limited by what the grid carries at the worst hour.
-  let placedPflops = 0
-  let gpuCount = 0
-  for (const r of racks) {
-    const rack = groupOf(r.groupId)?.rack
-    if (!rack) continue
-    const gpu = rack.gpuId ? ctx.catalog.get(rack.gpuId, 'gpu') : undefined
-    placedPflops += num(rack.fp8Pflops) ?? (gpu ? (num(gpu.fp8Pflops) ?? 0) * rack.gpuCount : 0)
-    gpuCount += rack.gpuCount
-  }
+  const { pflops: placedPflops, gpuCount } = placedCompute(ctx, racks)
   const usableFraction = itW > 0 ? Math.min(1, Math.max(0, (cap * chain - coolingWorst - misc * itW) / itW)) : 0
   const usablePflops = placedPflops * usableFraction
 
@@ -250,10 +275,9 @@ export function powerBudget(
   }
 
   function buswayChecks() {
-    const purpose = plan.workload.purpose
-    const peakToAverage = rule(PEAK_TO_AVERAGE[purpose], 1)
     const allowance = plan.power.oversubscription
     const rowLoads = new Map<string, number>()
+    const rows: BuswayRow[] = []
     const out: Check[] = []
     for (const row of plan.hall.rows) {
       const inRow = racks.filter((r) => r.rowId === row.id)
@@ -264,12 +288,21 @@ export function powerBudget(
       const pf = param(model, 'powerFactor')
       const peakW = inRow.reduce((s, r) => s + peakOf(r), 0)
       const lineA = volts && pf ? peakW / (Math.sqrt(3) * volts * pf) : null
-      const designA = lineA === null ? null : (lineA * peakToAverage) / allowance
+      // Rack peak power already is the electrical peak, so no peak-to-average factor goes on top.
+      const designA = lineA === null ? null : lineA / allowance
       if (designA !== null) rowLoads.set(row.id, designA)
 
       const ratingA = item && model ? param(model, 'ratingA') : null
       const feeds = item ? servingUnits(item.count, redundancy) : 0
       const limit = ratingA === null ? null : feeds * ratingA
+      const objectIds = item?.objectIds.length ? item.objectIds : inRow.map((r) => r.objectId)
+      rows.push({
+        rowId: row.id,
+        nominalW: inRow.reduce((s, r) => s + r.powerW, 0),
+        ampsPerW: volts && pf ? 1 / (Math.sqrt(3) * volts * pf) : null,
+        capacityA: limit,
+        objectIds,
+      })
 
       let explanation: string
       if (lineA === null || designA === null) {
@@ -277,7 +310,9 @@ export function powerBudget(
       } else {
         const derivation =
           `Row ${row.id} racks draw up to ${fmtW(peakW)} at peak, which is ${fmtA(lineA)} at ${round(volts!, 0)}${NBSP}V and power factor ${pf}.` +
-          ` With the ${purpose} workload's peak-to-average factor of ${peakToAverage} and an oversubscription allowance of ${allowance}, the design current is ${fmtA(designA)}`
+          (allowance === 1
+            ? ` The design current is ${fmtA(designA)}`
+            : ` With an oversubscription allowance of ${allowance}, the design current is ${fmtA(designA)}`)
         explanation =
           limit === null
             ? `${derivation}, but no busway is sized for the row, so the load cannot be checked.`
@@ -287,7 +322,7 @@ export function powerBudget(
         capacityCheck(
           {
             kind: 'power.busway',
-            subject: { kind: 'row', id: row.id, objectIds: item?.objectIds.length ? item.objectIds : inRow.map((r) => r.objectId) },
+            subject: { kind: 'row', id: row.id, objectIds },
             title: `Busway load, row ${row.id}`,
             value: designA,
             limit,
@@ -299,7 +334,7 @@ export function powerBudget(
         ),
       )
     }
-    return { checks: out, rowLoads }
+    return { checks: out, rowLoads, rows }
   }
 
   /** UPS or transformer: the load against the units left once redundant ones are set aside. */
@@ -419,6 +454,7 @@ export function powerBudget(
   return {
     hourly: { itW: itSeries, facilityW, pue },
     rows: plan.hall.rows.map((r) => ({ rowId: r.id, buswayLoadA: busways.rowLoads.get(r.id) ?? 0 })),
+    busways: busways.rows,
     checks,
     metrics: [
       metric('power.itW', 'IT load', itW, 'W', ['placements', 'rackGroups.rackTypeId', 'network.opticsW']),
