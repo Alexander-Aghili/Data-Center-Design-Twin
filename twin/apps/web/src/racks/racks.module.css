@@ -24,8 +24,6 @@
   gap: var(--space-1);
   max-width: 100%;
   padding: var(--space-1);
-  overflow-x: auto;
-  scrollbar-width: thin;
   border: var(--rule);
   border-radius: 8px;
   background: var(--panel);
@@ -66,6 +64,24 @@
 
 .popover:focus-visible {
   outline-offset: -2px;
+}
+
+.chips {
+  display: flex;
+  gap: var(--space-1);
+  min-width: 0;
+  /* Room for the focus ring, which the scroll box would clip. */
+  margin: -4px;
+  padding: 4px;
+  scroll-padding-inline: 4px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+
+.chips > .chip {
+  scroll-snap-align: start;
 }
 
 /* A rack seen from the front, in the group's workload tint. */

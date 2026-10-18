@@ -129,22 +129,25 @@ function Bar({ plan }: { plan: Plan }) {
         </div>
       )}
       <div role="toolbar" aria-label="Rack groups" className={s.bar} onKeyDown={onKeyDown}>
-        {groups.map((g) => {
-          const rackTypeId = plan.rackGroups.find((x) => x.id === g.id)?.rackTypeId ?? ''
-          return (
-            <button key={g.id} {...chipProps(g.id)} className={s.chip} aria-current={current === g.id ? 'true' : undefined} onClick={() => pickGroup(g.id)}>
-              <span className={s.swatch} style={{ background: g.color }} aria-hidden="true" />
-              <span className={s.chipName} title={g.name}>
-                {g.name}
-              </span>
-              <span className={s.chipCount}>{g.racks}</span>
-              <span className="visually-hidden"> racks, </span>
-              <span className={s.chipGpu} translate="no">
-                {rackCarries(catalog.get(rackTypeId, 'rack'), catalog)}
-              </span>
-            </button>
-          )
-        })}
+        {/* The group chips scroll when they outgrow the scene; New group stays in reach at the end. */}
+        <div className={s.chips}>
+          {groups.map((g) => {
+            const rackTypeId = plan.rackGroups.find((x) => x.id === g.id)?.rackTypeId ?? ''
+            return (
+              <button key={g.id} {...chipProps(g.id)} className={s.chip} aria-current={current === g.id ? 'true' : undefined} onClick={() => pickGroup(g.id)}>
+                <span className={s.swatch} style={{ background: g.color }} aria-hidden="true" />
+                <span className={s.chipName} title={g.name}>
+                  {g.name}
+                </span>
+                <span className={s.chipCount}>{g.racks}</span>
+                <span className="visually-hidden"> racks, </span>
+                <span className={s.chipGpu} translate="no">
+                  {rackCarries(catalog.get(rackTypeId, 'rack'), catalog)}
+                </span>
+              </button>
+            )
+          })}
+        </div>
         <button {...chipProps(NEW_KEY)} className={`${s.chip} ${s.chipNew}`} onClick={pickNew}>
           <PlusIcon />
           New group

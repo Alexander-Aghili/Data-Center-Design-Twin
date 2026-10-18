@@ -127,8 +127,9 @@ export function SceneTag({ position, status, children }: { position: [number, nu
 
 const legendStyle: CSSProperties = {
   position: 'absolute',
-  left: 'var(--space-4)',
-  bottom: 'var(--space-4)',
+  // The shell can lift the legend clear of its own chrome at the bottom of the scene (the rack bar).
+  left: 'var(--scene-legend-left, var(--space-4))',
+  bottom: 'var(--scene-legend-bottom, var(--space-4))',
   width: 248,
   margin: 0,
   padding: 'var(--space-2) var(--space-3) var(--space-3)',

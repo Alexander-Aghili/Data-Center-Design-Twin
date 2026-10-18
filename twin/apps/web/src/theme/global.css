@@ -436,6 +436,9 @@ button {
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
+  /* Overlay legends sit at the bottom left, above the rack bar (42 px tall, 12 px off the edge). */
+  --scene-legend-left: var(--space-3);
+  --scene-legend-bottom: calc(42px + 2 * var(--space-3));
 }
 
 /* Chrome floats over the canvas; only its controls take the pointer, so the scene stays draggable around them. */
@@ -498,10 +501,15 @@ button {
   outline-color: var(--action);
 }
 
-.scene-overlays .layer-header__hint {
+.scene-overlays :is(.layer-header__hint, .workload-legend__purpose) {
   padding: 2px var(--space-2);
   border-radius: var(--radius-pill);
   background: rgb(238 242 242 / 0.85);
+}
+
+/* The rack bar already lists the groups with their tint swatches; over the scene the legend keeps its summary line. */
+.scene-overlays .workload-legend__groups {
+  display: none;
 }
 
 .scene-dock {
