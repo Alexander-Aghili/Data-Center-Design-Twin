@@ -153,7 +153,7 @@ These are relative benchmark values, not a calibrated model of a real facility. 
 - Optics power and cost are rounded public figures.
 - Pipe aging is a roughness and fouling step change.
 
-The twin ignores humidity, redundancy (N+1), failures and part-load chiller curves. What the hill does measure honestly is the coupled trade: density against recirculation, warm water against GPU throttling, optics reach against layout, latency against cable distance, and capex against all of it. Every design is judged the same way.
+The hall is a benchmark at about 38 kW per GPU rack, well below the 130–245 kW rack-scale systems in this repo's `catalog/`; see the density note in `../README.md`. The twin ignores humidity, redundancy (N+1), failures and part-load chiller curves. What the hill does measure honestly is the coupled trade: density against recirculation, warm water against GPU throttling, optics reach against layout, latency against cable distance, and capex against all of it. Every design is judged the same way.
 
 ## What the evaluator will not do
 

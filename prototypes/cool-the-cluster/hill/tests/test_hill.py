@@ -10,9 +10,19 @@ import json
 from pathlib import Path
 
 import pytest
-from hills import run_evaluator
 
 HILL = Path(__file__).resolve().parents[1]
+
+try:
+    from hills import run_evaluator
+except ImportError:  # plain `pytest` without the AutoLab CLI: call eval.py directly
+    import importlib.util
+
+    def run_evaluator(hill, submission, final=False):
+        spec = importlib.util.spec_from_file_location("cool_the_cluster_eval", Path(hill) / "eval.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod.eval(Path(submission), final=final)
 BASELINE = HILL / "examples" / "baseline"
 
 
@@ -163,6 +173,14 @@ def test_details_carry_tracked_views(tmp_path):
     for key in ("capex_usd", "job_latency_us", "pumps", "pipes", "row_design_kw", "link_lengths_m"):
         assert key in st
     assert st["job_latency_us"]["serve"]["max_us"] <= 1.95
+
+
+def test_power_breakdown_is_additive():
+    """avg_kw terms sum to facility power; network power is inside IT, reported on its own."""
+    sc = run_evaluator(HILL, BASELINE)["details"]["scenarios"]["summer_training"]
+    assert "network" not in sc["avg_kw"]
+    assert 0 < sc["network_kw_within_it"] < sc["avg_kw"]["it"]
+    assert sum(sc["avg_kw"].values()) / sc["avg_kw"]["it"] == pytest.approx(sc["pue"], rel=1e-3)
 
 
 def test_garbage_values_never_crash(tmp_path):

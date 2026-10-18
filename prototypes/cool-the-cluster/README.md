@@ -6,7 +6,7 @@ A working prototype built at the hackathon, alongside the Phase 1 design. It is 
 |---|---|---|
 | **Optimize** | An [AutoLab](https://app.autolab.ai) hill: agents edit one `submission.json` and climb the score | [`hill/`](hill/) |
 | **Track + predict** | Reads daily telemetry (cooling, air, optics), finds what is degrading, calibrates the twin and projects +30 and +90 days | [`tracker/`](tracker/) |
-| **Suggest** | Re-runs the calibrated twin for each candidate fix and ranks them by MWh/yr saved at equal output | [`tracker/track.py`](tracker/track.py) |
+| **Suggest** | Re-runs the calibrated twin for each candidate fix and ranks them: limit violations first, then urgency, then MWh/yr saved at equal output | [`tracker/track.py`](tracker/track.py) |
 
 **Read first:** [`explainer.html`](explainer.html) is a one-page explanation with the floor plan, results and tracker demo. GitHub shows HTML as source, so download it and open it in a browser.
 
@@ -59,7 +59,8 @@ Phase 1 sizes a hall from a sourced catalog and checks it, including N-1 failure
 
 ## Limits
 
+- **Rack density is below this repo's target.** Each GPU rack is about 38 kW at full load (32 GPUs × 1 kW plus 4.8 kW server, 1.2 kW leaf switch and optics), on 230 kW row busways and 420 kW CDUs. The rest of this repo is built for rack-scale systems of 130–245 kW (GB300 NVL72, Vera Rubin NVL72, AMD Helios) and up to 600 kW. At those densities almost all heat goes to liquid, CDU, busway and floor limits bind far earlier, and the trade-offs and best setpoints shift, so do not carry results such as the 3–4% ceiling over to a rack-scale hall. Rebuilding `challenge_spec.json` from `catalog/` (rack power, liquid share, CDU capacity, optics) is the step that would make it representative.
 - Benchmark coefficients, not a calibrated facility. Use it to compare designs, not to quote a real PUE.
 - Recirculation is a heat-flow matrix, not CFD. Humidity, N+1 redundancy and chiller part-load curves are not modeled.
 - Telemetry is synthetic. A real hall would feed the same CSV columns from its BMS/DCIM and optic diagnostics (CMIS/DDM).
-- Gains top out around 3–4% because server power dominates.
+- Gains top out around 3–4% in this benchmark hall because server power dominates (see the density note above).

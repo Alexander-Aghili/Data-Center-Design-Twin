@@ -14,8 +14,10 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 # The hill lives next to this folder in the repo (../hill); in an AutoLab workspace it is
-# registered under .autolab/hills/cool-the-cluster.
-HILL = next((p for p in (HERE.parent / "hill", HERE.parent / ".autolab" / "hills" / "cool-the-cluster")
+# registered under .autolab/hills/cool-the-cluster, either at the repo root (as the README's
+# run steps do) or next to this folder.
+_REGISTERED = Path(".autolab") / "hills" / "cool-the-cluster"
+HILL = next((p for p in (HERE.parent / "hill", HERE.parents[2] / _REGISTERED, HERE.parent / _REGISTERED)
              if (p / "twin.py").is_file()), HERE.parent / "hill")
 
 

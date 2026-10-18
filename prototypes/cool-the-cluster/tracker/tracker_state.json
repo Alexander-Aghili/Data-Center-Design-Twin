@@ -105,8 +105,8 @@
   },
   {
    "when": "today (calibrated)",
-   "annual_mwh": 7885.264971249224,
-   "kwh_per_rack_hour": 49.88158877056608,
+   "annual_mwh": 7885.264971249222,
+   "kwh_per_rack_hour": 49.881588770566076,
    "summer_min_job_speed": 0.9656485610739765,
    "summer_worst_junction_c": 87.85878597313379,
    "summer_worst_inlet_c": 27.557551646332247,
@@ -121,7 +121,7 @@
    "kwh_per_rack_hour": 50.05280446976546,
    "summer_min_job_speed": 0.9284760489963446,
    "summer_worst_junction_c": 88.78809877507936,
-   "summer_worst_inlet_c": 27.55449068514341,
+   "summer_worst_inlet_c": 27.554490685143413,
    "violations": [
     "summer_training: inlet of S2 reaches 27.50 C at 0.50 h (limit 27.0 C)",
     "summer_training: inlet of S2 reaches 27.55 C at 1.50 h (limit 27.0 C)"
@@ -142,30 +142,31 @@
  ],
  "actions": [
   {
-   "action": "Flush loop + clean cold plates on G21; move pex branches to stainless at next window",
-   "saves_mwh_yr": 22.793719687037115,
-   "urgency": "now"
-  },
-  {
-   "action": "Stop-gap until the flush: run warm-season coolant 0.5 C colder (setpoints_by_scenario) so fouled racks stop throttling",
-   "saves_mwh_yr": 3.431102521843169,
-   "urgency": "this week"
-  },
-  {
    "action": "Re-install blanking panels / fix containment at S2",
    "saves_mwh_yr": 0.0,
    "urgency": "now",
+   "clears_violation": true,
    "note": "summer_training: inlet of S2 reaches 27.50 C at 0.50 h (limit 27.0 C)"
   },
   {
-   "action": "Descale / chemically treat branch G08; add a strainer and water-quality sampling",
-   "saves_mwh_yr": 0.0,
-   "urgency": "before 485 days"
+   "action": "Flush loop + clean cold plates on G21; move pex branches to stainless at next window",
+   "saves_mwh_yr": 22.79371968703599,
+   "urgency": "now"
   },
   {
    "action": "Replace transceiver G03->N1 lane 5 (pre-emptive)",
    "saves_mwh_yr": 0.0,
    "urgency": "past wear-out alarm now"
+  },
+  {
+   "action": "Stop-gap until the flush: run warm-season coolant 0.5 C colder (setpoints_by_scenario) so fouled racks stop throttling",
+   "saves_mwh_yr": 3.4311025218409195,
+   "urgency": "this week"
+  },
+  {
+   "action": "Descale / chemically treat branch G08; add a strainer and water-quality sampling",
+   "saves_mwh_yr": 0.0,
+   "urgency": "before 485 days"
   },
   {
    "action": "Inspect and clean connector on G19->N0 lane 2",

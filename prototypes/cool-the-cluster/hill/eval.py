@@ -77,7 +77,11 @@ def eval(submission: Path, *, final: bool = False) -> dict:
             "kwh_per_rack_hour": round(v["kwh_per_rack_hour"], 6),
             "pue": round(v["pue"], 5),
             "peak_facility_kw": round(v["peak_facility_kw"], 2),
-            "avg_kw": {k.replace("_kwh", ""): round(x / 24.0, 3) for k, x in v["breakdown_kwh"].items()},
+            # Additive facility breakdown; network power is already inside "it", so it is
+            # reported separately rather than as another term of the sum.
+            "avg_kw": {k.replace("_kwh", ""): round(x / 24.0, 3)
+                       for k, x in v["breakdown_kwh"].items() if k != "network_kwh"},
+            "network_kw_within_it": round(v["breakdown_kwh"]["network_kwh"] / 24.0, 3),
             "worst_inlet_c": round(v["worst_inlet_c"], 3),
             "worst_inlet_rack": v["worst_inlet_rack"],
             "worst_junction_c": round(v["worst_junction_c"], 3),

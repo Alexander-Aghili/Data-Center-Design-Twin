@@ -1,8 +1,8 @@
 """Track -> predict -> suggest, for the hall in hall_design.json.
 
 Reads telemetry/*.csv (never the injected-fault file), calibrates the digital twin
-to what the sensors say, projects it forward, and ranks fixes by annual energy saved
-and by how soon something breaks.
+to what the sensors say, projects it forward, and ranks fixes: first anything that clears
+a limit violation, then by how soon something breaks, then by annual energy saved.
 
     python3 track.py            # writes tracker_report.md and tracker_state.json
 """
@@ -233,6 +233,7 @@ def main():
         actions.append({"action": f"Re-install blanking panels / fix containment at {', '.join(recirc_scale)}",
                         "saves_mwh_yr": saved_mwh(base_kpr, kpr, sim_fix, SPEC),
                         "urgency": "now" if sim_now["violations"] else "next walk-through",
+                        "clears_violation": bool(sim_now["violations"]) and not sim_fix["violations"],
                         "note": (sim_now["violations"][0] if sim_now["violations"] else "restores inlet margin")})
     for f in findings:
         if f["kind"] == "pipe_scaling":
@@ -244,7 +245,10 @@ def main():
         if f["kind"] == "dirty_connector":
             actions.append({"action": f"Inspect and clean connector on {f['asset']}", "saves_mwh_yr": 0.0,
                             "urgency": "next walk-through"})
-    actions.sort(key=lambda a: -a["saves_mwh_yr"])
+    # Safety and reliability first: a fix that clears a limit violation, then anything due now
+    # (including parts past a failure alarm), then by schedule; energy saved breaks ties.
+    actions.sort(key=lambda a: (not a.get("clears_violation", False), urgency_tier(a["urgency"]),
+                                -a["saves_mwh_yr"]))
 
     state = {"as_of_day": last, "fouling": {g: round(v, 4) for g, v in fouling_now.items()},
              "fouling_per_day": {g: round(v, 6) for g, v in fouling_slope.items()},
@@ -253,6 +257,20 @@ def main():
     (HERE / "tracker_state.json").write_text(json.dumps(state, indent=1))
     write_report(state, base_kwh, base_kpr)
     print(f"{len(findings)} findings, {len(actions)} actions -> tracker_report.md")
+
+
+def urgency_tier(urgency: str) -> int:
+    """0 = act now, 1 = this week, 2 = before a forecast date, 3 = next walk-through, 4 = monitor."""
+    u = urgency.lower()
+    if "now" in u or "past" in u:
+        return 0
+    if "this week" in u:
+        return 1
+    if u.startswith("before"):
+        return 2
+    if "walk-through" in u:
+        return 3
+    return 4
 
 
 def write_report(state, base_kwh, base_kpr):
@@ -266,7 +284,7 @@ def write_report(state, base_kwh, base_kpr):
     for p in state["predictions"]:
         L.append(f"| {p['when']} | {p['annual_mwh']:,.0f} | {p['kwh_per_rack_hour']:.3f} | {p['summer_min_job_speed']:.3f} | "
                  f"{p['summer_worst_junction_c']:.1f} | {p['summer_worst_inlet_c']:.2f} | {(p['violations'] or ['—'])[0]} |")
-    L += ["", "## Suggested changes (ranked by MWh/yr saved at equal output)", "",
+    L += ["", "## Suggested changes (ranked by urgency, then MWh/yr saved at equal output)", "",
           "| # | action | saves MWh/yr | urgency | note |", "|---|---|---|---|---|"]
     for i, a in enumerate(state["actions"], 1):
         L.append(f"| {i} | {a['action']} | {a['saves_mwh_yr']:.1f} | {a['urgency']} | {a.get('note', '')} |")

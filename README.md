@@ -15,7 +15,7 @@ Early. What exists today:
 | Core engine and `dctwin` CLI (Python) | Planned — [Plan 1](docs/superpowers/plans/2026-10-18-plan1-core-engine-cli.md) |
 | API and 3D web viewer (TypeScript, Three.js) | Planned — Plan 2 |
 | Sculptured design desk team | Planned — Plan 3 |
-| Operations twin prototype (energy per unit of work, telemetry tracker, AutoLab hill) | Working — [prototypes/cool-the-cluster](prototypes/cool-the-cluster/) |
+| Operations twin prototype (energy per unit of work, telemetry tracker, AutoLab hill) | Working — [prototypes/cool-the-cluster](prototypes/cool-the-cluster/); benchmark hall at ~38 kW per rack, not yet wired to `catalog/`; tests run with plain `pytest` |
 
 ## What Phase 1 does
 

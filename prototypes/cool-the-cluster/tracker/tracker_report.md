@@ -19,13 +19,13 @@
 | +30 days | 7,836 | 50.053 | 0.928 | 88.8 | 27.55 | summer_training: inlet of S2 reaches 27.50 C at 0.50 h (limit 27.0 C) |
 | +90 days | 7,734 | 50.417 | 0.861 | 90.5 | 27.55 | summer_training: inlet of S2 reaches 27.50 C at 0.50 h (limit 27.0 C) |
 
-## Suggested changes (ranked by MWh/yr saved at equal output)
+## Suggested changes (ranked by urgency, then MWh/yr saved at equal output)
 
 | # | action | saves MWh/yr | urgency | note |
 |---|---|---|---|---|
-| 1 | Flush loop + clean cold plates on G21; move pex branches to stainless at next window | 22.8 | now |  |
-| 2 | Stop-gap until the flush: run warm-season coolant 0.5 C colder (setpoints_by_scenario) so fouled racks stop throttling | 3.4 | this week |  |
-| 3 | Re-install blanking panels / fix containment at S2 | 0.0 | now | summer_training: inlet of S2 reaches 27.50 C at 0.50 h (limit 27.0 C) |
-| 4 | Descale / chemically treat branch G08; add a strainer and water-quality sampling | 0.0 | before 485 days |  |
-| 5 | Replace transceiver G03->N1 lane 5 (pre-emptive) | 0.0 | past wear-out alarm now |  |
+| 1 | Re-install blanking panels / fix containment at S2 | 0.0 | now | summer_training: inlet of S2 reaches 27.50 C at 0.50 h (limit 27.0 C) |
+| 2 | Flush loop + clean cold plates on G21; move pex branches to stainless at next window | 22.8 | now |  |
+| 3 | Replace transceiver G03->N1 lane 5 (pre-emptive) | 0.0 | past wear-out alarm now |  |
+| 4 | Stop-gap until the flush: run warm-season coolant 0.5 C colder (setpoints_by_scenario) so fouled racks stop throttling | 3.4 | this week |  |
+| 5 | Descale / chemically treat branch G08; add a strainer and water-quality sampling | 0.0 | before 485 days |  |
 | 6 | Inspect and clean connector on G19->N0 lane 2 | 0.0 | next walk-through |  |
