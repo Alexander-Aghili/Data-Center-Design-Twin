@@ -1,5 +1,5 @@
 import { num, type Evaluation, type Plan, type SizedEquipment } from '@twin/schema'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { BoxGeometry, Object3D, type Group, type InstancedMesh } from 'three'
 import { selectOpenness, useRackOpenness } from '../camera/openness'
 import { objectIdForEquipment, objectIdForPlacement, slotWorld } from '../geometry'
@@ -8,7 +8,7 @@ import { useRegistered } from '../hooks'
 import { Busway } from './Busway'
 import { Cdu, CDU_SIZE } from './Cdu'
 import { Crah, CRAH_SIZE } from './Crah'
-import { LeafSwitch } from './LeafSwitch'
+import { LeafRack } from './LeafSwitch'
 import { PLANT_PITCH_M, plantCategory, plantUnitLength } from './Plant'
 import { DOOR_MATERIALS, Rack, SHELL_MATERIALS, catalogEntry, panelGeometry, rackDoorGeometry, rackModel, rackShellGeometry } from './Rack'
 
@@ -32,6 +32,8 @@ export interface EquipmentUnit {
   rotY: number
   /** Row a busway or CDU belongs to. */
   rowId: string | null
+  /** Leaf switches: the switch's slot in its network rack, top down; every switch of one rack shares x, z and rotY. */
+  slot?: number
 }
 
 type EquipmentSource = Pick<SizedEquipment, 'key' | 'modelId' | 'count' | 'positionIds' | 'objectIds'>
@@ -93,6 +95,23 @@ const CABINET_PITCH_M = { ups: 1.4, transformer: 2.0 } as const
 /** Service aisle between rows of yard plant (m). */
 const PLANT_ROW_GAP_M = 2.5
 
+/** A network rack (rack.network) holds eight 64-port switches. */
+const SWITCHES_PER_RACK = 8
+/** Network racks stand side by side, one 600 mm rack width apart. */
+const NETWORK_RACK_PITCH_M = 0.6
+
+/**
+ * Network rack `r` of a leaf position: at the end of one of the rows it serves (round robin, so each row end gets
+ * its racks in turn), further racks at a row end stepping away from the rows toward the nearer side wall.
+ */
+function leafRackAt(plan: Plan, p: Plan['hall']['positions'][number], r: number): { x: number; z: number; rowId: string | null } {
+  const rows = p.servesRows.map((id) => plan.hall.rows.find((row) => row.id === id)).filter((row) => row !== undefined)
+  const row = rows.length > 0 ? rows[r % rows.length]! : null
+  const column = rows.length > 0 ? Math.floor(r / rows.length) : r
+  const away = p.x < plan.hall.widthM / 2 ? -1 : 1
+  return { x: p.x + away * column * NETWORK_RACK_PITCH_M, z: row ? row.z + row.rackDepthM / 2 : p.z, rowId: row?.id ?? null }
+}
+
 /** Yard plant stands in rows no wider than the building. */
 function plantRowLength(plan: Plan, pitch: number): number {
   return Math.max(1, Math.floor(plan.hall.widthM / pitch))
@@ -152,9 +171,11 @@ export function equipmentUnits(plan: Plan, evaluation: Evaluation | null): Equip
         case 'crah':
           units.push({ ...base, x: p.x, z: p.z + centered(CRAH_SIZE.w + 0.2), rotY: -Math.PI / 2, rowId: null })
           break
-        case 'leaf':
-          units.push({ ...base, x: p.x, z: p.z + centered(0.7), rotY: rowRot(p.servesRows[0]), rowId: null })
+        case 'leaf': {
+          const rack = leafRackAt(plan, p, Math.floor(j / SWITCHES_PER_RACK))
+          units.push({ ...base, x: rack.x, z: rack.z, rotY: rowRot(rack.rowId ?? undefined), rowId: null, slot: j % SWITCHES_PER_RACK })
           break
+        }
         case 'plant': {
           const pitch = PLANT_PITCH_M[plantCategory(plan, e.modelId)]
           const at = yardSlot(j, m, plantRowLength(plan, pitch))
@@ -209,7 +230,11 @@ interface InstancedRacksProps {
   racks: { id: string; x: number; z: number; rotY: number }[]
 }
 
-function InstancedRacks({ plan, rackTypeId, coolingMethodId, racks }: InstancedRacksProps) {
+/**
+ * Closed racks of one type as instances. The open rack (`hidden`, its scene id; drawn in full elsewhere) keeps its instance at
+ * zero scale, so opening and closing a rack updates one matrix instead of rebuilding the instanced meshes.
+ */
+function InstancedRacks({ plan, rackTypeId, coolingMethodId, racks, hidden }: InstancedRacksProps & { hidden: string | null }) {
   const model = useMemo(() => rackModel(plan, rackTypeId, coolingMethodId), [plan, rackTypeId, coolingMethodId])
   const shell = useRef<InstancedMesh>(null)
   const door = useRef<InstancedMesh>(null)
@@ -218,6 +243,7 @@ function InstancedRacks({ plan, rackTypeId, coolingMethodId, racks }: InstancedR
     racks.forEach((r, i) => {
       dummy.position.set(r.x, 0, r.z)
       dummy.rotation.set(0, r.rotY, 0)
+      dummy.scale.setScalar(r.id === hidden ? 0 : 1)
       dummy.updateMatrix()
       shell.current?.setMatrixAt(i, dummy.matrix)
       door.current?.setMatrixAt(i, dummy.matrix)
@@ -228,7 +254,7 @@ function InstancedRacks({ plan, rackTypeId, coolingMethodId, racks }: InstancedR
       mesh.computeBoundingSphere()
       mesh.computeBoundingBox()
     }
-  }, [racks])
+  }, [racks, hidden])
   const ids = racks.map((r) => r.id)
   return (
     <>
@@ -248,9 +274,11 @@ function InstancedRacks({ plan, rackTypeId, coolingMethodId, racks }: InstancedR
         castShadow
         receiveShadow
       />
-      {racks.map((r) => (
-        <RackProxy key={r.id} id={r.id} x={r.x} z={r.z} rotY={r.rotY} size={model.size} />
-      ))}
+      {racks
+        .filter((r) => r.id !== hidden)
+        .map((r) => (
+          <RackProxy key={r.id} id={r.id} x={r.x} z={r.z} rotY={r.rotY} size={model.size} />
+        ))}
     </>
   )
 }
@@ -274,7 +302,32 @@ interface HallProps {
   units: EquipmentUnit[]
   /** The rack the camera rig opens (`useRackOpenness`); drawn in full with trays and GPUs. */
   openRack: string | null
+  /** Hide the overhead busways (they stay mounted, so toggling them costs no rebuild). */
+  hideBusways?: boolean
 }
+
+/** One unit of hall equipment. Memoized: units keep their identity while unchanged, so view changes skip them. */
+const Equipment = memo(function Equipment({ unit, plan, hidden }: { unit: EquipmentUnit; plan: Plan; hidden: boolean }) {
+  switch (unit.kind) {
+    case 'cdu':
+      return <Cdu unit={unit} />
+    case 'crah':
+      return <Crah unit={unit} />
+    case 'busway':
+      return (
+        <group visible={!hidden}>
+          <Busway unit={unit} plan={plan} />
+        </group>
+      )
+    case 'ups':
+    case 'transformer':
+      return <Cabinet unit={unit} />
+    default:
+      return null
+  }
+})
+
+const MemoLeafRack = memo(LeafRack)
 
 /** The rack stays drawn in full this long after the rig closes it, so the door and trays finish easing shut. */
 const CLOSE_LINGER_MS = 300
@@ -301,7 +354,7 @@ function RigRack({ placementId }: { placementId: string }) {
 }
 
 /** Racks in their slots (instanced when there are many), the one open rack, and the equipment inside the hall. */
-export function Hall({ plan, units, openRack }: HallProps) {
+export function Hall({ plan, units, openRack, hideBusways = false }: HallProps) {
   const instanced = plan.placements.length > INSTANCE_THRESHOLD
   const lingering = useLingering(openRack, CLOSE_LINGER_MS)
   const open = lingering && plan.placements.some((p) => p.id === lingering) ? lingering : null
@@ -310,7 +363,6 @@ export function Hall({ plan, units, openRack }: HallProps) {
     if (!instanced) return []
     const byType = new Map<string, InstancedRacksProps>()
     for (const p of plan.placements) {
-      if (p.id === open) continue
       const group = plan.rackGroups.find((g) => g.id === p.groupId)
       if (!group) continue
       const slotsWide = catalogEntry(plan, group.rackTypeId, 'rack')?.slotsWide ?? 1
@@ -321,33 +373,32 @@ export function Hall({ plan, units, openRack }: HallProps) {
       byType.set(key, batch)
     }
     return [...byType.entries()]
-  }, [plan, instanced, open])
+  }, [plan, instanced])
+
+  const leafRacks = useMemo(() => {
+    const racks = new Map<string, EquipmentUnit[]>()
+    for (const u of units) {
+      if (u.kind !== 'leaf') continue
+      const id = `${u.x.toFixed(3)}|${u.z.toFixed(3)}`
+      racks.set(id, [...(racks.get(id) ?? []), u])
+    }
+    return racks
+  }, [units])
 
   return (
     <group>
       {instanced
-        ? batches.map(([key, batch]) => <InstancedRacks key={key} {...batch} />)
+        ? batches.map(([key, batch]) => <InstancedRacks key={key} {...batch} hidden={open === null ? null : objectIdForPlacement(open)} />)
         : plan.placements
             .filter((p) => p.id !== open)
             .map((p) => <Rack key={p.id} placementId={p.id} openness={0} interior={false} />)}
       {open ? <RigRack key={`open-${open}`} placementId={open} /> : null}
-      {units.map((u) => {
-        switch (u.kind) {
-          case 'cdu':
-            return <Cdu key={u.objectId} unit={u} />
-          case 'crah':
-            return <Crah key={u.objectId} unit={u} />
-          case 'leaf':
-            return <LeafSwitch key={u.objectId} unit={u} plan={plan} />
-          case 'busway':
-            return <Busway key={u.objectId} unit={u} plan={plan} />
-          case 'ups':
-          case 'transformer':
-            return <Cabinet key={u.objectId} unit={u} />
-          default:
-            return null
-        }
-      })}
+      {[...leafRacks].map(([id, rackUnits]) => (
+        <MemoLeafRack key={id} id={id} units={rackUnits} plan={plan} />
+      ))}
+      {units.map((u) => (
+        <Equipment key={u.objectId} unit={u} plan={plan} hidden={u.kind === 'busway' && hideBusways} />
+      ))}
     </group>
   )
 }

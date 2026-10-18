@@ -2,8 +2,10 @@ import { Edges } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import type { Selection } from '@twin/schema'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Raycaster, Vector2, Vector3, type Camera, type Object3D } from 'three'
+import { BoxGeometry, Matrix4, Raycaster, Vector2, Vector3, type Camera, type Object3D } from 'three'
 import { useTwinStore } from '../state/store'
+import { useRackOpenness } from './camera/openness'
+import { useSiteReveal } from './camera/siteReveal'
 import { PALETTE } from './palette'
 import { useSceneRegistry, type SceneObject } from './registry'
 
@@ -48,9 +50,16 @@ export interface Picker {
   click(ndc: { x: number; y: number }): void
 }
 
+/** Visible along with all its ancestors (the raycaster itself ignores visibility). */
+function shown(object: Object3D): boolean {
+  for (let o: Object3D | null = object; o; o = o.parent) if (!o.visible) return false
+  return true
+}
+
 /**
  * Raycasts against the registered scene objects. A hit counts for the nearest registered ancestor of the mesh it
- * struck; registered objects that are not selectable (the hall shell, pipes) let the ray pass on to what is behind.
+ * struck; registered objects that are not selectable (the hall shell, pipes) let the ray pass on to what is behind,
+ * except a shown mesh marked `userData.occludesPicks` (the roof), which hides everything under it.
  * An InstancedMesh can name its instances through `userData.instanceObjectIds[instanceId]`.
  */
 export function createPicker({
@@ -91,6 +100,10 @@ export function createPicker({
     }
     raycaster.setFromCamera(pointer.set(ndc.x, ndc.y), camera)
     for (const hit of raycaster.intersectObjects(roots, true)) {
+      if (hit.object.userData.occludesPicks === true && shown(hit.object)) return null
+      // Inside a hidden group (busways under a flow overlay, the neutral pipes): not there for the user. The mesh
+      // itself may be invisible, as the instanced racks' pick proxies are.
+      if (hit.object.parent && !shown(hit.object.parent)) continue
       const id = idOf(hit.object, hit.instanceId)
       const selection = id === null ? null : selectionForObjectId(id)
       if (id !== null && selection) return { objectId: outlineId(id, registered), selection }
@@ -111,20 +124,52 @@ const OUTLINE_INFLATE_M = 0.03
 // Flat objects such as bay tiles still get a visible outline box.
 const MIN_OUTLINE_M = 0.02
 
-function HoverOutline({ id }: { id: string }) {
-  const box = useMemo(() => useSceneRegistry.getState().worldBox(id), [id])
+// Edges hidden behind other geometry still show, faint, so a box half buried in a row reads as a box.
+const HIDDEN_EDGE_OPACITY = 0.45
+// While the camera moves under a resting pointer, what is under it is re-picked at most this often.
+const REPICK_INTERVAL_S = 1 / 15
+
+const unitBox = new BoxGeometry(1, 1, 1)
+const noRaycast = () => null
+
+interface Outline {
+  id: string
+  center: [number, number, number]
+  size: [number, number, number]
+}
+
+/** The outline box of a registered object, slightly inflated, or null when it is no longer rendered. */
+function outlineFor(id: string): Outline | null {
+  const box = useSceneRegistry.getState().worldBox(id)
   if (!box || box.isEmpty()) return null
   const size = box.getSize(new Vector3()).addScalar(2 * OUTLINE_INFLATE_M).max(new Vector3(MIN_OUTLINE_M, MIN_OUTLINE_M, MIN_OUTLINE_M))
+  return { id, center: box.getCenter(new Vector3()).toArray(), size: size.toArray() }
+}
+
+const sameOutline = (a: Outline | null, b: Outline | null) => JSON.stringify(a) === JSON.stringify(b)
+
+function HoverOutline({ outline }: { outline: Outline }) {
   return (
-    <mesh position={box.getCenter(new Vector3())} raycast={() => null} renderOrder={3}>
-      <boxGeometry args={[size.x, size.y, size.z]} />
+    <mesh geometry={unitBox} position={outline.center} scale={outline.size} raycast={noRaycast}>
       <meshBasicMaterial visible={false} />
-      <Edges color={PALETTE.ink} lineWidth={2} raycast={() => null} />
+      <Edges color={PALETTE.ink} lineWidth={2} raycast={noRaycast} renderOrder={3} />
+      <Edges
+        color={PALETTE.ink}
+        lineWidth={1}
+        depthTest={false}
+        transparent
+        opacity={HIDDEN_EDGE_OPACITY}
+        raycast={noRaycast}
+        renderOrder={2}
+      />
     </mesh>
   )
 }
 
-/** Click selects the rack, equipment, bay or row under the pointer (empty space clears it); hover outlines it. */
+/**
+ * Click selects the rack, equipment, bay or row under the pointer (empty space clears it); hover outlines it, with
+ * the edges other geometry hides drawn faint.
+ */
 export function Picking() {
   const camera = useThree((s) => s.camera)
   const canvas = useThree((s) => s.gl.domElement)
@@ -138,9 +183,14 @@ export function Picking() {
       }),
     [camera, dispatchView],
   )
-  const [hovered, setHovered] = useState<string | null>(null)
-  // Pointer moves are only recorded here; the raycast runs at most once per frame.
-  const pendingHover = useRef<{ x: number; y: number } | null>(null)
+  const [outline, setOutline] = useState<Outline | null>(null)
+  // Last pointer position over the canvas (null outside). The raycast runs in the frame loop: at once after a pointer
+  // move, and while the camera moves or the scene changes under a resting pointer, so the outline never stays on
+  // what used to be under it.
+  const pointer = useRef<{ x: number; y: number } | null>(null)
+  const pointerMoved = useRef(false)
+  const sceneChanged = useRef(false)
+  const lastView = useRef({ world: new Matrix4(), projection: new Matrix4(), sinceS: 0 })
 
   useEffect(() => {
     const ndc = (e: PointerEvent) => {
@@ -156,35 +206,55 @@ export function Picking() {
       down = null
     }
     const onMove = (e: PointerEvent) => {
-      pendingHover.current = ndc(e)
+      pointer.current = ndc(e)
+      pointerMoved.current = true
     }
     const onLeave = () => {
-      pendingHover.current = null
-      setHovered(null)
+      pointer.current = null
+      setOutline(null)
+    }
+    const markChanged = () => {
+      sceneChanged.current = true
     }
     canvas.addEventListener('pointerdown', onDown)
     canvas.addEventListener('pointerup', onUp)
     canvas.addEventListener('pointermove', onMove)
     canvas.addEventListener('pointerleave', onLeave)
+    const unsubscribeScene = useSceneRegistry.subscribe(markChanged)
+    const unsubscribeOpenness = useRackOpenness.subscribe(markChanged)
+    const unsubscribeReveal = useSiteReveal.subscribe(markChanged)
     return () => {
       canvas.removeEventListener('pointerdown', onDown)
       canvas.removeEventListener('pointerup', onUp)
       canvas.removeEventListener('pointermove', onMove)
       canvas.removeEventListener('pointerleave', onLeave)
+      unsubscribeScene()
+      unsubscribeOpenness()
+      unsubscribeReveal()
     }
   }, [canvas, picker])
 
-  useFrame(() => {
-    const at = pendingHover.current
+  useFrame((_, dt) => {
+    const at = pointer.current
+    const view = lastView.current
+    view.sinceS += dt
     if (!at) return
-    pendingHover.current = null
+    const viewMoved = !view.world.equals(camera.matrixWorld) || !view.projection.equals(camera.projectionMatrix)
+    const due = (viewMoved || sceneChanged.current) && view.sinceS >= REPICK_INTERVAL_S
+    if (!pointerMoved.current && !due) return
+    pointerMoved.current = false
+    sceneChanged.current = false
+    view.world.copy(camera.matrixWorld)
+    view.projection.copy(camera.projectionMatrix)
+    view.sinceS = 0
     const hit = picker.pick(at)
-    setHovered(hit?.objectId ?? null)
+    const next = hit ? outlineFor(hit.objectId) : null
+    setOutline((prev) => (sameOutline(prev, next) ? prev : next))
   })
 
   useEffect(() => {
-    canvas.style.cursor = hovered ? 'pointer' : ''
-  }, [canvas, hovered])
+    canvas.style.cursor = outline ? 'pointer' : ''
+  }, [canvas, outline])
 
-  return hovered ? <HoverOutline id={hovered} /> : null
+  return outline ? <HoverOutline outline={outline} /> : null
 }

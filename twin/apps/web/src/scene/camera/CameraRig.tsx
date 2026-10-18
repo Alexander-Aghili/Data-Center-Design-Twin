@@ -5,6 +5,7 @@ import { MathUtils, PerspectiveCamera, Vector3 } from 'three'
 import { useTwinStore, type TwinState } from '../../state/store'
 import { useSceneRegistry } from '../registry'
 import { useRackOpenness } from './openness'
+import { useSiteReveal } from './siteReveal'
 import { Choreography, type CameraDriver, type Waypoint } from './path'
 import { focusRack, focusTray, resolveFocus, shotFor, type Shot } from './shots'
 
@@ -98,6 +99,9 @@ export function CameraRig() {
       },
       setFade(opacity) {
         canvas.style.opacity = opacity < 1 ? String(opacity) : ''
+      },
+      setReveal(value) {
+        useSiteReveal.setState({ value })
       },
       setOpenness(placementId, value) {
         const open = useRackOpenness.getState()

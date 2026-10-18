@@ -1,5 +1,5 @@
 import { useFrame } from '@react-three/fiber'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   BufferAttribute,
   CatmullRomCurve3,
@@ -14,6 +14,7 @@ import {
   TubeGeometry,
   Vector3,
   type InstancedMesh,
+  type Object3D,
 } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { create } from 'zustand'
@@ -71,6 +72,11 @@ const tmpColor = new Color()
 const rgbOut = [0, 0, 0]
 const FORWARD = new Vector3(0, 0, 1)
 
+function shownInScene(object: Object3D): boolean {
+  for (let o: Object3D | null = object; o; o = o.parent) if (!o.visible) return false
+  return true
+}
+
 /** Instanced particles moving along `CatmullRomCurve3`s at each circuit's speed, colored supply→return by temperature. */
 export function FlowParticles({ circuits, scale, radiusFor, opacity = 1, stretch = 1, spread = 0, followFill = false }: FlowParticlesProps) {
   const mesh = useRef<InstancedMesh>(null)
@@ -99,7 +105,8 @@ export function FlowParticles({ circuits, scale, radiusFor, opacity = 1, stretch
 
   useFrame((_, delta) => {
     const m = mesh.current
-    if (!m) return
+    // Hidden with its overlay (the liquid flow stays mounted): no per-frame work.
+    if (!m || !shownInScene(m)) return
     m.instanceColor = colors
     if (!reduced) time.current += Math.min(delta, 0.1)
     const progress = usePipeFill.getState().progress
@@ -185,14 +192,24 @@ function PipeTubes({ pipes, leg }: { pipes: PipeRun[]; leg: Leg }) {
 const PARTICLE_RADIUS: Record<Circuit['tier'], number> = { facility: 0.1, cdu: 0.065, header: 0.065, rack: 0.032, air: 0.07 }
 export const particleRadius = (c: Circuit) => PARTICLE_RADIUS[c.tier]
 
-/** Supply and return pipes from the plant to every liquid-cooled rack, with beads moving at the computed flow. */
-export function LiquidFlow() {
+/**
+ * Supply and return pipes from the plant to every liquid-cooled rack, with beads moving at the computed flow.
+ * It stays mounted while hidden (`visible` false), so switching to the liquid overlay at the start of a camera move
+ * does not rebuild the tube geometry and its shader in that frame.
+ */
+export function LiquidFlow({ visible }: { visible: boolean }) {
   const plan = useTwinStore((s) => s.plan)
   const evaluation = useTwinStore((s) => s.evaluation)
-  const network = useMemo(() => (plan && evaluation ? liquidNetwork(plan, evaluation) : null), [plan, evaluation])
+  // While hidden, edits do not rebuild the network; it catches up when the overlay shows again.
+  const [shown, setShown] = useState({ plan, evaluation })
+  if (visible && (shown.plan !== plan || shown.evaluation !== evaluation)) setShown({ plan, evaluation })
+  const network = useMemo(
+    () => (shown.plan && shown.evaluation ? liquidNetwork(shown.plan, shown.evaluation) : null),
+    [shown],
+  )
   if (!network) return null
   return (
-    <group name="liquid-flow">
+    <group name="liquid-flow" visible={visible}>
       <PipeTubes pipes={network.pipes} leg="supply" />
       <PipeTubes pipes={network.pipes} leg="return" />
       <FlowParticles circuits={network.circuits} scale={network.scale} radiusFor={particleRadius} followFill />

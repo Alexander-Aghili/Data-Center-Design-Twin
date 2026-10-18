@@ -30,6 +30,9 @@ export const useSceneRegistry = create<SceneRegistry>()((set, get) => ({
   },
   worldBox(id) {
     const entry = get().objects.get(id)
-    return entry ? new Box3().setFromObject(entry.ref) : null
+    if (!entry) return null
+    // Parents first: a nested object (a switch in its rack, a sliding tray) may be asked before the next render.
+    entry.ref.updateWorldMatrix(true, false)
+    return new Box3().setFromObject(entry.ref)
   },
 }))

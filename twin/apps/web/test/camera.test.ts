@@ -210,6 +210,7 @@ class FakeDriver implements CameraDriver {
   moves: Move[] = []
   fades: number[] = []
   openness: { placementId: string | null; value: number }[] = []
+  reveals: number[] = []
   private current: Shot
   constructor(start: Shot) {
     this.current = start
@@ -227,6 +228,9 @@ class FakeDriver implements CameraDriver {
   }
   setOpenness(placementId: string | null, value: number) {
     this.openness.push({ placementId, value })
+  }
+  setReveal(value: number) {
+    this.reveals.push(value)
   }
 }
 
@@ -391,6 +395,76 @@ describe('Choreography', () => {
     expect(driver.openness.at(-1)).toEqual({ placementId: 'R3-07', value: 1 })
   })
 
+  it('after a user grab the next move starts where the camera settled, so leaving never opens the rack', () => {
+    const resolve = resolveIn(ctx())
+    const f = 'rack:R3-07'
+    const start: Waypoint = { shot: 'hall', focusId: f }
+    const driver = new FakeDriver(resolve(start))
+    const choreo = new Choreography(driver, resolve, start)
+    choreo.go({ shot: 'gpu', focusId: f }, false)
+    // Grab on the row to rack leg: the camera keeps heading for the rack shot after the grab.
+    const rackShot = JSON.stringify(resolve({ shot: 'rack', focusId: f }))
+    for (let i = 0; i < 600 && JSON.stringify(driver.moves.at(-1)?.pose) !== rackShot; i++) choreo.tick(1 / 60)
+    choreo.cancel()
+    const openAtGrab = driver.openness.at(-1)?.value ?? 0
+    driver.moves = []
+    driver.openness = []
+    choreo.go({ shot: 'site', focusId: f }, false)
+    run(choreo, 2)
+    const targets = [...new Set(driver.moves.map((m) => JSON.stringify(m.pose)))]
+    expect(targets).toEqual((['row', 'hall', 'site'] as const).map((shot) => JSON.stringify(resolve({ shot, focusId: f }))))
+    for (const o of driver.openness) expect(o.value).toBeLessThanOrEqual(openAtGrab)
+  })
+
+  it('reduced motion re-frames by cutting, not gliding, while the scene settles after the cut', () => {
+    const boxes: Record<string, Box3> = {}
+    const resolve = resolveIn(ctx({ worldBox: (id) => boxes[id] ?? null }))
+    const f = 'rack:R3-07:tray:0'
+    const start: Waypoint = { shot: 'hall', focusId: f }
+    const driver = new FakeDriver(resolve(start))
+    const choreo = new Choreography(driver, resolve, start)
+    choreo.go({ shot: 'gpu', focusId: f }, true)
+    run(choreo, 0.3)
+    // The open rack's tray registers and slides out after the cut.
+    boxes['rack:R3-07:tray:0'] = new Box3(new Vector3(9.9, 1.2, 7), new Vector3(10.5, 1.24, 9.2))
+    choreo.invalidate()
+    run(choreo, 0.5)
+    expect(driver.moves.length).toBeGreaterThan(1)
+    for (const m of driver.moves) expect(m.smoothTimeS).toBe(0)
+  })
+
+  it('closes the building only on the last leg into the site shot and opens it on the first leg out', () => {
+    const resolve = resolveIn(ctx())
+    const f = 'rack:R3-07'
+    const start: Waypoint = { shot: 'gpu', focusId: f }
+    const driver = new FakeDriver(resolve(start))
+    const choreo = new Choreography(driver, resolve, start)
+    expect(driver.reveals).toEqual([0])
+    choreo.go({ shot: 'site', focusId: f }, false)
+    const hallShot = JSON.stringify(resolve({ shot: 'hall', focusId: f }))
+    const siteShot = JSON.stringify(resolve({ shot: 'site', focusId: f }))
+    // Inside the hall (down to the hall shot) the roof stays off, so it never fills the view on the way out.
+    for (let i = 0; i < 600 && JSON.stringify(driver.moves.at(-1)?.pose) !== siteShot; i++) {
+      choreo.tick(1 / 60)
+      if (JSON.stringify(driver.moves.at(-1)?.pose) !== siteShot) expect(driver.reveals.at(-1), 'before the site leg').toBe(0)
+    }
+    run(choreo, 2)
+    const rising = driver.reveals.slice(1)
+    expect(rising.at(-1)).toBe(1)
+    expect(rising.some((v) => v > 0.1 && v < 0.9)).toBe(true)
+    for (let i = 1; i < rising.length; i++) expect(rising[i]).toBeGreaterThanOrEqual(rising[i - 1]!)
+
+    driver.reveals = []
+    driver.moves = []
+    choreo.go({ shot: 'gpu', focusId: f }, false)
+    for (let i = 0; i < 600 && JSON.stringify(driver.moves.at(-1)?.pose) !== hallShot; i++) choreo.tick(1 / 60)
+    // Open by the time the camera has dropped to the hall shot.
+    run(choreo, 0.5)
+    expect(driver.reveals.at(-1)).toBeLessThan(0.01)
+    run(choreo, 2)
+    expect(driver.reveals.at(-1)).toBe(0)
+  })
+
   it('reduced motion uses cross-fade (duration 0.2 s, no path)', () => {
     const resolve = resolveIn(ctx())
     const start: Waypoint = { shot: 'gpu', focusId: 'rack:R3-07' }
@@ -405,6 +479,7 @@ describe('Choreography', () => {
     expect(Math.min(...driver.fades)).toBeLessThan(0.2)
     expect(driver.fades.at(-1)).toBe(1)
     expect(driver.openness.at(-1)).toEqual({ placementId: 'R3-07', value: 0 })
+    expect(driver.reveals.at(-1)).toBe(1)
   })
 })
 

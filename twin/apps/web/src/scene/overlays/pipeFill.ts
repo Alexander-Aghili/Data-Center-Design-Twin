@@ -1,5 +1,5 @@
 import { useFrame } from '@react-three/fiber'
-import { useEffect, useRef } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import { useTwinStore } from '../../state/store'
 import { fillPipes, prefersReducedMotion } from './LiquidFlow'
 
@@ -20,7 +20,8 @@ export function PipeFillTransition() {
   const pipeFill = useTwinStore((s) => s.pipeFill)
   const started = useRef<number | null>(null)
 
-  useEffect(() => {
+  // Before paint: the pipes must not show full for a frame before they empty and refill.
+  useLayoutEffect(() => {
     if (pipeFill === 0 || prefersReducedMotion()) return
     started.current = performance.now()
     fillPipes(0)

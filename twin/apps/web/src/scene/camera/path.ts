@@ -17,6 +17,8 @@ export interface CameraDriver {
   /** Scene opacity during a reduced-motion cross-fade: 1 shown, 0 faded out. */
   setFade(opacity: number): void
   setOpenness(placementId: string | null, value: number): void
+  /** How far the building is closed for the site shot: 0 walls cut low and no roof, 1 full walls and roof. */
+  setReveal(value: number): void
 }
 
 const MIN_TOTAL_S = 0.8
@@ -33,6 +35,8 @@ const SETTLE_S = 0.5
 const RESOLVE_INTERVAL_S = 1 / 15
 // The rack is shut down to the rack shot and fully open (doors swung, trays out) at tray and gpu.
 const OPENNESS: Record<ShotId, number> = { site: 0, hall: 0, row: 0, rack: 0, tray: 1, gpu: 1 }
+// The building closes (walls up, roof on) only for the site shot: anywhere inside, the roof would fill the view.
+const REVEAL: Record<ShotId, number> = { site: 1, hall: 0, row: 0, rack: 0, tray: 0, gpu: 0 }
 
 const level = (shot: ShotId) => SHOT_IDS.indexOf(shot)
 const ROW = level('row')
@@ -128,8 +132,13 @@ export class Choreography {
   private open: { placementId: string | null; value: number }
   private openFrom = 0
   private openTo = 0
+  private reveal: number
+  private revealFrom = 0
+  private revealTo = 0
   private commanded: Shot | null = null
   private released = false
+  /** The last move asked for reduced motion: re-frames cut instead of gliding. */
+  private reducedMotion = false
   private staleForS = 0
   private sinceResolveS = 0
   private readonly driver: CameraDriver
@@ -141,6 +150,8 @@ export class Choreography {
     this.target = start
     this.open = { placementId: focusRack(start.focusId), value: OPENNESS[start.shot] }
     driver.setOpenness(this.open.placementId, this.open.value)
+    this.reveal = REVEAL[start.shot]
+    driver.setReveal(this.reveal)
   }
 
   /** True while a transition or cross-fade is under way. */
@@ -153,6 +164,7 @@ export class Choreography {
     const { from, waypoints } = this.plan(target)
     this.target = target
     this.released = false
+    this.reducedMotion = reducedMotion
     this.legs = []
     this.legIndex = -1
     this.elapsedS = 0
@@ -176,7 +188,14 @@ export class Choreography {
    * rack finishes opening or closing as the interrupted leg intended.
    */
   cancel(): void {
-    if (this.legIndex >= 0) this.setOpen(this.open.placementId, this.openTo)
+    const leg = this.legs[this.legIndex]
+    if (leg) {
+      this.setOpen(this.open.placementId, this.openTo)
+      this.setReveal(this.revealTo)
+      // The controls carry on to the leg's pose under the user's hand, so the next move starts from there, not from
+      // the abandoned target (which would first fly back in, opening the rack, on the way out).
+      this.target = leg.to
+    }
     this.legs = []
     this.legIndex = -1
     this.released = true
@@ -195,9 +214,9 @@ export class Choreography {
     const due = this.staleForS > 0 && this.sinceResolveS >= RESOLVE_INTERVAL_S
     this.staleForS = Math.max(0, this.staleForS - dt)
     this.sinceResolveS += dt
-    if (this.fadeS !== null) return this.tickFade(dt)
+    if (this.fadeS !== null) return this.tickFade(dt, due)
     if (this.legs.length === 0) {
-      if (due && !this.released) this.command(this.target, REFRAME_S)
+      if (due && !this.released) this.command(this.target, this.reducedMotion ? 0 : REFRAME_S)
       return
     }
     this.elapsedS += dt
@@ -212,6 +231,10 @@ export class Choreography {
     const p = MathUtils.clamp((this.elapsedS - leg.startS) / leg.durationS, 0, 1)
     const eased = this.openTo > this.openFrom ? easeOut(p) : easeIn(p)
     this.setOpen(this.open.placementId, this.openFrom + (this.openTo - this.openFrom) * eased)
+    // Walls rise and the roof lands late on the way out, once the camera is well above the deck; going in they drop
+    // early, before the camera reaches roof height.
+    const revealed = this.revealTo > this.revealFrom ? easeIn(p) : easeOut(p)
+    this.setReveal(this.revealFrom + (this.revealTo - this.revealFrom) * revealed)
     if (last && p >= 1) {
       this.legs = []
       this.legIndex = -1
@@ -247,6 +270,14 @@ export class Choreography {
     const rack = this.openTo > 0 ? focusRack(leg.to.focusId) : this.open.placementId
     this.openFrom = rack === this.open.placementId ? this.open.value : 0
     this.setOpen(rack, this.openFrom)
+    this.revealFrom = this.reveal
+    this.revealTo = REVEAL[leg.to.shot]
+  }
+
+  private setReveal(value: number): void {
+    if (value === this.reveal) return
+    this.reveal = value
+    this.driver.setReveal(value)
   }
 
   private setOpen(placementId: string | null, value: number): void {
@@ -256,15 +287,18 @@ export class Choreography {
   }
 
   /** Reduced motion: dip to the canvas over 0.2 s and cut to the target at the midpoint. */
-  private tickFade(dt: number): void {
+  private tickFade(dt: number, due: boolean): void {
     const half = CROSS_FADE_S / 2
     const before = this.fadeS!
     const now = before + dt
+    // Models settling after the cut (the rack opening at once) re-frame while the scene is still faded.
+    if (before >= half && due) this.command(this.target, 0)
     if (before < half && now >= half) {
       this.commanded = this.resolve(this.target)
       this.driver.moveTo(this.commanded, 0)
       const value = OPENNESS[this.target.shot]
       this.setOpen(value > 0 ? focusRack(this.target.focusId) : this.open.placementId, value)
+      this.setReveal(REVEAL[this.target.shot])
     }
     if (now >= CROSS_FADE_S) {
       this.fadeS = null
