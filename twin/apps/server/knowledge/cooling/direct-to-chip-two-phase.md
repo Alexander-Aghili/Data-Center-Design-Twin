@@ -30,7 +30,7 @@ The plumbing looks like single-phase DLC: cold plates, rack manifolds, a CDU. Th
 
 ## What to watch for
 
-- Flow maldistribution. Sleds with more heat make more vapour, which raises their pressure drop and diverts liquid away from exactly the sleds that need it. Without restrictors the hottest sled in the Accelsius model reached a predicted 176% exit quality, which means dry-out [3]. Orifices or flow regulators upstream of each plate fix it at a pump-head cost.
+- Flow maldistribution. Sleds with more heat make more vapour, which raises their pressure drop and diverts liquid away from the sleds that need it most. Without restrictors the hottest sled in the Accelsius model reached a predicted 176% exit quality, which means dry-out [3]. Orifices or flow regulators upstream of each plate fix it at a pump-head cost.
 - Refrigerant regulation. Some earlier two-phase fluids were fluorinated chemicals affected by 3M's PFAS exit; ZutaCore announced a move to an interim lower-fluorine fluid [5].
 - Hardware warranty. Confirm the server vendor supports the cold plates and fluid.
 

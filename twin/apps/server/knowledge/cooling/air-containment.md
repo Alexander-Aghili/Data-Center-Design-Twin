@@ -23,7 +23,7 @@ Airflow follows from an energy balance: V = Q / (ρ·c_p·ΔT), with air at ρ �
 | 40 kW | 12 K | 2.8 m³/s (about 5,900 CFM) |
 | 130 kW | 15 K | 7.2 m³/s (about 15,200 CFM) |
 
-A 130 kW rack on air alone would need about 7 m³/s through one cabinet face. Server fans, perforated doors and the CRAH coils cannot move that, which is why racks at that density are liquid cooled.
+A 130 kW rack on air alone would need about 7 m³/s through one cabinet face. Server fans, perforated doors and the CRAH coils cannot move that, so racks at that density are liquid cooled.
 
 Published density limits for air:
 - Schneider Electric's power-distribution study treats about 35 kW per rack as the practical ceiling for air-cooled racks [2].

@@ -1,6 +1,6 @@
 # Buffer tanks (thermal storage for ride-through)
 
-Insulated tanks of chilled or facility water connected to the cooling loop. When the chillers or pumps stop briefly, the stored water keeps absorbing heat until the plant restarts. Jane Street's team described their tanks as a thermal battery for exactly this [3].
+Insulated tanks of chilled or facility water connected to the cooling loop. When the chillers or pumps stop briefly, the stored water keeps absorbing heat until the plant restarts. Jane Street's team calls theirs a thermal battery [3].
 
 ## What it is
 

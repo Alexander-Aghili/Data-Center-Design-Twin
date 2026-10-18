@@ -23,7 +23,7 @@ The app models chiller power each hour as P = Q / COP(T_out), with free-cooling 
 
 ## Interactions with other layers
 
-- Power: chiller power is the largest swing term in facility power. It peaks on the hottest hours, which is exactly when the grid cap is tightest. PUE at the worst hour is usually set by the chillers.
+- Power: chiller power is the largest swing term in facility power. It peaks on the hottest hours, the same hours the grid cap is tightest. PUE at the worst hour is usually set by the chillers.
 - Coolant: the facility supply setpoint drives COP. A loop held at 18 °C for air units (as at Jane Street's hall, where air units share the loop with the CDUs [6]) needs far more chiller hours than a 32 to 45 °C loop for cold plates only.
 - Buffer tanks: restart time sets how much stored cold water is needed (see `cooling/buffer-tanks`).
 - Cost and lead time: large chillers are long-lead equipment and often sit on the build's critical path (see `topics/cost-and-lead-times`).

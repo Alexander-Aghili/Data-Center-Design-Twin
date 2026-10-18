@@ -21,7 +21,7 @@ Fan power rises with outdoor temperature, because the fans speed up as the air g
 ## Textbook numbers
 
 - Hour rule (calculated example): with a 40 °C facility supply and an 8 K approach set in the catalog, the dry cooler carries the load whenever outdoor air is at or below 32 °C. Above that, trim is needed. For racks taking 45 °C coolant (NVIDIA's stated Vera Rubin supply temperature [2]), a 4 °C CDU approach [3] leaves 41 °C at the facility side, and the threshold becomes 33 °C.
-- Heat per unit airflow follows the same balance as inside the hall: Q = ρ·c_p·V·ΔT_air. Rejecting 1 MW with a 10 K air temperature rise takes about 83 m³/s of outdoor air (calculated with ρ = 1.2 kg/m³, c_p = 1.005 kJ/(kg·K)). This is why dry cooler yards are large.
+- Heat per unit airflow follows the same balance as inside the hall: Q = ρ·c_p·V·ΔT_air. Rejecting 1 MW with a 10 K air temperature rise takes about 83 m³/s of outdoor air (calculated with ρ = 1.2 kg/m³, c_p = 1.005 kJ/(kg·K)), so dry cooler yards cover a large area.
 - Water use: zero at the site, except for any adiabatic option (see `cooling/adiabatic-dry-cooler`).
 
 ## Interactions with other layers
