@@ -1,7 +1,18 @@
-import type { CheckKind, Plan, RackResult } from '@twin/schema'
+import type { Check, CheckKind, Plan, RackResult } from '@twin/schema'
 import { Fragment } from 'react'
 import { fmtPower } from '../format'
-import { fmtUnit, Node, Pipe, rowsLabel, selectFor, sizedSummary, statusOf, StripFrame, type LayerStripProps } from './parts'
+import {
+  fmtUnit,
+  Node,
+  Pipe,
+  rowsLabel,
+  selectFor,
+  sizedSummary,
+  statusOf,
+  StripFrame,
+  worstCheck,
+  type LayerStripProps,
+} from './parts'
 
 const HEAT_REJECTION_NAMES: Record<string, string> = {
   chiller: 'Chiller',
@@ -29,6 +40,13 @@ function coolantName(plan: Plan, racks: RackResult[]): string | null {
 }
 
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0)
+
+/** "W1 at 112%": the zone behind a problem when the node sums several zones. */
+function zoneProblem(checks: Check[]): string | undefined {
+  const worst = worstCheck(checks)
+  if (!worst || (worst.status !== 'fail' && worst.status !== 'warn') || worst.utilization === null) return undefined
+  return `${worst.subject.id.replace(/^\w+:/, '')} at ${fmtUnit(worst.utilization, 'fraction')}`
+}
 const LANE_TOP = 22
 const LANE_AIR = 84
 const EMPTY = 'No racks placed yet. Place racks in Layout to see the cooling chain.'
@@ -104,7 +122,10 @@ export function CoolingChain({ plan, evaluation, select }: LayerStripProps) {
         ) : null}
         {hasAir ? (
           <>
-            <Pipe d={hasLiquid ? `M${tee} ${LANE_TOP}V${airY}H${x(2) - 10}` : `M${x(1) + 10} ${airY}H${x(2) - 10}`} kind="supply" />
+            <Pipe
+              d={hasLiquid ? `M${tee} ${LANE_TOP}V${airY}H${x(2) - 10}` : `M${x(1) + 10} ${airY}H${x(2) - 10}`}
+              kind="supply"
+            />
             {hasLiquid ? <circle cx={tee} cy={LANE_TOP} r={2.5} fill="var(--supply)" /> : null}
             <Pipe d={`M${x(2) + 10} ${airY}H${x(4) - 10}`} kind="air" />
           </>
@@ -168,6 +189,7 @@ export function CoolingChain({ plan, evaluation, select }: LayerStripProps) {
               y={airY}
               label="CRAH"
               value={crahSummary ? `${crahSummary.value}, ${crahSummary.detail}` : 'not sized'}
+              detail={zoneProblem(of('cooling.crahCapacity'))}
               status={statusOf(of('cooling.crahCapacity'))}
               onSelect={selectFor(select, of('cooling.crahCapacity'), crahs[0])}
             />

@@ -19,7 +19,7 @@ export function fmtUnit(v: number | null, unit: string): string {
 }
 
 /** "7.2 of 9.1 MW": a load against its capacity, the unit said once when both share it. */
-export function fmtLoadOf(loadW: number, capacityW: number | null): string {
+function fmtLoadOf(loadW: number, capacityW: number | null): string {
   if (capacityW === null) return fmtPower(loadW)
   const load = fmtPower(loadW)
   const cap = fmtPower(capacityW)
@@ -31,7 +31,7 @@ export function fmtLoadOf(loadW: number, capacityW: number | null): string {
 export function rowsLabel(rowIds: string[], capital = true): string {
   const n = [...new Set(rowIds.map((id) => Number(id.replace(/\D/g, ''))))].sort((a, b) => a - b)
   const runs: string[] = []
-  for (let i = 0; i < n.length; ) {
+  for (let i = 0; i < n.length;) {
     let j = i
     while (j + 1 < n.length && n[j + 1] === n[j]! + 1) j++
     runs.push(j > i ? `${n[i]}–${n[j]}` : `${n[i]}`)
@@ -41,8 +41,8 @@ export function rowsLabel(rowIds: string[], capital = true): string {
   return `${capital ? word[0]!.toUpperCase() + word.slice(1) : word} ${runs.join(', ')}`
 }
 
-export const STATUS_GLYPH: Record<Status, string> = { fail: '✕', warn: '▲', pass: '✓', unknown: '?' }
-export const STATUS_COLOR: Record<Status, string> = {
+const STATUS_GLYPH: Record<Status, string> = { fail: '✕', warn: '▲', pass: '✓', unknown: '?' }
+const STATUS_COLOR: Record<Status, string> = {
   fail: 'var(--heat)',
   warn: 'var(--warning)',
   pass: 'var(--ok)',
@@ -113,7 +113,7 @@ export function useWidth<T extends Element>(fallback: number): [RefObject<T | nu
 }
 
 /** Enter and Space activate an SVG element that acts as a button. */
-export function activateOnKey(onSelect: () => void) {
+function activateOnKey(onSelect: () => void) {
   return (e: KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
@@ -122,14 +122,14 @@ export function activateOnKey(onSelect: () => void) {
   }
 }
 
-export type PipeKind = 'supply' | 'air' | 'missing' | 'power' | 'copper' | 'fiber'
+type PipeKind = 'supply' | 'air' | 'missing' | 'power' | 'copper' | 'fiber'
 
 /** A run of pipe, cable or bus in the piping-diagram language. */
 export function Pipe({ d, kind, width = 2 }: { d: string; kind: PipeKind; width?: number }) {
   return <path className={`dt-pipe dt-pipe-${kind}`} d={d} strokeWidth={width} fill="none" strokeLinecap="round" />
 }
 
-export interface NodeProps {
+interface NodeProps {
   x: number
   y: number
   label: string
@@ -183,8 +183,15 @@ export function Node({ x, y, label, value, detail, status, missing, symbol, text
           strokeDasharray={missing ? '3 2' : undefined}
         />
       )}
-      <text className="dt-label" x={tx} y={ty} textAnchor={anchor} fill={missing ? 'var(--graphite)' : problem ? STATUS_COLOR[problem] : 'var(--ink)'}>
-        {problem ? `${STATUS_GLYPH[problem]} ${label}` : label}
+      <text
+        className="dt-label"
+        x={tx}
+        y={ty}
+        textAnchor={anchor}
+        fill={missing ? 'var(--graphite)' : problem ? STATUS_COLOR[problem] : 'var(--ink)'}
+      >
+        {problem ? <tspan fill={STATUS_COLOR[problem]}>{`${STATUS_GLYPH[problem]} `}</tspan> : null}
+        {label}
       </text>
       <text className="dt-value" x={inline ? tx + 26 : tx} y={inline ? ty : ty + 13} textAnchor={anchor}>
         {value}

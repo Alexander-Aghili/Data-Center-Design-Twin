@@ -10,7 +10,12 @@ let Strip: typeof StripComponent
 let useTwinStore: typeof UseTwinStore
 
 beforeAll(async () => {
-  vi.stubGlobal('WebSocket', class { readyState = 0 })
+  vi.stubGlobal(
+    'WebSocket',
+    class {
+      readyState = 0
+    },
+  )
   ;({ useTwinStore } = await import('../src/state/store'))
   ;({ HourlyChart } = await import('../src/charts/HourlyChart'))
   ;({ Strip } = await import('../src/strips/Strip'))
@@ -106,7 +111,9 @@ describe('Strip', () => {
     const { container } = render(<Strip layer="workload" />)
     expect(container.innerHTML).toBe('')
     cleanup()
-    useTwinStore.setState({ evaluation: { ...evaluation, racks: [], rows: [], equipment: [], network: { ...evaluation.network, links: [] } } })
+    useTwinStore.setState({
+      evaluation: { ...evaluation, racks: [], rows: [], equipment: [], network: { ...evaluation.network, links: [] } },
+    })
     render(<Strip layer="cooling" />)
     expect(screen.getByText(/No racks placed yet/)).toBeTruthy()
   })

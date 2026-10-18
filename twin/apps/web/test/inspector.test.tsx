@@ -9,7 +9,12 @@ let useTwinStore: typeof UseTwinStore
 
 beforeAll(async () => {
   // The store module creates the app's store on import; keep it from opening a real socket.
-  vi.stubGlobal('WebSocket', class { readyState = 0 })
+  vi.stubGlobal(
+    'WebSocket',
+    class {
+      readyState = 0
+    },
+  )
   ;({ useTwinStore } = await import('../src/state/store'))
   ;({ Inspector } = await import('../src/panels/Inspector'))
 })
@@ -35,7 +40,9 @@ describe('Inspector', () => {
     }
     expect(within(drawer).getByRole('group', { name: 'Power' }).textContent).toContain('132\u00a0kW')
     expect(within(drawer).getByRole('group', { name: 'Heat split' }).textContent).toContain('85%')
-    expect(within(drawer).getByRole('group', { name: 'Bay' }).textContent).toContain(evaluation.racks.find((r) => r.placementId === 'R3-07')!.bayId)
+    expect(within(drawer).getByRole('group', { name: 'Bay' }).textContent).toContain(
+      evaluation.racks.find((r) => r.placementId === 'R3-07')!.bayId,
+    )
   })
 
   it('accepts the scene object id of a rack, tray or GPU as the selection id', () => {

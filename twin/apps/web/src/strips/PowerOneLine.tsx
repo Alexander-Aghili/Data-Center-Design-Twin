@@ -55,7 +55,8 @@ export function PowerOneLine({ plan, evaluation, select }: LayerStripProps) {
   const drops = rows.map((row) => {
     const busway = busways.find((b) => b.key === `busway:${row.rowId}`)
     const rowChecks = of('power.busway').filter(
-      (c) => c.subject.id === row.rowId || (busway !== undefined && c.subject.objectIds.some((id) => busway.objectIds.includes(id))),
+      (c) =>
+        c.subject.id === row.rowId || (busway !== undefined && c.subject.objectIds.some((id) => busway.objectIds.includes(id))),
     )
     return { row, busway, checks: rowChecks, loadW: sum(racks.filter((r) => r.rowId === row.rowId).map((r) => r.powerW)) }
   })

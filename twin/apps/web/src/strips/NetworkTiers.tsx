@@ -5,6 +5,8 @@ import { Node, Pipe, selectFor, statusOf, StripFrame, type LayerStripProps } fro
 const FABRIC: Record<string, string> = { railOptimized: 'Rail-optimized', fatTree: 'Fat tree' }
 const TOP = 26
 const BOTTOM = 132
+// Uplinks leave a leaf from its top or bottom edge and turn clear of its two text lines.
+const UPLINK_CLEAR = 19
 const EMPTY = 'No racks placed yet. Place racks in Layout to see the network tiers.'
 
 type Link = NetworkResult['links'][number]
@@ -42,7 +44,9 @@ export function NetworkTiers({ plan, evaluation, select }: LayerStripProps) {
   const rowIds = [...new Set(racks.map((r) => r.rowId))]
   const leafIds = [...new Set(network.links.map((l) => leafOf(l.toId)?.key ?? l.toId))]
   const linksOf = (rowId: string, leafId?: string) =>
-    network.links.filter((l) => rowOf.get(l.fromId) === rowId && (leafId === undefined || (leafOf(l.toId)?.key ?? l.toId) === leafId))
+    network.links.filter(
+      (l) => rowOf.get(l.fromId) === rowId && (leafId === undefined || (leafOf(l.toId)?.key ?? l.toId) === leafId),
+    )
   const total = counts(network.links)
   const summary = `${total.copper} copper links, ${total.fiber} fiber links, optics ${fmtPower(network.opticsW)}`
 
@@ -63,6 +67,12 @@ export function NetworkTiers({ plan, evaluation, select }: LayerStripProps) {
       return `M${x1} ${y1}C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}`
     }
 
+    const uplink = (y: number) => {
+      const dir = spineY >= y ? 1 : -1
+      const turnY = y + dir * UPLINK_CLEAR
+      return `M${leafX} ${y + dir * 5}V${turnY}${curve(leafX, turnY, spineX - 12, spineY).replace(/^M[^C]+/, '')}`
+    }
+
     return (
       <svg width={width} height={140} role="group" aria-label="Network tiers">
         <text className="dt-tier" x={rowX - 6} y={10}>
@@ -79,17 +89,33 @@ export function NetworkTiers({ plan, evaluation, select }: LayerStripProps) {
             const c = counts(linksOf(rowId, leafId))
             const y2 = leafY(leafId)
             return [
-              c.copper ? <Pipe key={`${rowId}-${leafId}-c`} d={curve(lineStart, rowY(i) - 1.5, leafX - 12, y2 - 1.5)} kind="copper" width={1.5} /> : null,
-              c.fiber ? <Pipe key={`${rowId}-${leafId}-f`} d={curve(lineStart, rowY(i) + 1.5, leafX - 12, y2 + 1.5)} kind="fiber" width={1.5} /> : null,
+              c.copper ? (
+                <Pipe
+                  key={`${rowId}-${leafId}-c`}
+                  d={curve(lineStart, rowY(i) - 1.5, leafX - 12, y2 - 1.5)}
+                  kind="copper"
+                  width={1.5}
+                />
+              ) : null,
+              c.fiber ? (
+                <Pipe
+                  key={`${rowId}-${leafId}-f`}
+                  d={curve(lineStart, rowY(i) + 1.5, leafX - 12, y2 + 1.5)}
+                  kind="fiber"
+                  width={1.5}
+                />
+              ) : null,
             ]
           }),
         )}
         {leafIds.map((leafId) => (
-          <Pipe key={`${leafId}-spine`} d={curve(leafX + 12, leafY(leafId), spineX - 12, spineY)} kind="fiber" width={1.5} />
+          <Pipe key={`${leafId}-spine`} d={uplink(leafY(leafId))} kind="fiber" width={1.5} />
         ))}
         {rowIds.map((rowId, i) => {
           const rackIds = new Set(racks.filter((r) => r.rowId === rowId).map((r) => r.objectId))
-          const rowChecks = checks.filter((c) => c.kind === 'network.copperReach' && c.subject.objectIds.some((id) => rackIds.has(id)))
+          const rowChecks = checks.filter(
+            (c) => c.kind === 'network.copperReach' && c.subject.objectIds.some((id) => rackIds.has(id)),
+          )
           return (
             <Node
               key={rowId}
@@ -106,7 +132,11 @@ export function NetworkTiers({ plan, evaluation, select }: LayerStripProps) {
         })}
         {leafIds.map((leafId, i) => {
           const leaf = leafEquipment.find((e) => e.key === leafId)
-          const portChecks = checks.filter((c) => c.kind === 'network.leafPorts' && (c.subject.id === leafId || leaf?.objectIds.some((id) => c.subject.objectIds.includes(id))))
+          const portChecks = checks.filter(
+            (c) =>
+              c.kind === 'network.leafPorts' &&
+              (c.subject.id === leafId || leaf?.objectIds.some((id) => c.subject.objectIds.includes(id))),
+          )
           const ports = portChecks[0]
           return (
             <Node
@@ -114,7 +144,11 @@ export function NetworkTiers({ plan, evaluation, select }: LayerStripProps) {
               x={leafX}
               y={leafY(leafId)}
               label={`Leaf ${i + 1}`}
-              value={ports && ports.value !== null && ports.limit !== null ? `${ports.value} of ${ports.limit} ports` : `${network.links.filter((l) => (leafOf(l.toId)?.key ?? l.toId) === leafId).length} links`}
+              value={
+                ports && ports.value !== null && ports.limit !== null
+                  ? `${ports.value} of ${ports.limit} ports`
+                  : `${network.links.filter((l) => (leafOf(l.toId)?.key ?? l.toId) === leafId).length} links`
+              }
               textAt="right"
               symbol={<SwitchSymbol x={leafX} y={leafY(leafId)} />}
               status={statusOf(portChecks)}

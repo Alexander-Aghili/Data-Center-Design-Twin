@@ -75,9 +75,22 @@ const RACKS_PER_ROW = 16
 export function fixturePlan(): Plan {
   const plan = createDefaultPlan()
   const snapshot = [
-    RACK.HGX_B300_AIR, RACK.GB300_NVL72, RACK_COOLING.AIR_CONTAINED, RACK_COOLING.DLC_1P, HEAT_REJECTION.CHILLER_AIR,
-    COOLANT.PG25, COOLANT.WATER, EQUIPMENT.CDU_1200KW, EQUIPMENT.CRAH_400KW, EQUIPMENT.BUSWAY_2500A, EQUIPMENT.UPS_500KW,
-    EQUIPMENT.TRANSFORMER_3MVA, EQUIPMENT.LEAF_64X800G, EQUIPMENT.CABLE_DAC, EQUIPMENT.CABLE_AEC, EQUIPMENT.CABLE_FIBER,
+    RACK.HGX_B300_AIR,
+    RACK.GB300_NVL72,
+    RACK_COOLING.AIR_CONTAINED,
+    RACK_COOLING.DLC_1P,
+    HEAT_REJECTION.CHILLER_AIR,
+    COOLANT.PG25,
+    COOLANT.WATER,
+    EQUIPMENT.CDU_1200KW,
+    EQUIPMENT.CRAH_400KW,
+    EQUIPMENT.BUSWAY_2500A,
+    EQUIPMENT.UPS_500KW,
+    EQUIPMENT.TRANSFORMER_3MVA,
+    EQUIPMENT.LEAF_64X800G,
+    EQUIPMENT.CABLE_DAC,
+    EQUIPMENT.CABLE_AEC,
+    EQUIPMENT.CABLE_FIBER,
   ]
   return {
     ...plan,
@@ -103,7 +116,9 @@ function computeRacks(plan: Plan): RackResult[] {
   const cdu = entry(EQUIPMENT.CDU_1200KW, 'equipment')
   const pg25 = entry(COOLANT.PG25, 'coolant')
   const airDeltaK = rule('airDeltaTKContained')
-  const rackOf = (rowId: string): { groupId: string; rack: CatalogEntryOfKind<'rack'>; method: CatalogEntryOfKind<'rackCooling'> } => {
+  const rackOf = (
+    rowId: string,
+  ): { groupId: string; rack: CatalogEntryOfKind<'rack'>; method: CatalogEntryOfKind<'rackCooling'> } => {
     const g = plan.rackGroups.find((x) => x.id === (LIQUID_ROWS.includes(rowId) ? 'g2' : 'g1'))!
     return { groupId: g.id, rack: entry(g.rackTypeId, 'rack'), method: entry(g.coolingMethodId, 'rackCooling') }
   }
@@ -197,7 +212,18 @@ function equipmentFor(plan: Plan, racks: RackResult[]): SizedEquipment[] {
     positionIds: string[],
     loadW: number,
     capacityW: number | null,
-  ): SizedEquipment => ({ key, category, modelId, count, required: count, positionIds, autoSized: true, loadW, capacityW, objectIds: unit(key, count) })
+  ): SizedEquipment => ({
+    key,
+    category,
+    modelId,
+    count,
+    required: count,
+    positionIds,
+    autoSized: true,
+    loadW,
+    capacityW,
+    objectIds: unit(key, count),
+  })
 
   const crahs = plan.hall.positions
     .filter((p) => p.kind === 'crah')
@@ -212,7 +238,15 @@ function equipmentFor(plan: Plan, racks: RackResult[]): SizedEquipment[] {
   const xfmrCount = Math.ceil(itW / param(transformer, 'ratingVa')) + 1
   const buswayRatingW = param(busway, 'ratingA') * param(busway, 'voltageV') * Math.sqrt(3) * param(busway, 'powerFactor')
   const busways = [...new Set(racks.map((r) => r.rowId))].map((rowId) =>
-    sized(`busway:${rowId}`, 'busway', busway.id, 1, [], sum(racks.filter((r) => r.rowId === rowId).map((r) => r.powerW)), buswayRatingW),
+    sized(
+      `busway:${rowId}`,
+      'busway',
+      busway.id,
+      1,
+      [],
+      sum(racks.filter((r) => r.rowId === rowId).map((r) => r.powerW)),
+      buswayRatingW,
+    ),
   )
   const leaves = plan.hall.positions
     .filter((p) => p.kind === 'leaf')
@@ -224,7 +258,15 @@ function equipmentFor(plan: Plan, racks: RackResult[]): SizedEquipment[] {
     sized('plant', 'heatRejection', chiller.id, plantCount, ['plant-1'], heatW, plantCount * value(chiller.unitCapacityW)),
     ...crahs,
     sized('ups', 'ups', ups.id, upsCount, ['elec-1'], itW, (upsCount - 1) * param(ups, 'moduleW')),
-    sized('transformer', 'transformer', transformer.id, xfmrCount, ['elec-1'], itW, (xfmrCount - 1) * param(transformer, 'ratingVa')),
+    sized(
+      'transformer',
+      'transformer',
+      transformer.id,
+      xfmrCount,
+      ['elec-1'],
+      itW,
+      (xfmrCount - 1) * param(transformer, 'ratingVa'),
+    ),
     ...busways,
     ...leaves,
   ]
@@ -260,7 +302,12 @@ function checksFor(plan: Plan, racks: RackResult[], equipment: SizedEquipment[],
       status: 'fail',
       explanation: `The training block uses direct-to-chip cooling, which needs a CDU per row, but ${rangeLabel(LIQUID_ROWS)} have no CDU position to hold one.`,
       causes: [
-        { layer: 'cooling', path: 'rackGroups.g2.coolingMethodId', label: 'Rack cooling, Training block', value: 'Direct-to-chip, single-phase' },
+        {
+          layer: 'cooling',
+          path: 'rackGroups.g2.coolingMethodId',
+          label: 'Rack cooling, Training block',
+          value: 'Direct-to-chip, single-phase',
+        },
         { layer: 'compute', path: 'rackGroups.g2.rackTypeId', label: 'Rack type, Training block', value: 'NVIDIA GB300 NVL72' },
         { layer: 'layout', path: 'hall.positions', label: 'CDU positions in the hall', value: 'none' },
       ],
@@ -294,7 +341,12 @@ function checksFor(plan: Plan, racks: RackResult[], equipment: SizedEquipment[],
       explanation: `Facility power passes the grid cap in ${hoursOver} hours of the Dallas typical year, when the chillers lose efficiency in the afternoon heat.`,
       causes: [
         { layer: 'compute', path: 'rackGroups.g2.rackTypeId', label: 'Rack type, Training block', value: 'NVIDIA GB300 NVL72' },
-        { layer: 'cooling', path: 'cooling.heatRejectionId', label: 'Heat rejection', value: 'Air-cooled chiller with free cooling' },
+        {
+          layer: 'cooling',
+          path: 'cooling.heatRejectionId',
+          label: 'Heat rejection',
+          value: 'Air-cooled chiller with free cooling',
+        },
       ],
     },
     {
@@ -309,7 +361,9 @@ function checksFor(plan: Plan, racks: RackResult[], equipment: SizedEquipment[],
       utilization: r3.loadW / r3.capacityW!,
       status: statusOf(r3.loadW / r3.capacityW!),
       explanation: 'Sixteen GB300 NVL72 racks on one 2,500 A busway.',
-      causes: [{ layer: 'compute', path: 'rackGroups.g2.rackTypeId', label: 'Rack type, Training block', value: 'NVIDIA GB300 NVL72' }],
+      causes: [
+        { layer: 'compute', path: 'rackGroups.g2.rackTypeId', label: 'Rack type, Training block', value: 'NVIDIA GB300 NVL72' },
+      ],
     },
     {
       id: 'network.leafPorts:L1',

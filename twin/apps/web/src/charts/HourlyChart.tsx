@@ -124,6 +124,7 @@ const CSS = `
 .dt-hourly .btn{height:22px;font-size:var(--text-xs)}
 .dt-hourly .dt-plots{padding:0 var(--space-4) var(--space-1)}
 .dt-hourly .dt-row{display:flex;gap:${GAP}px}
+.dt-hourly .dt-captions{font-size:var(--text-xs);font-stretch:var(--stretch-label);color:var(--graphite);margin-bottom:6px}
 .dt-hourly svg{display:block;overflow:visible}
 .dt-hourly svg[tabindex]:focus-visible{outline:2px solid var(--supply);outline-offset:2px}
 .dt-hourly .dt-grid{stroke:var(--hairline);stroke-width:1}
@@ -221,7 +222,7 @@ function Plots({ hourly, series, width, worstHour, capW, overHours, hover, setHo
   const inner = Math.max(320, width - 32)
   const weekW = Math.round(Math.max(160, inner * 0.3))
   const yearW = inner - weekW - GAP
-  const plotH = series.length === 1 ? 96 : 72
+  const plotH = series.length === 1 ? 82 : 72
   const weekStart = Math.min(Math.max(0, worstHour - WEEK / 2), HOURS_PER_YEAR - WEEK)
   const xYear = (day: number) => Y_AXIS_W + ((day + 0.5) / DAYS) * (yearW - Y_AXIS_W)
   const xWeek = (h: number) => ((h - weekStart + 0.5) / WEEK) * weekW
@@ -248,13 +249,17 @@ function Plots({ hourly, series, width, worstHour, capW, overHours, hover, setHo
 
   return (
     <div className="dt-plots">
+      <div className="dt-row dt-captions" aria-hidden="true">
+        <span style={{ width: yearW, paddingLeft: Y_AXIS_W }}>Each day of the year</span>
+        <span>Worst week, hour by hour</span>
+      </div>
       {series.map((key, row) => {
         const meta = META[key]
         const values = hourly[key]
         const band = daily(values)
         const all = finite(values)
         const withCap = key === 'facilityW' && capW !== null ? [...all, capW] : all
-        const scale = niceScale(Math.min(...withCap), Math.max(...withCap))
+        const scale = niceScale(Math.min(...withCap), Math.max(...withCap), 4)
         const y = (v: number) => plotH - ((v - scale.min) / (scale.max - scale.min)) * plotH
         const week = values.slice(weekStart, weekStart + WEEK)
         const last = row === series.length - 1
@@ -283,7 +288,14 @@ function Plots({ hourly, series, width, worstHour, capW, overHours, hover, setHo
                   </text>
                 </g>
               ))}
-              <rect x={xYear(weekStart / 24) - 0.5} y={0} width={(WEEK / 24 / DAYS) * (yearW - Y_AXIS_W)} height={plotH} fill="var(--ink)" fillOpacity={0.05} />
+              <rect
+                x={xYear(weekStart / 24) - 0.5}
+                y={0}
+                width={(WEEK / 24 / DAYS) * (yearW - Y_AXIS_W)}
+                height={plotH}
+                fill="var(--ink)"
+                fillOpacity={0.05}
+              />
               <path d={bandPath(band, xYear, y)} fill="var(--ink)" fillOpacity={0.1} />
               <path d={linePath(band.hi, xYear, y)} fill="none" stroke="var(--ink)" strokeWidth={1.5} strokeLinejoin="round" />
               {showCap ? <CapLine x1={Y_AXIS_W} x2={yearW} y={y(capW)} label={`Grid cap ${fmtPower(capW)}`} /> : null}
@@ -302,7 +314,9 @@ function Plots({ hourly, series, width, worstHour, capW, overHours, hover, setHo
                     />
                   ))
                 : null}
-              {hover?.panel === 'year' ? <line className="dt-grid" x1={xYear(hover.at)} x2={xYear(hover.at)} y1={0} y2={plotH} stroke="var(--graphite)" /> : null}
+              {hover?.panel === 'year' ? (
+                <line className="dt-grid" x1={xYear(hover.at)} x2={xYear(hover.at)} y1={0} y2={plotH} stroke="var(--graphite)" />
+              ) : null}
               {last
                 ? MONTH_START_DAY.map((d, m) => (
                     <text key={m} className="dt-tick" x={xYear(d + 14)} y={plotH + 13} textAnchor="middle">
@@ -325,18 +339,49 @@ function Plots({ hourly, series, width, worstHour, capW, overHours, hover, setHo
               {scale.ticks.map((t) => (
                 <line key={t} className="dt-grid" x1={0} x2={weekW} y1={y(t)} y2={y(t)} />
               ))}
-              <path d={linePath(week, (i) => xWeek(weekStart + i), y)} fill="none" stroke="var(--ink)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+              <path
+                d={linePath(week, (i) => xWeek(weekStart + i), y)}
+                fill="none"
+                stroke="var(--ink)"
+                strokeWidth={2}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
               {showCap ? <CapLine x1={0} x2={weekW} y={y(capW)} /> : null}
               {showCap
                 ? overHours
                     .filter((hr) => hr >= weekStart && hr < weekStart + WEEK)
-                    .map((hr) => <line key={hr} x1={xWeek(hr)} x2={xWeek(hr)} y1={plotH - 7} y2={plotH} stroke="var(--heat)" strokeWidth={1.5} />)
+                    .map((hr) => (
+                      <line
+                        key={hr}
+                        x1={xWeek(hr)}
+                        x2={xWeek(hr)}
+                        y1={plotH - 7}
+                        y2={plotH}
+                        stroke="var(--heat)"
+                        strokeWidth={1.5}
+                      />
+                    ))
                 : null}
               {hover?.panel === 'week' ? (
                 <>
-                  <line className="dt-grid" x1={xWeek(weekStart + hover.at)} x2={xWeek(weekStart + hover.at)} y1={0} y2={plotH} stroke="var(--graphite)" />
+                  <line
+                    className="dt-grid"
+                    x1={xWeek(weekStart + hover.at)}
+                    x2={xWeek(weekStart + hover.at)}
+                    y1={0}
+                    y2={plotH}
+                    stroke="var(--graphite)"
+                  />
                   {values[weekStart + hover.at] !== null ? (
-                    <circle cx={xWeek(weekStart + hover.at)} cy={y(values[weekStart + hover.at]!)} r={4} fill="var(--ink)" stroke="var(--canvas)" strokeWidth={2} />
+                    <circle
+                      cx={xWeek(weekStart + hover.at)}
+                      cy={y(values[weekStart + hover.at]!)}
+                      r={4}
+                      fill="var(--ink)"
+                      stroke="var(--canvas)"
+                      strokeWidth={2}
+                    />
                   ) : null}
                 </>
               ) : null}
@@ -345,16 +390,11 @@ function Plots({ hourly, series, width, worstHour, capW, overHours, hover, setHo
                     const day = Math.floor(weekStart / 24) + d + 1
                     return day * 24 < weekStart + WEEK ? (
                       <text key={d} className="dt-tick" x={xWeek(day * 24)} y={plotH + 13} textAnchor="middle">
-                        {dayLabel(day)}
+                        {d === 0 ? dayLabel(day) : day - MONTH_START_DAY[monthOfDay(day)]! + 1}
                       </text>
                     ) : null
                   })
                 : null}
-              {row === 0 ? (
-                <text className="dt-tick" x={weekW} y={-4} textAnchor="end">
-                  Worst week, hourly
-                </text>
-              ) : null}
             </svg>
           </div>
         )
@@ -377,12 +417,19 @@ function CapLine({ x1, x2, y, label }: { x1: number; x2: number; y: number; labe
   )
 }
 
-function Tooltip(props: { hourly: HourlySeries; series: HourlySeriesKey[]; hover: NonNullable<Hover>; weekStart: number; x: number; width: number }) {
+function Tooltip(props: {
+  hourly: HourlySeries
+  series: HourlySeriesKey[]
+  hover: NonNullable<Hover>
+  weekStart: number
+  x: number
+  width: number
+}) {
   const { hourly, series, hover, weekStart } = props
   const hour = hover.panel === 'week' ? weekStart + hover.at : null
   const left = props.x + 16 + 200 > props.width ? props.x - 16 - 200 : props.x + 16
   return (
-    <div className="dt-tip" role="status" style={{ left: left + 16, top: HEADER_H + 4, width: 200 }}>
+    <div className="dt-tip" role="status" style={{ left: left + 16, top: HEADER_H + 20, width: 200 }}>
       <div>{hour === null ? `${dayLabel(hover.at)}, daily range` : hourLabel(hour)}</div>
       {series.map((key) => {
         const meta = META[key]

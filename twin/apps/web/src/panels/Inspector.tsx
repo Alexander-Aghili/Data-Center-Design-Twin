@@ -18,7 +18,8 @@ import { fmtUnit, rowsLabel } from '../strips/parts'
 import { StatusMark } from './StatusMark'
 
 /** Where a shown number comes from: a calculation over named inputs, or a catalog or plan value with its basis. */
-type Origin = { from: string[] } | { basis: Basis; of?: string; source?: string; note?: string }
+type Origin =
+  { from: string[] } | { basis: Basis; of?: string; source?: string; note?: string } | { catalog: string; source?: string }
 
 interface Fact {
   label: string
@@ -56,7 +57,12 @@ const LAYER_NAMES: Record<LayerId, string> = {
   network: 'Network',
 }
 
-const STATUS_WORDS: Record<Status, string> = { fail: 'Fails', warn: 'Close to the limit', pass: 'Passes', unknown: 'Not enough data' }
+const STATUS_WORDS: Record<Status, string> = {
+  fail: 'Fails',
+  warn: 'Close to the limit',
+  pass: 'Passes',
+  unknown: 'Not enough data',
+}
 
 const EQUIPMENT_NAMES: Record<string, string> = {
   cdu: 'CDU',
@@ -104,10 +110,6 @@ function placementOf(id: string): string {
   return bare.split(':')[0]!
 }
 
-function relatedChecks(checks: Check[], match: (c: Check) => boolean): Check[] {
-  return checks.filter(match)
-}
-
 function rackView(plan: Plan | null, ev: Evaluation, id: string): View | null {
   const r = ev.racks.find((x) => x.placementId === placementOf(id))
   if (!r) return null
@@ -129,11 +131,20 @@ function rackView(plan: Plan | null, ev: Evaluation, id: string): View | null {
       origin: quantityOrigin(rack?.nominalPowerW, `${rackName} nominal power`) ?? { from: [`${rackName} nominal power`] },
     },
     ...(rack && num(rack.peakPowerW) !== null
-      ? [{ label: 'Peak power', value: [fmtUnit(num(rack.peakPowerW), 'W')], origin: quantityOrigin(rack.peakPowerW, `${rackName} peak power`) }]
+      ? [
+          {
+            label: 'Peak power',
+            value: [fmtUnit(num(rack.peakPowerW), 'W')],
+            origin: quantityOrigin(rack.peakPowerW, `${rackName} peak power`),
+          },
+        ]
       : []),
     {
       label: 'Heat split',
-      value: [`${fmtPower(r.liquidW)} to liquid (${pctOf(r.liquidW, r.heatW)})`, `${fmtPower(r.airW)} to air (${pctOf(r.airW, r.heatW)})`],
+      value: [
+        `${fmtPower(r.liquidW)} to liquid (${pctOf(r.liquidW, r.heatW)})`,
+        `${fmtPower(r.airW)} to air (${pctOf(r.airW, r.heatW)})`,
+      ],
       origin: {
         from: [
           `heat ${fmtPower(r.heatW)}`,
@@ -143,7 +154,13 @@ function rackView(plan: Plan | null, ev: Evaluation, id: string): View | null {
       },
     },
     ...(r.facilityWaterW > 0
-      ? [{ label: 'To facility water', value: [fmtPower(r.facilityWaterW)], origin: { from: [input(`${methodName} share at the rack`, method?.toFacilityWaterAtRack)] } }]
+      ? [
+          {
+            label: 'To facility water',
+            value: [fmtPower(r.facilityWaterW)],
+            origin: { from: [input(`${methodName} share at the rack`, method?.toFacilityWaterAtRack)] },
+          },
+        ]
       : []),
     {
       label: 'Flow',
@@ -175,12 +192,24 @@ function rackView(plan: Plan | null, ev: Evaluation, id: string): View | null {
     {
       label: 'Weight',
       value: [fmtUnit(r.weightKg, 'kg')],
-      origin: { from: [input(`${rackName} weight`, rack?.weightKg), input(`${methodName} added weight`, method?.addedWeightKgPerRack)] },
+      origin: {
+        from: [input(`${rackName} weight`, rack?.weightKg), input(`${methodName} added weight`, method?.addedWeightKgPerRack)],
+      },
     },
     {
       label: 'Bay',
-      value: [bay ? `${r.bayId}, ${fmtUnit(bay.loadKnM2, 'kN/m²')} of ${fmtUnit(bay.ratingKnM2, 'kN/m²')} (${fmtUnit(bay.utilization, 'fraction')})` : r.bayId],
-      origin: { from: [`footprint center of row ${r.rowId.replace(/\D/g, '')}, slot ${r.slot + 1}`, 'the 3.6 m bay grid', 'rack weights in the bay'] },
+      value: [
+        bay
+          ? `${r.bayId}, ${fmtUnit(bay.loadKnM2, 'kN/m²')} of ${fmtUnit(bay.ratingKnM2, 'kN/m²')} (${fmtUnit(bay.utilization, 'fraction')})`
+          : r.bayId,
+      ],
+      origin: {
+        from: [
+          `footprint center of row ${r.rowId.replace(/\D/g, '')}, slot ${r.slot + 1}`,
+          'the 3.6 m bay grid',
+          'rack weights in the bay',
+        ],
+      },
     },
   ]
 
@@ -189,8 +218,7 @@ function rackView(plan: Plan | null, ev: Evaluation, id: string): View | null {
     title: r.placementId,
     subtitle: [group?.name, rack?.name, method?.name].filter(Boolean).join(', '),
     facts,
-    related: relatedChecks(
-      ev.checks,
+    related: ev.checks.filter(
       (c) =>
         c.subject.objectIds.includes(r.objectId) ||
         (c.subject.kind === 'group' && c.subject.id === r.groupId) ||
@@ -214,10 +242,22 @@ function equipmentView(plan: Plan | null, ev: Evaluation, id: string): View | nu
   if (!e) return null
   const model = plan && e.modelId ? plan.catalog[e.modelId] : undefined
   const unit = UNIT_PARAM[e.category]
-  const unitQ = model?.kind === 'equipment' && unit ? model.params[unit.key] : model?.kind === 'heatRejection' ? model.unitCapacityW : undefined
+  const unitQ =
+    model?.kind === 'equipment' && unit
+      ? model.params[unit.key]
+      : model?.kind === 'heatRejection'
+        ? model.unitCapacityW
+        : undefined
   const unitLabel = unit?.unit ?? 'W'
   const rows = servedRows(plan, ev, e)
-  const loadOf = e.category === 'crah' ? 'air-side heat' : e.category === 'cdu' ? 'liquid heat' : e.category === 'heatRejection' ? 'heat' : 'IT load'
+  const loadOf =
+    e.category === 'crah'
+      ? 'air-side heat'
+      : e.category === 'cdu'
+        ? 'liquid heat'
+        : e.category === 'heatRejection'
+          ? 'heat'
+          : 'IT load'
   const name = EQUIPMENT_NAMES[e.category] ?? e.category
 
   const facts: Fact[] = [
@@ -225,21 +265,34 @@ function equipmentView(plan: Plan | null, ev: Evaluation, id: string): View | nu
       label: 'Model',
       value: [model?.name ?? 'not chosen'],
       origin: model
-        ? { basis: model.custom ? 'user' : 'vendor', of: `catalog entry as of ${model.asOf}`, source: model.sources?.[0]?.url }
+        ? model.custom
+          ? { basis: 'user', of: 'custom catalog entry' }
+          : { catalog: `catalog entry as of ${model.asOf}`, source: model.sources?.[0]?.url }
         : undefined,
     },
     {
       label: 'Count',
       value: [e.count === e.required ? `${e.count}` : `${e.count}, ${e.required} required`],
       origin: e.autoSized
-        ? { from: [`${loadOf} ${fmtPower(e.loadW)}`, input('unit rating', unitQ, unitLabel), plan ? `${plan.power.redundancy} redundancy (set in the plan)` : 'redundancy'] }
+        ? {
+            from: [
+              `${loadOf} ${fmtPower(e.loadW)}`,
+              input('unit rating', unitQ, unitLabel),
+              plan ? `${plan.power.redundancy} redundancy (set in the plan)` : 'redundancy',
+            ],
+          }
         : { basis: 'user', of: 'equipment override' },
     },
     { label: 'Load', value: [fmtPower(e.loadW)], origin: { from: [`${loadOf} of ${rowsLabel(rows, false)}`] } },
     {
       label: 'Capacity',
       value: [fmtUnit(e.capacityW, 'W')],
-      origin: { from: [`${e.count} × ${input('unit rating', unitQ, unitLabel)}`, ...(e.count > e.required ? [] : []), 'redundant units excluded'] },
+      origin: {
+        from: [
+          `${e.count} × ${input('unit rating', unitQ, unitLabel)}`,
+          plan ? `${plan.power.redundancy} redundancy` : 'redundancy',
+        ],
+      },
     },
     ...(e.capacityW !== null
       ? [
@@ -254,27 +307,32 @@ function equipmentView(plan: Plan | null, ev: Evaluation, id: string): View | nu
   ]
 
   return {
-    kind: name,
-    title: e.key,
+    kind: 'Equipment',
+    title: [name, e.key.split(':')[1]].filter(Boolean).join(' '),
     subtitle: e.autoSized ? 'Auto-sized to the load' : 'Model and count set in the plan',
     facts,
-    related: relatedChecks(ev.checks, (c) => c.subject.id === e.key || c.subject.objectIds.some((o) => e.objectIds.includes(o))),
+    related: ev.checks.filter((c) => c.subject.id === e.key || c.subject.objectIds.some((o) => e.objectIds.includes(o))),
   }
 }
 
 function checkView(ev: Evaluation, id: string): View | null {
   const c = ev.checks.find((x) => x.id === id)
   if (!c) return null
-  const causes = c.causes.map((k) => `${k.label.toLowerCase()} ${k.value}`)
   const facts: Fact[] = [
-    { label: 'Value', value: [fmtUnit(c.value, c.unit)], origin: causes.length ? { from: causes } : { from: [c.explanation] } },
+    {
+      label: 'Value',
+      value: [fmtUnit(c.value, c.unit)],
+      origin: { from: [c.causes.length ? 'the plan decisions listed under causes' : 'the evaluated plan'] },
+    },
     { label: 'Limit', value: [fmtUnit(c.limit, c.unit)] },
     { label: 'Utilization', value: [fmtUnit(c.utilization, 'fraction')], origin: { from: ['value', 'limit'] } },
     ...(c.worstFailure
       ? [
           {
             label: 'Worst failure',
-            value: [`${c.worstFailure.scenario}: ${fmtUnit(c.worstFailure.value, c.unit)} (${fmtUnit(c.worstFailure.utilization, 'fraction')})`],
+            value: [
+              `${c.worstFailure.scenario}: ${fmtUnit(c.worstFailure.value, c.unit)} (${fmtUnit(c.worstFailure.utilization, 'fraction')})`,
+            ],
             origin: { from: ['the same check with one unit out of service'] },
           },
         ]
@@ -290,11 +348,15 @@ function bayView(ev: Evaluation, id: string): View | null {
     kind: 'Floor bay',
     title: b.bayId,
     facts: [
-      { label: 'Load', value: [fmtUnit(b.loadKnM2, 'kN/m²')], origin: { from: ['rack and equipment weights in the bay', 'bay area'] } },
+      {
+        label: 'Load',
+        value: [fmtUnit(b.loadKnM2, 'kN/m²')],
+        origin: { from: ['rack and equipment weights in the bay', 'bay area'] },
+      },
       { label: 'Rating', value: [fmtUnit(b.ratingKnM2, 'kN/m²')], origin: { basis: 'user', of: 'floor rating of the hall' } },
       { label: 'Utilization', value: [fmtUnit(b.utilization, 'fraction')], origin: { from: ['load', 'rating'] } },
     ],
-    related: relatedChecks(ev.checks, (c) => c.subject.kind === 'bay' && c.subject.id === b.bayId),
+    related: ev.checks.filter((c) => c.subject.kind === 'bay' && c.subject.id === b.bayId),
   }
 }
 
@@ -310,10 +372,14 @@ function rowView(ev: Evaluation, id: string): View | null {
       { label: 'Heat to liquid', value: [fmtPower(r.liquidW)], origin: { from: [`heat split of ${racks.length} racks`] } },
       { label: 'Heat to air', value: [fmtPower(r.airW)], origin: { from: [`heat split of ${racks.length} racks`] } },
       { label: 'Flow', value: [fmtUnit(r.flowLps, 'L/s')], origin: { from: ['rack flows in the row'] } },
-      { label: 'Busway current', value: [fmtUnit(r.buswayLoadA, 'A')], origin: { from: ['row IT load', 'busway voltage and power factor'] } },
+      {
+        label: 'Busway current',
+        value: [fmtUnit(r.buswayLoadA, 'A')],
+        origin: { from: ['row IT load', 'busway voltage and power factor'] },
+      },
       { label: 'CDU', value: [r.cduKey ?? 'none'] },
     ],
-    related: relatedChecks(ev.checks, (c) => c.subject.kind === 'row' && c.subject.id === r.rowId),
+    related: ev.checks.filter((c) => c.subject.kind === 'row' && c.subject.id === r.rowId),
   }
 }
 
@@ -323,7 +389,9 @@ function metricView(ev: Evaluation, id: string): View | null {
   return {
     kind: `${LAYER_NAMES[m.layer]} value`,
     title: m.label,
-    facts: [{ label: 'Value', value: [fmtUnit(m.value, m.unit)], origin: m.inputs.length ? { from: m.inputs } : { basis: m.basis } }],
+    facts: [
+      { label: 'Value', value: [fmtUnit(m.value, m.unit)], origin: m.inputs.length ? { from: m.inputs } : { basis: m.basis } },
+    ],
     related: [],
   }
 }
@@ -348,20 +416,31 @@ function describe(sel: Selection, plan: Plan | null, ev: Evaluation): View | nul
   }
 }
 
+function SourceLink({ href }: { href?: string }) {
+  return href ? (
+    <>
+      {', '}
+      <a href={href} target="_blank" rel="noreferrer">
+        source
+      </a>
+    </>
+  ) : null
+}
+
 function OriginLine({ origin }: { origin: Origin }) {
   if ('from' in origin) return <p className="dt-origin">Calculated from {origin.from.join(', ')}</p>
+  if ('catalog' in origin)
+    return (
+      <p className="dt-origin">
+        {origin.catalog[0]!.toUpperCase() + origin.catalog.slice(1)}
+        <SourceLink href={origin.source} />
+      </p>
+    )
   return (
     <p className="dt-origin" title={origin.note}>
       Basis: {BASIS_WORDS[origin.basis]}
       {origin.of ? `, ${origin.of}` : ''}
-      {origin.source ? (
-        <>
-          {', '}
-          <a href={origin.source} target="_blank" rel="noreferrer">
-            source
-          </a>
-        </>
-      ) : null}
+      <SourceLink href={origin.source} />
     </p>
   )
 }
