@@ -2,7 +2,7 @@ import { fileURLToPath } from 'node:url'
 import { SERVER_PORT } from '@twin/schema'
 import { createScriptedClient } from './agent/fakeClient'
 import { designAgentFactory } from './agent/wire'
-import { createApp } from './app'
+import { createApp, DEV_WEB_PORT, localOrigins } from './app'
 import type { PlanStore } from './contracts'
 import { loadApiKey } from './env'
 
@@ -18,7 +18,14 @@ const agentFactory = fakeAgent
     ? designAgentFactory({ dataDir })
     : undefined
 
-const app = await createApp({ dataDir, logger: true, ...(agentFactory ? { agentFactory } : {}) })
+const port = Number(process.env.PORT ?? SERVER_PORT)
+/** Vite's dev server and this server on local names, plus `TWIN_ALLOWED_ORIGINS` (comma-separated; end-to-end tests run Vite on a free port). */
+const allowedOrigins = [
+  ...localOrigins([DEV_WEB_PORT, port]),
+  ...(process.env.TWIN_ALLOWED_ORIGINS ?? '').split(',').map((o) => o.trim()).filter(Boolean),
+]
+
+const app = await createApp({ dataDir, logger: true, allowedOrigins, ...(agentFactory ? { agentFactory } : {}) })
 app.log.info(
   { dataDir, hasApiKey, fakeAgent },
   fakeAgent ? 'Scripted agent (TWIN_FAKE_AGENT=1)' : hasApiKey ? 'API key loaded' : 'No API key in .env; the agent is unavailable',
@@ -30,4 +37,4 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   })
 }
 
-await app.listen({ port: Number(process.env.PORT ?? SERVER_PORT), host: '127.0.0.1' })
+await app.listen({ port, host: '127.0.0.1' })

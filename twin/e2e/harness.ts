@@ -88,7 +88,13 @@ export class Twin {
   /** Starts (or restarts) the server on the same port and data directory. */
   async startServer(): Promise<void> {
     this.output = ''
-    const env: NodeJS.ProcessEnv = { ...process.env, PORT: String(this.serverPort), TWIN_DATA_DIR: this.dataDir }
+    const env: NodeJS.ProcessEnv = {
+      ...process.env,
+      PORT: String(this.serverPort),
+      TWIN_DATA_DIR: this.dataDir,
+      // The page's origin; the server refuses API calls and sockets from any other.
+      TWIN_ALLOWED_ORIGINS: `http://127.0.0.1:${this.webPort}`,
+    }
     if (this.opts.liveAgent) delete env.TWIN_FAKE_AGENT
     else env.TWIN_FAKE_AGENT = '1'
     const server = spawn(process.execPath, ['--import', 'tsx', SERVER_MAIN], { cwd: TWIN_DIR, env, stdio: ['ignore', 'pipe', 'pipe'] })
