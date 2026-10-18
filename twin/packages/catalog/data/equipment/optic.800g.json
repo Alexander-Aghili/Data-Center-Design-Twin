@@ -1,0 +1,40 @@
+{
+  "id": "optic.800g",
+  "kind": "equipment",
+  "name": "800G OSFP optical transceiver",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "nvidia-sn5000-specs",
+      "url": "https://networking-docs.nvidia.com/sn5000hw/specifications",
+      "title": "NVIDIA Spectrum SN5000 hardware user manual: specifications"
+    }
+  ],
+  "summary": "800G OSFP transceiver (2×400G DR4 or DR8 class) over single-mode fiber.",
+  "category": "optic",
+  "params": {
+    "powerW": {
+      "value": 17.8,
+      "low": 14,
+      "high": 18,
+      "unit": "W",
+      "basis": "calculated",
+      "source": "https://networking-docs.nvidia.com/sn5000hw/specifications",
+      "note": "NVIDIA SN5600: (2080 W with 64 optics − 940 W with passive cables) / 64 = 17.8 W per module."
+    },
+    "reachM": {
+      "value": 500,
+      "unit": "m",
+      "basis": "textbook",
+      "note": "IEEE 802.3 DR4/DR8 single-mode reach is 500 m; FR variants reach 2 km."
+    },
+    "capexUsd": {
+      "value": 900,
+      "low": 600,
+      "high": 1400,
+      "unit": "USD",
+      "basis": "estimate",
+      "note": "Judgment from 2025–2026 street prices for 800G DR8-class OSFP modules."
+    }
+  }
+}

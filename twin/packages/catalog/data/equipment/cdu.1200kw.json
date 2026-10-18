@@ -1,0 +1,75 @@
+{
+  "id": "cdu.1200kw",
+  "kind": "equipment",
+  "name": "1.2 MW row CDU",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "vertiv-coolchip-cdu",
+      "url": "https://www.vertiv.com/en-us/products-catalog/thermal-management/high-density-solutions/vertiv-coolchip-cdu/",
+      "title": "Vertiv CoolChip CDU family specifications"
+    },
+    {
+      "id": "coolit-chx2000",
+      "url": "https://www.storagereview.com/news/coolit-unveils-chx2000-cdu-with-2mw-liquid-cooling-capacity-in-standard-rack-footprint",
+      "title": "StorageReview: CoolIT unveils CHx2000 CDU with 2 MW capacity"
+    }
+  ],
+  "summary": "In-row liquid-to-liquid coolant distribution unit of about 1.2 MW, sized for eight to ten 120–140 kW liquid-cooled racks.",
+  "category": "cdu",
+  "params": {
+    "capacityW": {
+      "value": 1200000,
+      "low": 1200000,
+      "high": 1350000,
+      "unit": "W",
+      "basis": "estimate",
+      "note": "Class rating. The closest catalogued product, Vertiv CoolChip CDU 1350, is rated 1350 kW at a 4 K approach; 1.2 MW leaves margin for a warmer facility supply."
+    },
+    "maxFlowLps": {
+      "value": 24,
+      "unit": "L/s",
+      "basis": "estimate",
+      "note": "1.2 L/min per kW of capacity (CoolIT CHx2000 rating) × 1200 kW = 1440 L/min = 24 L/s."
+    },
+    "approachK": {
+      "value": 4,
+      "unit": "K",
+      "basis": "vendor",
+      "source": "https://www.vertiv.com/en-us/products-catalog/thermal-management/high-density-solutions/vertiv-coolchip-cdu/",
+      "note": "Vertiv rates its CoolChip CDU 1350 and 2300 at a 4 °C approach temperature difference."
+    },
+    "pumpPowerW": {
+      "value": 10000,
+      "low": 6000,
+      "high": 15000,
+      "unit": "W",
+      "basis": "estimate",
+      "note": "Hydraulic power 24 L/s × 250 kPa secondary head = 6 kW, divided by a 0.6 wire-to-water efficiency for variable-speed pumps = 10 kW at full flow."
+    },
+    "weightKg": {
+      "value": 1600,
+      "low": 1200,
+      "high": 2200,
+      "unit": "kg",
+      "basis": "estimate",
+      "note": "A 900 × 1243 × 2122 mm steel cabinet (Vertiv CoolChip CDU 1350 envelope) holding a plate heat exchanger, two pumps and about 200 L of coolant; comparable row CDUs list 1,000–2,000 kg."
+    },
+    "capexUsd": {
+      "value": 220000,
+      "low": 150000,
+      "high": 300000,
+      "unit": "USD",
+      "basis": "estimate",
+      "note": "About 180 USD per kW of capacity (judgment range 125–250 USD/kW for 1–2 MW row CDUs in 2025–2026), equipment only."
+    },
+    "leadTimeWeeks": {
+      "value": 20,
+      "low": 12,
+      "high": 30,
+      "unit": "week",
+      "basis": "estimate",
+      "note": "Judgment: CDU demand outran supply in 2024–2025; vendors quoted roughly 3–7 months depending on volume."
+    }
+  }
+}
