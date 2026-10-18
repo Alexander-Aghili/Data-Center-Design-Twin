@@ -116,6 +116,33 @@ describe('procedural models', () => {
     expect(Math.abs(cdu.z - position.z)).toBeLessThan(1e-9)
   })
 
+  it('the open rack stays drawn while it eases shut, then returns to the instanced hall', async () => {
+    const plan = nvl72Plan()
+    useTwinStore.setState({ plan, evaluation: null })
+    renderer = await ReactThreeTestRenderer.create(<Hall plan={plan} units={[]} openRack="R3-04" />)
+    expect(ids()).toContain('rack:R3-04:chassis')
+    await renderer.update(<Hall plan={plan} units={[]} openRack={null} />)
+    expect(ids()).toContain('rack:R3-04:chassis')
+    await new Promise((r) => setTimeout(r, 400))
+    expect(ids()).not.toContain('rack:R3-04:chassis')
+    expect(ids()).toContain('rack:R3-04')
+  })
+
+  it('useStable keeps the reference while the content is unchanged', async () => {
+    const { useStable } = await import('../src/scene/hooks')
+    const seen: unknown[] = []
+    function Probe({ value }: { value: { a: number[] } }) {
+      seen.push(useStable(value))
+      return null
+    }
+    renderer = await ReactThreeTestRenderer.create(<Probe value={{ a: [1, 2] }} />)
+    await renderer.update(<Probe value={{ a: [1, 2] }} />)
+    await renderer.update(<Probe value={{ a: [1, 3] }} />)
+    expect(seen[1]).toBe(seen[0])
+    expect(seen[2]).not.toBe(seen[0])
+    expect(seen[2]).toEqual({ a: [1, 3] })
+  })
+
   it('Hall renders one mesh per placement (instanced for >40)', async () => {
     const countRacks = () => ids().filter((id) => /^rack:R\d-\d\d$/.test(id)).length
     const instanced = (root: Object3D) => {

@@ -1,7 +1,7 @@
 import { CylinderGeometry, type BufferGeometry, type Group } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { FINISH } from '../Lighting'
-import { useRegistered } from '../Scene'
+import { useRegistered } from '../hooks'
 import { box } from './Rack'
 import type { TrayCooling } from './Tray'
 

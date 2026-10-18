@@ -1,6 +1,6 @@
 import type { Group } from 'three'
 import { FINISH, LOUVER_TILE_M } from '../Lighting'
-import { useRegistered } from '../Scene'
+import { useRegistered } from '../hooks'
 import type { EquipmentUnit } from './Hall'
 import { panelGeometry } from './Rack'
 

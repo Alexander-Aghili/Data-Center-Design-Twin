@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { CatmullRomCurve3, TubeGeometry, Vector3, type BufferGeometry, type Group } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { FINISH, PERF_TILE_M } from '../Lighting'
-import { useRegistered } from '../Scene'
+import { useRegistered } from '../hooks'
 import { Gpu, gpuFootprint, gpuPorts } from './Gpu'
 import { box, panelGeometry } from './Rack'
 

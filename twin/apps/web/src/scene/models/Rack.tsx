@@ -14,7 +14,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { useTwinStore } from '../../state/store'
 import { objectIdForPlacement, rackSize, slotWorld } from '../geometry'
 import { FINISH, PERF_TILE_M } from '../Lighting'
-import { useRegistered } from '../Scene'
+import { useRegistered } from '../hooks'
 import { Shelf, Tray, type TrayCooling } from './Tray'
 
 // Built-in catalog by id; plan snapshot entries win over these, as in the engine.
