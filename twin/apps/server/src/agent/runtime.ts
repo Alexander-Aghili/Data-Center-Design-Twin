@@ -6,9 +6,9 @@ import { join } from 'node:path'
 import type { AgentRuntime, PlanStore, StoreChange, ToolRunResult } from '../contracts'
 import { AGENT_MODEL, createAnthropicClient, type AnthropicLike } from './client'
 import { Conversation, type Effort } from './conversation'
-import { errorText, runTurn, toolParams } from './loop'
+import { callSummary, errorText, runTurn, toolParams } from './loop'
 import { ChangeCoalescer, formatAppEvent, isWorthObserving, severityOf, type MergedChanges } from './observe'
-import type { AgentTool } from './tools/index'
+import { toolResultNumbers, type AgentTool, type ToolOutcome } from './tools/index'
 
 /** Task 13's `ProposalBook`, as far as applying and dismissing go. */
 export interface ProposalControl {
@@ -31,6 +31,13 @@ export interface AgentRuntimeDeps {
   diff?: (prev: Evaluation, next: Evaluation) => EvalDiff
   proposals?: ProposalControl
   views?: ViewSource
+}
+
+interface Turn {
+  text: string
+  effort: Effort
+  trigger: 'chat' | 'observation'
+  severity: Severity
 }
 
 const MISSING_KEY = 'The agent needs an API key in .env'
@@ -69,9 +76,14 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
     }
   }
 
-  /** Turns run one at a time, in arrival order; a turn appends its user message only when it starts. */
-  const enqueueTurn = (turn: { text: string; effort: Effort; trigger: 'chat' | 'observation'; severity: Severity }) => {
+  /**
+   * Turns run one at a time, in arrival order; a turn appends its user message only when it starts. A turn given
+   * as a function is built when it starts, and skipped when that gives null.
+   */
+  const enqueueTurn = (next: Turn | (() => Turn | null)) => {
     queue = queue.then(async () => {
+      const turn = typeof next === 'function' ? next() : next
+      if (!turn) return
       const conv = conversation
       conv.appendUserTurn(turn.text, turn.effort)
       const messageId = randomUUID()
@@ -95,10 +107,28 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
     })
   }
 
-  const observe = ({ prev, next, summaries }: MergedChanges) => {
-    const d = diff(prev, next)
-    if (missingKey || !isWorthObserving(d)) return
-    enqueueTurn({ text: formatAppEvent(d, summaries), effort: 'low', trigger: 'observation', severity: severityOf(d) })
+  /**
+   * Edits waiting for their observation turn. Bursts that close while another turn runs merge into it (the
+   * evaluation before the first, after the last, every summary), so the person gets one remark after the turn;
+   * the diff is taken when that turn starts and dropped if it no longer says anything.
+   */
+  let pendingObservation: MergedChanges | null = null
+
+  const observe = (merged: MergedChanges) => {
+    if (missingKey) return
+    if (pendingObservation) {
+      pendingObservation = { prev: pendingObservation.prev, next: merged.next, summaries: [...pendingObservation.summaries, ...merged.summaries] }
+      return
+    }
+    pendingObservation = merged
+    enqueueTurn(() => {
+      const changes = pendingObservation
+      pendingObservation = null
+      if (!changes) return null
+      const d = diff(changes.prev, changes.next)
+      if (!isWorthObserving(d)) return null
+      return { text: formatAppEvent(d, changes.summaries), effort: 'low', trigger: 'observation', severity: severityOf(d) }
+    })
   }
   const coalescer = new ChangeCoalescer(observe)
 
@@ -107,6 +137,20 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
     const messageId = randomUUID()
     emit({ kind: 'messageStart', messageId, trigger: 'observation', severity: 'info' })
     emit({ kind: 'textDelta', messageId, text: FRESH_CONVERSATION_OFFER })
+    emit({ kind: 'messageEnd', messageId })
+  }
+
+  /**
+   * A tool run from outside a turn (the MCP server) that made a proposal or a file gets its own short message in
+   * the thread, as an agent run would, so the card can be applied and the link downloaded.
+   */
+  const showExternalRun = (name: string, outcome: Extract<ToolOutcome, { ok: true }>) => {
+    const messageId = randomUUID()
+    const callId = randomUUID()
+    emit({ kind: 'messageStart', messageId, trigger: 'observation', severity: 'info' })
+    emit({ kind: 'toolCall', messageId, callId, name, summary: callSummary(name) })
+    emit({ kind: 'toolResult', callId, ok: true, summary: outcome.summary, numbers: toolResultNumbers(outcome.content) })
+    for (const e of outcome.events ?? []) emit({ ...e, messageId })
     emit({ kind: 'messageEnd', messageId })
   }
 
@@ -136,6 +180,7 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
       planId = id
       if (replaced) {
         coalescer.clear()
+        pendingObservation = null
         offerFreshConversation()
         return
       }
@@ -145,6 +190,7 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
 
     resetConversation() {
       coalescer.clear()
+      pendingObservation = null
       conversation = new Conversation(file)
       conversation.reset()
     },
@@ -171,6 +217,7 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
       if (!tool) return { ok: false, error: `Unknown tool "${name}".` }
       try {
         const outcome = await tool.run(input)
+        if (outcome.ok && outcome.events?.length) showExternalRun(name, outcome)
         return outcome.ok ? { ok: true, result: outcome.content } : { ok: false, error: outcome.error }
       } catch (err) {
         return { ok: false, error: errorText(err) }

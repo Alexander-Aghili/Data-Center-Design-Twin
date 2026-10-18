@@ -3,7 +3,10 @@ import { join } from 'node:path'
 import type { Plan } from '@twin/schema'
 import type { FastifyInstance } from 'fastify'
 import { afterEach, describe, expect, it } from 'vitest'
+import { createScriptedClient } from '../src/agent/fakeClient'
+import { designAgentFactory } from '../src/agent/wire'
 import { createApp } from '../src/app'
+import type { AgentRuntime } from '../src/contracts'
 import { rename, tempDataDir, testBuiltins, testRegistry } from './helpers/fixtures'
 
 const apps: FastifyInstance[] = []
@@ -272,6 +275,48 @@ describe('HTTP routes', () => {
     const res = await app.inject({ method: 'POST', url: '/api/tools/get_plan', payload: { input: { section: 'site' } } })
     expect(res.json()).toEqual({ ok: true, result: 'ran get_plan' })
     expect(inputs).toEqual([{ section: 'site' }])
+  })
+
+  it('a proposal or a file made through POST /api/tools (MCP) shows in the thread like an agent run', async () => {
+    const dataDir = tempDataDir()
+    let runtime: AgentRuntime | null = null
+    const app = await createApp({
+      dataDir,
+      agentFactory: (store) => {
+        runtime = designAgentFactory({ dataDir, client: createScriptedClient(store) })(store)
+        return runtime
+      },
+    })
+    apps.push(app)
+    const thread = () => runtime!.threadEvents()
+
+    const proposed = await app.inject({
+      method: 'POST',
+      url: '/api/tools/propose_change',
+      payload: {
+        input: { title: 'Rename the hall', rationale: 'Clearer name.', commands: [{ type: 'renamePlan', payload: { name: 'Hall B' } }], respectsNotes: [], violatesNotes: [] },
+      },
+    })
+    expect(proposed.json()).toMatchObject({ ok: true })
+    const proposalId = (JSON.parse(proposed.json().result) as { proposalId: string }).proposalId
+    const card = thread().find((e) => e.kind === 'proposal')
+    expect(card).toMatchObject({ kind: 'proposal', proposal: { id: proposalId, title: 'Rename the hall', status: 'open' } })
+    const start = thread().find((e) => e.kind === 'messageStart')
+    expect(start).toMatchObject({ trigger: 'observation', severity: 'info' })
+    expect(card && 'messageId' in card && card.messageId).toBe(start && 'messageId' in start && start.messageId)
+    expect(thread().filter((e) => e.kind === 'messageEnd')).toHaveLength(1)
+
+    // The card works: applying it from the browser changes the plan.
+    runtime!.applyProposal(proposalId)
+    expect((await app.inject({ method: 'GET', url: '/api/state' })).json().plan.name).toBe('Hall B')
+
+    await app.inject({ method: 'POST', url: '/api/tools/export_plan', payload: { input: {} } })
+    expect(thread().find((e) => e.kind === 'link')).toMatchObject({ label: 'Plan JSON', href: expect.stringMatching(/^\/api\/plan\/export\/file\//) })
+
+    // A read tool leaves the thread alone.
+    const before = thread().length
+    await app.inject({ method: 'POST', url: '/api/tools/get_evaluation', payload: { input: { detail: 'summary' } } })
+    expect(thread()).toHaveLength(before)
   })
 
   it('POST /api/chat rejects an empty message', async () => {

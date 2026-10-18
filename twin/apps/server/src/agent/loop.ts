@@ -126,7 +126,7 @@ const CALL_LABELS: Record<string, string> = {
 }
 
 /** "cmd_setRackType" → "Set rack type"; other tools use their label. */
-function callSummary(name: string): string {
+export function callSummary(name: string): string {
   const label = CALL_LABELS[name]
   if (label) return label
   const words = name.replace(/^cmd_/, '').replace(/_/g, ' ').replace(/([A-Z])/g, ' $1').toLowerCase().trim()

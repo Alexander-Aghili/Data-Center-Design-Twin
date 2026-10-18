@@ -424,6 +424,59 @@ describe('agent runtime', () => {
       expect(sent).not.toContain('agent edit')
     })
 
+    it('edit bursts during a running turn coalesce into one observation after it, diffed from the first to the last', async () => {
+      vi.useFakeTimers()
+      let open = () => undefined as void
+      const gate = new Promise<void>((resolve) => {
+        open = resolve
+      })
+      const { client, requests } = fakeClient([{ ...(reply('Thinking about it.') as Extract<Step, { content: unknown }>), gate }, reply('Both edits made things worse.')])
+      const rt = createAgentRuntime({ store: fakeStore(), tools: [], client, dataDir, diff: testDiff })
+      const rec = recorder(rt)
+      const a = evaluation([check('cooling.rackHeatLimit:g2', 'warn'), check('power.ups:site', 'pass')])
+      const b = evaluation([check('cooling.rackHeatLimit:g2', 'warn'), check('power.ups:site', 'fail')])
+      rt.handleChat('long question')
+      await vi.advanceTimersByTimeAsync(10)
+      expect(requests).toHaveLength(1)
+      // Two separate bursts, each closed by the debounce while the chat turn is still running.
+      rt.handleChange(change(base, a, 'burst one'))
+      await vi.advanceTimersByTimeAsync(1600)
+      rt.handleChange(change(a, b, 'burst two'))
+      await vi.advanceTimersByTimeAsync(1600)
+      expect(requests).toHaveLength(1)
+      open()
+      await rec.turnsDone(2)
+      await vi.advanceTimersByTimeAsync(3000)
+      expect(requests).toHaveLength(2)
+      const event = lastUserText(requests[1]!)
+      expect(event).toContain('burst one; burst two')
+      expect(event).toContain('cooling.rackHeatLimit:g2')
+      expect(event).toContain('power.ups:site')
+      expect(rec.events.filter((e) => e.kind === 'messageStart').map((e) => e.kind === 'messageStart' && e.trigger)).toEqual(['chat', 'observation'])
+    })
+
+    it('a queued observation whose merged edits cancel out is dropped', async () => {
+      vi.useFakeTimers()
+      let open = () => undefined as void
+      const gate = new Promise<void>((resolve) => {
+        open = resolve
+      })
+      const { client, requests } = fakeClient([{ ...(reply('Thinking about it.') as Extract<Step, { content: unknown }>), gate }])
+      const rt = createAgentRuntime({ store: fakeStore(), tools: [], client, dataDir, diff: testDiff })
+      const rec = recorder(rt)
+      const worse = evaluation([check('cooling.rackHeatLimit:g2', 'fail'), check('power.ups:site', 'pass')])
+      rt.handleChat('long question')
+      await vi.advanceTimersByTimeAsync(10)
+      rt.handleChange(change(base, worse, 'swap racks'))
+      await vi.advanceTimersByTimeAsync(1600)
+      rt.handleChange({ ...change(worse, base, 'Undo'), kind: 'undo' })
+      await vi.advanceTimersByTimeAsync(1600)
+      open()
+      await rec.turnsDone(1)
+      await vi.advanceTimersByTimeAsync(3000)
+      expect(requests).toHaveLength(1)
+    })
+
     it('severity problem when any worsened check is fail', async () => {
       vi.useFakeTimers()
       const { client } = fakeClient([reply('UPS is close to its limit.'), reply('Rack heat now fails.')])
