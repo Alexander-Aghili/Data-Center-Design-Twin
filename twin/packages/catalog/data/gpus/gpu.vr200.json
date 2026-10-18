@@ -1,0 +1,51 @@
+{
+  "id": "gpu.vr200",
+  "kind": "gpu",
+  "name": "NVIDIA Rubin (VR200)",
+  "vendor": "NVIDIA",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "nv-vr",
+      "url": "https://www.nvidia.com/en-us/data-center/vera-rubin-nvl72/",
+      "title": "NVIDIA Vera Rubin NVL72 product page"
+    },
+    {
+      "id": "moduledge-vr",
+      "url": "https://moduledge.com/blog/nvidia-vera-rubin",
+      "title": "ModulEdge: NVIDIA Vera Rubin for data center providers"
+    }
+  ],
+  "summary": "Rubin GPU with HBM4, used in the Vera Rubin NVL72 rack. Compute and memory are per-GPU shares of NVIDIA's published rack totals. Power is not published; the value is an estimate.",
+  "tdpW": {
+    "value": 1800,
+    "low": 1800,
+    "high": 2300,
+    "unit": "W",
+    "basis": "estimate",
+    "source": "https://moduledge.com/blog/nvidia-vera-rubin",
+    "note": "Not published by NVIDIA. ModulEdge cites Ming-Chi Kuo: about 1.8 kW baseline, up to about 2.3 kW in the Max-P configuration. Value is the baseline; high is Max-P."
+  },
+  "fp8Pflops": {
+    "value": 17.5,
+    "unit": "PFLOPS",
+    "basis": "calculated",
+    "source": "https://www.nvidia.com/en-us/data-center/vera-rubin-nvl72/",
+    "note": "Dense. NVIDIA lists 1,260 PFLOPS FP8/FP6 training (dense) per 72-GPU rack: 1,260 / 72 = 17.5."
+  },
+  "fp4Pflops": {
+    "value": 35,
+    "unit": "PFLOPS",
+    "basis": "calculated",
+    "source": "https://www.nvidia.com/en-us/data-center/vera-rubin-nvl72/",
+    "note": "Dense. NVIDIA lists 2,520 PFLOPS NVFP4 training (dense) per 72-GPU rack: 2,520 / 72 = 35. The 3,600 PFLOPS inference figure is sparse (50 per GPU)."
+  },
+  "hbmGb": {
+    "value": 288,
+    "unit": "GB",
+    "basis": "calculated",
+    "source": "https://www.nvidia.com/en-us/data-center/vera-rubin-nvl72/",
+    "note": "NVIDIA lists 20.7 TB HBM4 per 72-GPU rack: 20,700 / 72 = 287.5, rounded to 288."
+  },
+  "cooling": "liquid"
+}
