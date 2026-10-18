@@ -140,6 +140,13 @@ describe('Strip', () => {
     expect(container.querySelector('[data-node="R1"]')!.textContent).toMatch(/\d+ copper, \d+ fiber|\d+ fiber|\d+ copper/)
   })
 
+  it('NetworkTiers counts links whose racks are named by placement id, as the engine names them', () => {
+    const links = evaluation.network.links.map((l) => ({ ...l, fromId: l.fromId.replace(/^rack:/, '') }))
+    useTwinStore.setState({ plan, evaluation: { ...evaluation, network: { ...evaluation.network, links } }, selection: null })
+    const { container } = render(<Strip layer="network" />)
+    for (const row of ['R1', 'R3']) expect(container.querySelector(`[data-node="${row}"]`)!.textContent).not.toContain('no links')
+  })
+
   it('renders nothing for layers without a schematic and a prompt for an empty hall', () => {
     load()
     const { container } = render(<Strip layer="workload" />)

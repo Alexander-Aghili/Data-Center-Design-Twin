@@ -37,7 +37,8 @@ function RackSymbol({ x, y }: { x: number; y: number }) {
 export function NetworkTiers({ plan, evaluation, select }: LayerStripProps) {
   const { racks, network, equipment, checks } = evaluation
   const leafEquipment = equipment.filter((e) => e.category === 'leaf')
-  const rowOf = new Map(racks.map((r) => [r.objectId, r.rowId]))
+  // The engine names a link's rack by placement id ("R1-00"); scene object ids ("rack:R1-00") are accepted too.
+  const rowOf = new Map(racks.flatMap((r) => [[r.placementId, r.rowId] as const, [r.objectId, r.rowId] as const]))
   const leafOf = (toId: string): SizedEquipment | undefined =>
     leafEquipment.find((e) => e.key === toId || e.objectIds.includes(toId) || e.positionIds.includes(toId))
 

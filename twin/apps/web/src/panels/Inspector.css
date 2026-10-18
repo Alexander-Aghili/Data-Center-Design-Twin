@@ -7,7 +7,8 @@
   z-index: var(--z-drawer);
   display: flex;
   flex-direction: column;
-  width: 340px;
+  /* Narrower on small screens, so the camera (which centers shots in what the drawer leaves) keeps a usable view. */
+  width: clamp(296px, 42%, 340px);
   max-width: calc(100% - 2 * var(--space-3));
   background: var(--panel-raised);
   border: 1px solid var(--graphite);

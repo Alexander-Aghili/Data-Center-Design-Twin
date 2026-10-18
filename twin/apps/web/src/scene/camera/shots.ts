@@ -41,9 +41,9 @@ const GPUS_PER_TRAY = 4
  */
 const STYLE: Record<ShotId, { elevationDeg: number; offsetDeg: number; fov: number; margin: number }> = {
   // The site keeps a ring of yard and feeds around the building, so it reads wider than the hall.
-  site: { elevationDeg: 32, offsetDeg: 50, fov: 34, margin: 1.6 },
+  site: { elevationDeg: 32, offsetDeg: 50, fov: 34, margin: 1.35 },
   hall: { elevationDeg: 56, offsetDeg: 58, fov: 36, margin: 1.12 },
-  row: { elevationDeg: 32, offsetDeg: 60, fov: 38, margin: 1.1 },
+  row: { elevationDeg: 44, offsetDeg: 55, fov: 38, margin: 1.2 },
   rack: { elevationDeg: 26, offsetDeg: 22, fov: 34, margin: 1.25 },
   tray: { elevationDeg: 40, offsetDeg: 14, fov: 32, margin: 1.3 },
   // Looks down onto the slid-out tray: board, GPU packages, cold plates, hoses and the quick disconnects at its rear.

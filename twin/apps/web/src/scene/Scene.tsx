@@ -20,22 +20,23 @@ import { PipeFillTransition } from './overlays/pipeFill'
 import { PALETTE } from './palette'
 import { Picking } from './Picking'
 
-const FLOW_OVERLAYS = new Set<Overlay>(['air', 'liquid', 'temperature'])
+const BUSWAY_FREE_OVERLAYS = new Set<Overlay>(['air', 'liquid', 'temperature', 'floorLoad'])
 
 function World() {
   const plan = useTwinStore((s) => s.plan)
   const evaluation = useTwinStore((s) => s.evaluation)
   const shot = useTwinStore((s) => s.shot)
   const overlay = useTwinStore((s) => s.overlay)
+  const layer = useTwinStore((s) => s.activeLayer)
   const openRack = useRackOpenness((s) => (s.value > 0 ? s.placementId : null))
 
   // Stable while unchanged, so a re-evaluation does not rebuild pipe and deck geometry.
   const units = useStable(useMemo(() => (plan ? equipmentUnits(plan, evaluation) : []), [plan, evaluation]))
   const runs = useStable(useMemo(() => (plan ? pipeRuns(plan, units) : []), [plan, units]))
-  // Overhead busways hide under the air, liquid and temperature overlays: several ducts per row would bar the view
-  // down into the aisles where those flows run.
-  const flowOverlay = FLOW_OVERLAYS.has(overlay)
-  const hallUnits = useMemo(() => (flowOverlay ? units.filter((u) => u.kind !== 'busway') : units), [units, flowOverlay])
+  // Overhead busways hide under the flow and floor load overlays and on the workload layer: several ducts per row
+  // would bar the view down into the aisles, bays and racks those views color.
+  const hideBusways = BUSWAY_FREE_OVERLAYS.has(overlay) || layer === 'workload'
+  const hallUnits = useMemo(() => (hideBusways ? units.filter((u) => u.kind !== 'busway') : units), [units, hideBusways])
 
   if (!plan) return null
   return (
