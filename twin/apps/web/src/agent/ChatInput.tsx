@@ -1,0 +1,61 @@
+import { useState, type KeyboardEvent } from 'react'
+import type { BackendStatus } from '../state/backend'
+import { useTwinStore } from '../state/store'
+
+const PLACEHOLDER: Record<BackendStatus, string> = {
+  online: 'Ask about this plan',
+  connecting: 'Connecting to the server',
+  offline: 'Offline. Reconnecting to the server',
+  local: 'The agent needs the local server',
+}
+
+const MAX_ROWS = 6
+
+/** Enter sends, Shift+Enter adds a line. The agent lives in the server, so the input only works online. */
+export function ChatInput() {
+  const connection = useTwinStore((s) => s.connection)
+  const chat = useTwinStore((s) => s.chat)
+  const [text, setText] = useState('')
+  const disabled = connection !== 'online'
+  const rows = Math.min(MAX_ROWS, text.split('\n').length)
+
+  const send = () => {
+    const message = text.trim()
+    if (!message || disabled) return
+    chat(message)
+    setText('')
+  }
+
+  const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key !== 'Enter' || e.shiftKey || e.nativeEvent.isComposing) return
+    e.preventDefault()
+    send()
+  }
+
+  return (
+    <form
+      className="ag-input"
+      onSubmit={(e) => {
+        e.preventDefault()
+        send()
+      }}
+    >
+      <textarea
+        aria-label="Message the design agent"
+        aria-describedby="ag-input-hint"
+        rows={rows}
+        value={text}
+        placeholder={PLACEHOLDER[connection]}
+        disabled={disabled}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={onKeyDown}
+      />
+      <span id="ag-input-hint" hidden>
+        Enter sends the message, Shift+Enter starts a new line.
+      </span>
+      <button type="submit" className="ag-input__send" disabled={disabled || !text.trim()}>
+        Send
+      </button>
+    </form>
+  )
+}
