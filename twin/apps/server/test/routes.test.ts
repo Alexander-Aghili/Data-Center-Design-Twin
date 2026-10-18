@@ -206,6 +206,28 @@ describe('HTTP routes', () => {
     expect(unreadable.json().ok).toBe(false)
   })
 
+  it('GET /api/plan/export/file/:name serves an exported plan and validates the name', async () => {
+    const dataDir = tempDataDir()
+    mkdirSync(join(dataDir, 'exports'))
+    writeFileSync(join(dataDir, 'exports', '2026-10-18T15-00-00-000Z-default-hall.json'), '{"name":"Default hall"}')
+    writeFileSync(join(dataDir, 'secret.json'), '{"secret":true}')
+    const app = await makeApp(dataDir)
+
+    const ok = await app.inject({ method: 'GET', url: '/api/plan/export/file/2026-10-18T15-00-00-000Z-default-hall.json' })
+    expect(ok.statusCode).toBe(200)
+    expect(ok.headers['content-type']).toMatch(/^application\/json/)
+    expect(ok.headers['content-disposition']).toBe('attachment; filename="2026-10-18T15-00-00-000Z-default-hall.json"')
+    expect(ok.json()).toEqual({ name: 'Default hall' })
+
+    expect((await app.inject({ method: 'GET', url: '/api/plan/export/file/missing.json' })).statusCode).toBe(404)
+    expect((await app.inject({ method: 'GET', url: '/api/plan/export/file/brief.md' })).statusCode).toBe(400)
+    for (const attempt of ['..%2Fsecret.json', '..%5Csecret.json', '%2Fetc%2Fpasswd.json']) {
+      const res = await app.inject({ method: 'GET', url: `/api/plan/export/file/${attempt}` })
+      expect(res.statusCode, attempt).toBe(400)
+      expect(res.body).not.toContain('"secret":true')
+    }
+  })
+
   it('GET /api/brief returns the deterministic brief for openfoam and rejects other targets', async () => {
     const app = await makeApp()
     const res = await app.inject({ method: 'GET', url: '/api/brief?target=openfoam' })

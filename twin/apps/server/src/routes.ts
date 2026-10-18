@@ -8,10 +8,10 @@ import type { FastifyInstance, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { generateBrief } from './brief/openfoam'
 import type { AgentRuntime, PlanStore } from './contracts'
+import { BRIEF_FILE_NAME, EXPORT_FILE_NAME, fileSlug } from './files'
 
-/** Names of briefs the agent writes into `dataDir/briefs/`. No slashes, so no path traversal. */
-const BRIEF_FILE_NAME = /^[\w.-]+\.md$/
 const MARKDOWN = 'text/markdown; charset=utf-8'
+const JSON_TYPE = 'application/json; charset=utf-8'
 
 const CommandBody = z.object({ command: CommandSchema })
 const CommandsBody = z.object({ commands: z.array(CommandSchema).min(1) })
@@ -30,14 +30,8 @@ function parse<T>(schema: z.ZodType<T>, value: unknown, reply: FastifyReply, pre
   return { ok: false }
 }
 
-/** "Default hall" → "default-hall", for download file names. */
-function fileSlug(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'plan'
-}
-
 export function registerRoutes(app: FastifyInstance, deps: { store: PlanStore; agent: AgentRuntime; dataDir: string }): void {
   const { store, agent, dataDir } = deps
-  const briefsDir = resolve(dataDir, 'briefs')
 
   app.get('/api/health', async () => ({ ok: true }))
 
@@ -95,20 +89,26 @@ export function registerRoutes(app: FastifyInstance, deps: { store: PlanStore; a
     return reply.type(MARKDOWN).send(generateBrief(plan, evaluation, query.data.target))
   })
 
-  app.get<{ Params: { name: string } }>('/api/brief/file/:name', async (request, reply) => {
-    const { name } = request.params
-    const file = resolve(briefsDir, name)
-    if (!BRIEF_FILE_NAME.test(name) || !file.startsWith(briefsDir + sep)) {
-      return reply.code(400).send({ ok: false, error: `Not a brief file name: ${name}` })
-    }
-    try {
-      const text = await readFile(file, 'utf8')
-      return reply.type(MARKDOWN).header('content-disposition', `attachment; filename="${name}"`).send(text)
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
-      return reply.code(404).send({ ok: false, error: `No brief named ${name}` })
-    }
-  })
+  /** Serves a file the agent wrote into `dataDir/<folder>/`, as a download; the name pattern rules out path traversal. */
+  const serveFile = (route: string, folder: string, pattern: RegExp, type: string, noun: string) => {
+    const dir = resolve(dataDir, folder)
+    app.get<{ Params: { name: string } }>(route, async (request, reply) => {
+      const { name } = request.params
+      const file = resolve(dir, name)
+      if (!pattern.test(name) || !file.startsWith(dir + sep)) {
+        return reply.code(400).send({ ok: false, error: `Not ${noun} file name: ${name}` })
+      }
+      try {
+        const text = await readFile(file, 'utf8')
+        return reply.type(type).header('content-disposition', `attachment; filename="${name}"`).send(text)
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
+        return reply.code(404).send({ ok: false, error: `No ${noun} named ${name}` })
+      }
+    })
+  }
+  serveFile('/api/brief/file/:name', 'briefs', BRIEF_FILE_NAME, MARKDOWN, 'a brief')
+  serveFile('/api/plan/export/file/:name', 'exports', EXPORT_FILE_NAME, JSON_TYPE, 'an exported plan')
 
   app.get('/api/tools', async () => agent.listTools())
 

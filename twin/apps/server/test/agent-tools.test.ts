@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, readdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { createDefaultPlan } from '@twin/catalog'
+import { createDefaultPlan, loadBuiltins, snapshotCatalog } from '@twin/catalog'
 import { createRegistry, defineCommand, listCommands } from '@twin/commands'
 import {
   COMMAND_TOOL_PREFIX,
@@ -520,7 +520,7 @@ describe('read', () => {
     expect((await run('get_hourly', { series: ['pue'], fromHour: 50, toHour: 10 })).ok).toBe(false)
   })
 
-  it('get_plan returns a section or the whole plan, and get_notes filters by target', async () => {
+  it('get_plan returns a section or a compact plan, and get_notes filters by target', async () => {
     const { run } = setup()
     expect(okJson(await run('get_plan', { section: 'cooling' }))).toMatchObject({ facilitySupplyC: 18 })
     expect(okJson(await run('get_plan', {})).name).toBe('Default hall')
@@ -560,6 +560,44 @@ describe('read', () => {
     expect(list.map((e) => e.id)).toEqual(['coolant.test'])
     expect(okJson(await run('get_catalog_entry', { id: 'coolant.test' }))).toMatchObject({ id: 'coolant.test', glycolFraction: { value: 0.25 } })
     expect((await run('get_catalog_entry', { id: 'nope' })).ok).toBe(false)
+  })
+})
+
+describe('get_plan size', () => {
+  // The server's plan carries snapshotted catalog entries, the Dallas climate with two 8760-hour series among them.
+  const snapshotted = () => snapshotCatalog(createDefaultPlan(), loadBuiltins().entries)
+
+  it('the default plan reads in under 8 KB, with catalog rows instead of entries', async () => {
+    const { run, store } = setup()
+    store.replace(snapshotted())
+    const content = okContent(await run('get_plan', {}))
+    expect(Buffer.byteLength(content, 'utf8')).toBeLessThan(8 * 1024)
+    expect(content).not.toContain('dryBulbC')
+    const plan = JSON.parse(content) as {
+      catalog: { entries: { id: string; kind: string }[] }
+      placements: { count: number; byRow: Record<string, Record<string, number[]>> }
+      hall: { rows: unknown[]; positions: unknown[]; bays: { count: number } }
+      cooling: unknown
+      rackGroups: unknown[]
+    }
+    expect(plan.catalog.entries.map((e) => e.id)).toContain('climate.dallas')
+    expect(plan.placements.count).toBe(80)
+    expect(plan.placements.byRow.R1?.g1).toHaveLength(16)
+    expect(plan.hall.rows).toHaveLength(8)
+    expect(plan.hall.bays.count).toBe(store.state().plan.hall.bays.length)
+    expect(plan.cooling).toEqual(store.state().plan.cooling)
+    expect(plan.rackGroups).toEqual(store.state().plan.rackGroups)
+  })
+
+  it('sections come in full, except the catalog, which comes as rows', async () => {
+    const { run, store } = setup()
+    store.replace(snapshotted())
+    expect(okJson(await run('get_plan', { section: 'hall' }))).toEqual(store.state().plan.hall)
+    expect(JSON.parse(okContent(await run('get_plan', { section: 'placements' })))).toEqual(store.state().plan.placements)
+    const catalog = okContent(await run('get_plan', { section: 'catalog' }))
+    expect(Buffer.byteLength(catalog, 'utf8')).toBeLessThan(8 * 1024)
+    expect(catalog).not.toContain('dryBulbC')
+    expect(catalog).toContain('get_catalog_entry')
   })
 })
 
@@ -630,11 +668,20 @@ describe('documents', () => {
     expect(okJson(outcome).href).toBe(`/api/brief/file/${name}`)
   })
 
-  it('export_plan returns the plan JSON and a download link', async () => {
-    const { run, store } = setup()
+  it('export_plan writes dataDir/exports/<name>.json and returns a link, not the plan', async () => {
+    const { run, store, dataDir } = setup()
+    store.replace(snapshotCatalog(createDefaultPlan(), loadBuiltins().entries))
     const outcome = await run('export_plan', {})
-    expect(JSON.parse(okContent(outcome))).toEqual(store.state().plan)
-    if (outcome.ok) expect(outcome.events).toEqual([{ kind: 'link', label: 'Plan JSON', href: '/api/plan/export' }])
+    const content = okContent(outcome)
+    expect(Buffer.byteLength(content, 'utf8')).toBeLessThan(512)
+    const files = readdirSync(join(dataDir, 'exports'))
+    expect(files).toHaveLength(1)
+    const name = files[0] ?? ''
+    expect(name).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z-default-hall\.json$/)
+    expect(JSON.parse(readFileSync(join(dataDir, 'exports', name), 'utf8'))).toEqual(store.state().plan)
+    const href = `/api/plan/export/file/${name}`
+    expect(JSON.parse(content)).toMatchObject({ file: name, href })
+    if (outcome.ok) expect(outcome.events).toEqual([{ kind: 'link', label: 'Plan JSON', href }])
   })
 })
 

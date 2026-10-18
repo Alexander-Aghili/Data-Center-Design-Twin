@@ -1,10 +1,17 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { snapshotCatalog } from '@twin/catalog'
 import type { PlanStore } from '../../contracts.js'
+import { fileSlug, timestampedName } from '../../files.js'
 import { defineTool, success, type AgentTool, type BriefGenerator } from './schema.js'
 
-/** File name safe for `GET /api/brief/file/:name` (`^[\w.-]+\.md$`), e.g. 2026-10-18T09-30-00-000Z-openfoam.md. */
-const briefFileName = (target: string, now: Date) => `${now.toISOString().replace(/[:.]/g, '-')}-${target}.md`
+/** Writes `text` to `dataDir/<folder>/<name>` and returns its size in bytes. */
+function writeFile(dataDir: string, folder: string, name: string, text: string): number {
+  const dir = join(dataDir, folder)
+  mkdirSync(dir, { recursive: true })
+  writeFileSync(join(dir, name), text, 'utf8')
+  return Buffer.byteLength(text, 'utf8')
+}
 
 export function documentTools(deps: { store: PlanStore; brief: BriefGenerator; dataDir: string }): AgentTool[] {
   const { store, brief, dataDir } = deps
@@ -15,20 +22,26 @@ export function documentTools(deps: { store: PlanStore; brief: BriefGenerator; d
       (input) => {
         const { plan, evaluation } = store.state()
         const markdown = brief(plan, evaluation, input.target, input.agentNotes)
-        const dir = join(dataDir, 'briefs')
-        mkdirSync(dir, { recursive: true })
-        const name = briefFileName(input.target, new Date())
-        writeFileSync(join(dir, name), markdown, 'utf8')
+        // Safe for `GET /api/brief/file/:name`, e.g. 2026-10-18T09-30-00-000Z-openfoam.md.
+        const name = timestampedName(`${input.target}.md`, new Date())
+        const bytes = writeFile(dataDir, 'briefs', name, markdown)
         const href = `/api/brief/file/${name}`
-        return success({ file: name, href, bytes: Buffer.byteLength(markdown, 'utf8') }, 'Wrote the OpenFOAM simulation brief', [
+        return success({ file: name, href, bytes }, 'Wrote the OpenFOAM simulation brief', [
           { kind: 'link', label: 'OpenFOAM simulation brief', href },
         ])
       },
     ),
     defineTool(
       'export_plan',
-      'Returns the whole plan as JSON, the same file the export button downloads, and gives the person a download link. Use it when someone asks to export, save or share the plan.',
-      () => success(store.state().plan, 'Exported the plan', [{ kind: 'link', label: 'Plan JSON', href: '/api/plan/export' }]),
+      'Saves the plan as a self-contained JSON file (the catalog entries it uses copied in, the same document the export button downloads) and gives the person a download link. Returns the file name and size, not the plan; use get_plan to read it. Use it when someone asks to export, save or share the plan.',
+      () => {
+        const plan = snapshotCatalog(store.state().plan, store.builtins().entries)
+        // Safe for `GET /api/plan/export/file/:name`, e.g. 2026-10-18T09-30-00-000Z-default-hall.json.
+        const name = timestampedName(`${fileSlug(plan.name)}.json`, new Date())
+        const bytes = writeFile(dataDir, 'exports', name, JSON.stringify(plan, null, 2))
+        const href = `/api/plan/export/file/${name}`
+        return success({ file: name, href, bytes }, 'Exported the plan', [{ kind: 'link', label: 'Plan JSON', href }])
+      },
     ),
   ]
 }

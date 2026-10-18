@@ -59,7 +59,7 @@ export function parseInput<S extends z.ZodType>(schema: S, input: unknown): { ok
 
 // Property descriptions the zod contract cannot carry; merged into the generated JSON Schema.
 const PROPERTY_DESCRIPTIONS: Partial<Record<ToolName, Record<string, string>>> = {
-  get_plan: { section: 'Top-level plan key, e.g. "cooling", "rackGroups", "placements", "hall". Omit for the whole plan.' },
+  get_plan: { section: 'Top-level plan key, e.g. "cooling", "rackGroups", "placements", "hall". Omit for the compact plan.' },
   get_evaluation: { detail: '"summary" for headline and problem checks, "full" for every metric, check, rack, equipment item, row and bay.' },
   explain_check: { checkId: 'Check id as "<kind>:<subjectId>", e.g. "layout.floorBay:B3-2".' },
   get_hourly: {

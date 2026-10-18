@@ -1,5 +1,5 @@
 import { makeCatalogIndex } from '@twin/engine'
-import type { CatalogEntry, CatalogKind, Check, Evaluation, Status } from '@twin/schema'
+import type { CatalogEntry, CatalogKind, Check, Evaluation, Plan, Status } from '@twin/schema'
 import type { PlanStore } from '../../contracts.js'
 import { KNOWLEDGE_SLUGS, readKnowledge, searchKnowledge } from '../../knowledge/index.js'
 import { compactCheck, defineTool, failure, success, type AgentTool } from './schema.js'
@@ -88,6 +88,40 @@ function catalogRow(entry: CatalogEntry) {
   }
 }
 
+/** The plan's own catalog (snapshotted and custom entries) as rows; the numbers come from get_catalog_entry. */
+function catalogSection(catalog: Plan['catalog']) {
+  return { entries: Object.values(catalog).map(catalogRow), numbers: 'Use get_catalog_entry with an id for every number.' }
+}
+
+const range = (values: number[]) => (values.length ? { min: Math.min(...values), max: Math.max(...values) } : null)
+
+/**
+ * The plan small enough to read every turn: decisions in full; placements as slots per row and group;
+ * floor bays as a count with rating ranges; notes as counts; the catalog as rows. Sections come in full.
+ */
+function compactPlan(plan: Plan) {
+  const { hall, placements, notes, catalog, ...decisions } = plan
+  const byRow: Record<string, Record<string, number[]>> = {}
+  for (const p of placements) ((byRow[p.rowId] ??= {})[p.groupId] ??= []).push(p.slot)
+  const importance: Record<string, number> = {}
+  for (const n of notes) importance[n.importance] = (importance[n.importance] ?? 0) + 1
+  return {
+    ...decisions,
+    hall: {
+      ...hall,
+      bays: {
+        count: hall.bays.length,
+        ratingKnM2: range(hall.bays.map((b) => b.ratingKnM2)),
+        pointLimitKn: range(hall.bays.map((b) => b.pointLimitKn)),
+        detail: 'get_plan with section "hall" lists every bay.',
+      },
+    },
+    placements: { count: placements.length, byRow, ids: 'A rack in row R3 at slot 7 has id "R3-07".' },
+    notes: { count: notes.length, byImportance: importance, detail: 'get_notes returns the text.' },
+    catalog: catalogSection(catalog),
+  }
+}
+
 /** R-slug: catalog risks use bare slugs ("air-containment"); knowledge slugs carry the folder. */
 function resolveSlug(slug: string): string | null {
   if (KNOWLEDGE_SLUGS.includes(slug)) return slug
@@ -114,10 +148,12 @@ export function readTools(store: PlanStore): AgentTool[] {
   return [
     defineTool(
       'get_plan',
-      'Returns the current plan as JSON: site inputs, hall geometry, rack groups, placements, cooling, power and network decisions, equipment overrides, notes and custom catalog entries. Pass a section, such as "cooling" or "placements", to get only that part. Use it before changing or proposing anything, so ids and current values come from the plan.',
+      'Returns the current plan as compact JSON: site inputs, rack groups, cooling, power and network decisions, equipment overrides, hall rows and positions in full; placements as slots per row and group; floor bays, notes and catalog entries summarized. Pass a section, such as "hall", "placements" or "cooling", to get that part in full (the catalog section lists entries; get_catalog_entry gives the numbers). Use it before changing or proposing anything, so ids and current values come from the plan.',
       (input) => {
         const { plan } = store.state()
-        return input.section ? success(plan[input.section], `Read the plan's ${input.section}`) : success(plan, 'Read the plan')
+        if (!input.section) return success(compactPlan(plan), 'Read the plan')
+        const part = input.section === 'catalog' ? catalogSection(plan.catalog) : plan[input.section]
+        return success(part, `Read the plan's ${input.section}`)
       },
     ),
     defineTool(
