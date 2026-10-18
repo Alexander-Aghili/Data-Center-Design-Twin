@@ -3,10 +3,10 @@ import { defineCommand, type AnyCommandDef } from '../define'
 import { count, formatSlots, listSome, pad } from '../format'
 import { claim, findEntry, occupancy, requireGroup, requirePlacement, requireRow, slotProblem, widthResolver } from '../lookup'
 
-/** The group's rack width and display name for slot messages. */
+/** The group's rack width (one slot when its rack type is missing) and display name for slot messages. */
 function rackOf(plan: Plan, catalog: CatalogIndex, group: RackGroup): { width: number; name: string } {
   const rack = findEntry(plan, catalog, group.rackTypeId, 'rack')
-  return { width: widthResolver(plan, catalog)(group.id), name: rack?.name ?? group.name }
+  return { width: rack?.slotsWide ?? 1, name: rack?.name ?? group.name }
 }
 
 const groupName = (plan: Plan, groupId: string) => plan.rackGroups.find((g) => g.id === groupId)?.name ?? groupId

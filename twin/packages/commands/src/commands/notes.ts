@@ -14,11 +14,15 @@ function resolvesInPlan(plan: Plan, path: string): boolean {
   return true
 }
 
+/** "group:g1" → ["group", "g1"]; a target without a colon has an empty kind. */
+function splitTarget(target: string): [kind: string, id: string] {
+  const colon = target.indexOf(':')
+  return colon < 0 ? ['', target] : [target.slice(0, colon), target.slice(colon + 1)]
+}
+
 /** Rejects a note target that does not name something in the plan. */
 function assertTarget(plan: Plan, target: string): void {
-  const colon = target.indexOf(':')
-  const kind = target.slice(0, colon)
-  const id = target.slice(colon + 1)
+  const [kind, id] = splitTarget(target)
   const path = 'payload.target'
   if (kind === 'decision') {
     if (!id || !resolvesInPlan(plan, id)) {
@@ -34,7 +38,7 @@ function assertTarget(plan: Plan, target: string): void {
 }
 
 function targetLabel(plan: Plan, target: string): string {
-  const [kind, id] = [target.slice(0, target.indexOf(':')), target.slice(target.indexOf(':') + 1)]
+  const [kind, id] = splitTarget(target)
   if (kind === 'group') return `rack group "${plan.rackGroups.find((g) => g.id === id)?.name ?? id}"`
   if (kind === 'layer') return `the ${id} layer`
   if (kind === 'rack') return `rack ${id}`

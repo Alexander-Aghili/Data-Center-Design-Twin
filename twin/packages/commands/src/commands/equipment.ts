@@ -35,13 +35,13 @@ function keyKind(key: string): KeyKind {
   )
 }
 
-function requireModel(plan: Plan, catalog: CatalogIndex, kind: KeyKind, modelId: string): string {
-  if (kind.category === 'plant') return requireEntry(plan, catalog, modelId, 'heatRejection', 'payload.modelId').id
+function assertModel(plan: Plan, catalog: CatalogIndex, kind: KeyKind, modelId: string): void {
   const category = kind.category
-  return requireEntry(plan, catalog, modelId, 'equipment', 'payload.modelId', { label: `${category} model`, accept: (e) => e.category === category }).id
+  if (category === 'plant') requireEntry(plan, catalog, modelId, 'heatRejection', 'payload.modelId')
+  else requireEntry(plan, catalog, modelId, 'equipment', 'payload.modelId', { label: `${category} model`, accept: (e) => e.category === category })
 }
 
-function requirePositions(plan: Plan, kind: KeyKind, positionIds: string[]): void {
+function assertPositions(plan: Plan, kind: KeyKind, positionIds: string[]): void {
   for (const id of positionIds) {
     const position = plan.hall.positions.find((p) => p.id === id)
     if (!position) {
@@ -64,8 +64,8 @@ const overrideEquipment = defineCommand({
     if (payload.modelId === undefined && payload.count === undefined && payload.positionIds === undefined) {
       throw new CommandError('overrideEquipment needs modelId, count or positionIds', 'payload')
     }
-    if (payload.modelId !== undefined) requireModel(draft, ctx.catalog, kind, payload.modelId)
-    if (payload.positionIds !== undefined) requirePositions(draft, kind, payload.positionIds)
+    if (payload.modelId !== undefined) assertModel(draft, ctx.catalog, kind, payload.modelId)
+    if (payload.positionIds !== undefined) assertPositions(draft, kind, payload.positionIds)
     const { key, ...fields } = payload
     const existing = draft.overrides.find((o) => o.key === key)
     if (existing) Object.assign(existing, fields)

@@ -33,7 +33,7 @@ export function findEntry<K extends CatalogKind>(plan: Plan, catalog: CatalogInd
 }
 
 /** Every entry visible to the plan: the resolved catalog with the plan's own entries over it. */
-export function allEntries(plan: Plan, catalog: CatalogIndex): CatalogEntry[] {
+function allEntries(plan: Plan, catalog: CatalogIndex): CatalogEntry[] {
   const byId = new Map(catalog.all().map((e) => [e.id, e]))
   for (const entry of Object.values(plan.catalog)) byId.set(entry.id, entry)
   return [...byId.values()]
@@ -102,7 +102,7 @@ export function groupLabel(plan: Plan, groupId: string): string {
   return rows ? `${name} (${rows})` : name
 }
 
-export type WidthOf = (groupId: string) => number
+type WidthOf = (groupId: string) => number
 
 /**
  * Slots a group's racks take. A group whose rack type is not in the catalog counts as one slot
@@ -116,7 +116,7 @@ export function widthResolver(plan: Plan, catalog: CatalogIndex): WidthOf {
 }
 
 /** Slot → id of the placement covering it, per row. */
-export type Occupancy = Map<string, Map<number, string>>
+type Occupancy = Map<string, Map<number, string>>
 
 export function occupancy(plan: Plan, widthOf: WidthOf, exceptId?: string): Occupancy {
   const occ: Occupancy = new Map(plan.hall.rows.map((r) => [r.id, new Map()]))

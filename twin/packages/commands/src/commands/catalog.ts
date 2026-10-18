@@ -29,12 +29,11 @@ function usesOf(plan: Plan, id: string): string[] {
   return uses
 }
 
-/** The plan's custom entry with this id; built-ins and unknown ids are rejected with `verb` in the message. */
-function requireCustom(plan: Plan, catalog: CatalogIndex, id: string, verb: string, path: string, hint = ''): CatalogEntry {
+/** The plan's custom entry with this id, `builtin` for built-in ids, or undefined. */
+function customEntry(plan: Plan, catalog: CatalogIndex, id: string): CatalogEntry | 'builtin' | undefined {
   const own = plan.catalog[id]
   if (own?.custom === true) return own
-  if (own || catalog.get(id)) throw new CommandError(`${id} is a built-in entry and cannot be ${verb}${hint}`, path)
-  throw new CommandError(`No custom catalog entry "${id}"${verb === 'changed' ? '. Use addCatalogEntry to create it.' : ''}`, path)
+  return own || catalog.get(id) ? 'builtin' : undefined
 }
 
 const describeEntry = (entry: { kind: CatalogEntry['kind']; name: string; id: string }) => `custom ${KIND_LABEL[entry.kind]} "${entry.name}" (${entry.id})`
@@ -67,7 +66,11 @@ const updateCatalogEntry = defineCommand({
     'Replaces a custom catalog entry, matched by id, with a new full version of the same kind. Built-in entries cannot be changed; add a custom copy with a new id instead. A wider rack type is rejected if its placed racks would no longer fit.',
   apply(draft, payload, ctx) {
     const entry: CatalogEntry = { ...payload.entry, custom: true }
-    const old = requireCustom(draft, ctx.catalog, entry.id, 'changed', 'payload.entry.id', '. Add a custom copy with a new id instead.')
+    const old = customEntry(draft, ctx.catalog, entry.id)
+    if (old === 'builtin') {
+      throw new CommandError(`${entry.id} is a built-in entry and cannot be changed. Add a custom copy with a new id instead.`, 'payload.entry.id')
+    }
+    if (!old) throw new CommandError(`No custom catalog entry "${entry.id}". Use addCatalogEntry to create it.`, 'payload.entry.id')
     if (old.kind !== entry.kind) {
       throw new CommandError(`${entry.id} is a ${KIND_LABEL[old.kind]}; an update cannot change it to a ${KIND_LABEL[entry.kind]}`, 'payload.entry.kind')
     }
@@ -89,7 +92,9 @@ const removeCatalogEntry = defineCommand({
   description:
     'Removes a custom catalog entry by id. Built-in entries cannot be removed, and an entry still used by the plan (site, cooling, rack groups, overrides or other custom entries) is rejected with the paths that use it.',
   apply(draft, payload, ctx) {
-    requireCustom(draft, ctx.catalog, payload.id, 'removed', 'payload.id')
+    const entry = customEntry(draft, ctx.catalog, payload.id)
+    if (entry === 'builtin') throw new CommandError(`${payload.id} is a built-in entry and cannot be removed`, 'payload.id')
+    if (!entry) throw new CommandError(`No custom catalog entry "${payload.id}"`, 'payload.id')
     const uses = usesOf(draft, payload.id)
     if (uses.length > 0) throw new CommandError(`${payload.id} is in use by ${uses.join(', ')}. Change those first.`, 'payload.id')
     delete draft.catalog[payload.id]
