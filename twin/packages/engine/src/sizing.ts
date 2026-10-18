@@ -1,4 +1,5 @@
 import {
+  COOLANT,
   num,
   type Check,
   type EquipmentEntry,
@@ -91,6 +92,23 @@ function workingUnits(count: number, redundancy: Redundancy): number {
 /** Heat a rack puts into a water or coolant loop at the rack: its technical loop, else facility water (RDHx). */
 export function loopW(rack: RackResult): number {
   return rack.liquidW > 0 ? rack.liquidW : rack.facilityWaterW
+}
+
+/**
+ * A rack's loop fluid and design flow, ṁ = Q / (cp·ΔT), in L/s with the fluid's catalog cp and ρ. Two-phase loops
+ * (R-2p) boil near-isothermally, so the method's ΔT is the facility-water rise and the flow is facility water's.
+ */
+export function loopFlow(ctx: EvalContext, rack: RackResult): { twoPhase: boolean; designLps: number | null } | null {
+  const method = groupEntries(ctx, rack.groupId).method
+  const heatW = loopW(rack)
+  if (!method || heatW <= 0) return null
+  const coolant = method.coolantId ? ctx.catalog.get(method.coolantId, 'coolant') : undefined
+  const twoPhase = coolant?.twoPhase ?? false
+  const fluid = twoPhase ? ctx.catalog.get(COOLANT.WATER, 'coolant') : coolant
+  const cp = fluid ? num(fluid.cpJPerKgK) : null
+  const rho = fluid ? num(fluid.densityKgM3) : null
+  const deltaTK = num(method.deltaTK)
+  return { twoPhase, designLps: cp && rho && deltaTK ? (heatW / (cp * deltaTK) / rho) * 1000 : null }
 }
 
 /** R-pump: a method's own pump fraction counts only when it has no CDU (the CDU's pumps are counted instead). */
@@ -247,11 +265,17 @@ export interface CduFill extends Fill {
   rowId: string
 }
 
-/** CDUs per row = ceil(liquid heat / capacity) + redundancy, in the CDU positions that serve the row. */
+/**
+ * CDUs per row = max(ceil(liquid heat / capacity), ceil(design flow / max flow)) + redundancy, in the CDU positions
+ * that serve the row. A model without a known max flow is sized on heat.
+ */
 export function planCdus(ctx: EvalContext, racks: RackResult[]): CduFill[] {
   const load = new Map<string, number>()
+  const flow = new Map<string, number>()
   for (const r of racks) {
-    if (r.liquidW > 0 && groupEntries(ctx, r.groupId).method?.requiresCdu) load.set(r.rowId, (load.get(r.rowId) ?? 0) + r.liquidW)
+    if (r.liquidW <= 0 || !groupEntries(ctx, r.groupId).method?.requiresCdu) continue
+    load.set(r.rowId, (load.get(r.rowId) ?? 0) + r.liquidW)
+    flow.set(r.rowId, (flow.get(r.rowId) ?? 0) + (loopFlow(ctx, r)?.designLps ?? 0))
   }
   const candidates = equipmentCandidates(ctx, 'cdu', 'capacityW', (w) => w)
   const free = freeMap(ctx.plan)
@@ -259,12 +283,17 @@ export function planCdus(ctx: EvalContext, racks: RackResult[]): CduFill[] {
     .filter((row) => load.has(row.id) || ctx.plan.overrides.some((o) => o.key === `cdu:${row.id}`))
     .map((row) => {
       const loadW = load.get(row.id) ?? 0
+      const flowLps = flow.get(row.id) ?? 0
+      const units = (c: Candidate, h: number) => {
+        const maxFlow = param(c, 'maxFlowLps')
+        return Math.max(Math.ceil(loadW / (c.unit * h)), maxFlow ? Math.ceil(flowLps / (maxFlow * h)) : 0)
+      }
       const demand: Demand = {
         key: `cdu:${row.id}`,
         category: 'cdu',
         loadW,
         candidates,
-        units: (c, h) => Math.ceil(loadW / (c.unit * h)),
+        units,
         positions: ctx.plan.hall.positions.filter((p) => p.kind === 'cdu' && p.servesRows.includes(row.id)),
         redundancy: ctx.plan.power.redundancy,
       }
@@ -470,7 +499,8 @@ function buswayAmpsPerW(e: EquipmentEntry | undefined): number | null {
 /**
  * UPS modules, busways per row and transformers, with the loads the power checks use (Task 7), so that
  * auto-sized units pass them: racks at catalog peak plus optics; UPS = IT peak / distribution efficiency;
- * busway design current = row peak × peak-to-average / (√3·V·pf) / oversubscription allowance; transformers =
+ * busway design current = row peak / (√3·V·pf) / oversubscription allowance (rack peak already is the electrical
+ * peak, so no peak-to-average factor); transformers =
  * facility power at the worst cooling hour, in VA at the busway power factor.
  */
 function electricalFills(ctx: EvalContext, racks: RackResult[], coolingItems: SizedEquipment[]): Fill[] {
@@ -483,15 +513,10 @@ function electricalFills(ctx: EvalContext, racks: RackResult[], coolingItems: Si
   if (rackPeak <= 0) return []
   const opticsW = networkFabric(ctx, racks).network.opticsW
   const itPeakW = rackPeak + (Number.isFinite(opticsW) ? opticsW : 0)
-  const free = freeMap(ctx.plan)
   const electrical = ctx.plan.hall.positions.filter((p) => p.kind === 'electrical')
-
   const upsLoad = itPeakW / (rule(ctx, 'distributionEfficiency') ?? 1)
   const upsCandidates = equipmentCandidates(ctx, 'ups', 'moduleW', (w) => w)
-  const ups = fill(ctx, { key: 'ups', category: 'ups', loadW: upsLoad, candidates: upsCandidates, units: (c, h) => Math.ceil(upsLoad / (c.unit * h)), positions: electrical, redundancy }, free)
 
-  const purposeRule = { training: 'peakToAverageTraining', inference: 'peakToAverageInference', mixed: 'peakToAverageMixed' } as const
-  const peakToAverage = rule(ctx, purposeRule[ctx.plan.workload.purpose]) ?? 1
   const allowance = ctx.plan.power.oversubscription
   const buswayCandidates = equipmentCandidates(ctx, 'busway', 'ratingA', (a, e) => {
     const k = buswayAmpsPerW(e)
@@ -500,8 +525,8 @@ function electricalFills(ctx: EvalContext, racks: RackResult[], coolingItems: Si
   const busways = ctx.plan.hall.rows.flatMap((row) => {
     const rowPeak = sumBy(racks.filter((r) => r.rowId === row.id), peakOf)
     if (rowPeak <= 0) return []
-    const units = (c: Candidate, h: number) => Math.ceil((rowPeak * (buswayAmpsPerW(c.entry) ?? 0) * peakToAverage) / allowance / (c.unit * h))
-    return [fill(ctx, { key: `busway:${row.id}`, category: 'busway', loadW: rowPeak, candidates: buswayCandidates, units, positions: null, redundancy }, free)]
+    const units = (c: Candidate, h: number) => Math.ceil((rowPeak * (buswayAmpsPerW(c.entry) ?? 0)) / allowance / (c.unit * h))
+    return [fill(ctx, { key: `busway:${row.id}`, category: 'busway', loadW: rowPeak, candidates: buswayCandidates, units, positions: null, redundancy }, new Map())]
   })
 
   const pf = param(busways[0]?.model ?? buswayCandidates[0] ?? null, 'powerFactor') ?? 1
@@ -510,11 +535,24 @@ function electricalFills(ctx: EvalContext, racks: RackResult[], coolingItems: Si
   const chain = (rule(ctx, 'upsEfficiency') ?? 1) * (rule(ctx, 'transformerEfficiency') ?? 1) * (rule(ctx, 'distributionEfficiency') ?? 1)
   const transformerW = ((itPeakW + coolingWorst + misc * itPeakW) / chain) * (rule(ctx, 'transformerEfficiency') ?? 1)
   const transformerCandidates = equipmentCandidates(ctx, 'transformer', 'ratingVa', (va) => va * pf)
-  const transformer = fill(
-    ctx,
-    { key: 'transformer', category: 'transformer', loadW: transformerW, candidates: transformerCandidates, units: (c, h) => Math.ceil(transformerW / pf / (c.unit * h)), positions: electrical, redundancy },
-    free,
-  )
+
+  // UPS modules and transformers share the electrical positions. The UPS is placed first; if its headroom
+  // would leave the transformers short, it is sized at full capacity instead.
+  const upsAndTransformers = (upsHeadroom: boolean) => {
+    const free = freeMap(ctx.plan)
+    const upsUnits = (c: Candidate, h: number) => Math.ceil(upsLoad / (c.unit * (upsHeadroom ? h : 1)))
+    const ups = fill(ctx, { key: 'ups', category: 'ups', loadW: upsLoad, candidates: upsCandidates, units: upsUnits, positions: electrical, redundancy }, free)
+    const transformerUnits = (c: Candidate, h: number) => Math.ceil(transformerW / pf / (c.unit * h))
+    const transformer = fill(
+      ctx,
+      { key: 'transformer', category: 'transformer', loadW: transformerW, candidates: transformerCandidates, units: transformerUnits, positions: electrical, redundancy },
+      free,
+    )
+    return { ups, transformer }
+  }
+  const short = (f: Fill) => f.item.count < f.item.required
+  const withHeadroom = upsAndTransformers(true)
+  const { ups, transformer } = short(withHeadroom.transformer) ? upsAndTransformers(false) : withHeadroom
   return [ups, ...busways, transformer]
 }
 
@@ -541,24 +579,20 @@ function leafFills(ctx: EvalContext, racks: RackResult[]): Fill[] {
   })
 }
 
+/**
+ * One buffer tank holding `cooling.bufferTankM3`, at the plant position, so ride-through and cost can find it.
+ * A `bufferTank` override can set the model, the count or the positions.
+ */
 function bufferTank(ctx: EvalContext, racks: RackResult[]): SizedEquipment[] {
   if (ctx.plan.cooling.bufferTankM3 <= 0) return []
-  const model = ctx.catalog.all().find((e) => e.kind === 'equipment' && e.category === 'bufferTank')
+  const candidates = ctx.catalog
+    .all()
+    .filter((e): e is EquipmentEntry => e.kind === 'equipment' && e.category === 'bufferTank')
+    .map((entry): Candidate => ({ id: entry.id, unit: 1, unitW: null, name: entry.name, entry }))
   const plant = ctx.plan.hall.positions.find((p) => p.kind === 'plant')
-  return [
-    {
-      key: 'bufferTank',
-      category: 'bufferTank',
-      modelId: model?.id ?? null,
-      count: 1,
-      required: 1,
-      positionIds: plant ? [plant.id] : [],
-      autoSized: false,
-      loadW: sumBy(racks, (r) => r.liquidW),
-      capacityW: null,
-      objectIds: ['eq:bufferTank:0'],
-    },
-  ]
+  const loadW = sumBy(racks, (r) => r.liquidW)
+  const f = fill(ctx, { key: 'bufferTank', category: 'bufferTank', loadW, candidates, units: () => 1, positions: plant ? [plant] : null, redundancy: 'N' }, freeMap(ctx.plan))
+  return [f.item]
 }
 
 /**

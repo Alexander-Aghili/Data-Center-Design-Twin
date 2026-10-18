@@ -233,9 +233,10 @@ describe('networkFabric', () => {
   })
 
   it('leaf ports needed = scale-out downlinks plus uplinks at the oversubscription ratio, against leaf ports × leaf count', () => {
-    // 10 racks × 4 ports = 40 downlinks; 1:1 needs 40 uplinks. Two default leaf positions hold one 64-port leaf each.
+    // 10 racks × 4 ports = 40 downlinks; 1:1 needs 40 uplinks. Two leaf positions hold one 64-port leaf each.
     const ten = Array.from({ length: 10 }, (_, slot) => ({ rowId: 'R1', slot }))
-    const oneToOne = setup({ slots: ten })
+    const leaves = [leafAtR1, { ...leafAtR1, id: 'leaf-y', z: 18.4 }]
+    const oneToOne = setup({ slots: ten, leaves })
     const check = networkFabric(oneToOne.ctx, oneToOne.racks).checks.find((c) => c.id === 'network.leafPorts:leaf')!
     expect(check.value).toBe(80)
     expect(check.limit).toBe(128)
@@ -243,10 +244,10 @@ describe('networkFabric', () => {
     expect(check.status).toBe('pass')
 
     // 3:1 needs ⌈40 / 3⌉ = 14 uplinks.
-    const threeToOne = setup({ slots: ten, oversubscription: 3 })
+    const threeToOne = setup({ slots: ten, leaves, oversubscription: 3 })
     expect(networkFabric(threeToOne.ctx, threeToOne.racks).checks.find((c) => c.kind === 'network.leafPorts')?.value).toBe(54)
 
-    const twenty = setup({ slots: Array.from({ length: 20 }, (_, slot) => ({ rowId: 'R1', slot })) })
+    const twenty = setup({ slots: Array.from({ length: 20 }, (_, slot) => ({ rowId: 'R1', slot })), leaves })
     const over = networkFabric(twenty.ctx, twenty.racks).checks.find((c) => c.kind === 'network.leafPorts')!
     expect(over.value).toBe(160)
     expect(over.status).toBe('fail')

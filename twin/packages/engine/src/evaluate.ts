@@ -28,7 +28,7 @@ export function evaluate(plan: Plan, builtins: Builtins): Evaluation {
 
   const placed = computeRacks(ctx)
   const air = airSide(ctx, placed)
-  const liquid = liquidSide(ctx, placed)
+  const liquid = liquidSide(ctx, air.racks)
   const racks = liquid.racks
   const sizing = sizeEquipment(ctx, racks, air, liquid)
   const rejection = rejectHeat(ctx, racks, sizing.equipment)

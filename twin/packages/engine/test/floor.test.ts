@@ -193,8 +193,8 @@ describe('floorLoads', () => {
     expect(bay('B4-2')?.loadKnM2).toBeCloseTo((1000 * G) / BAY_AREA / 1000, 6)
     expect(bay('B7-2')?.loadKnM2).toBeCloseTo((2 * 1600 * G) / BAY_AREA / 1000, 6)
     expect(bay('B1-1')?.loadKnM2).toBe(0)
-    expect(bay('B3-2')?.ratingKnM2).toBe(7.2)
-    expect(bay('B3-2')?.utilization).toBeCloseTo(bay('B3-2')!.loadKnM2 / 7.2, 9)
+    expect(bay('B3-2')?.ratingKnM2).toBe(7.3)
+    expect(bay('B3-2')?.utilization).toBeCloseTo(bay('B3-2')!.loadKnM2 / 7.3, 9)
 
     const check = result.checks.find((c) => c.id === 'layout.floorBay:B3-2')
     expect(check?.subject).toEqual({ kind: 'bay', id: 'B3-2', objectIds: ['rack:R1-00', 'rack:R1-04'] })
@@ -232,7 +232,7 @@ describe('floorLoads', () => {
     expect(point(dlcResult)).toBeCloseTo((1630 * G) / 4 / 1000, 6)
   })
 
-  it('floorBay fails for GB300+DLC in default bays (7.2 kN/m²)', () => {
+  it('floorBay fails for GB300+DLC in default bays (7.3 kN/m²)', () => {
     // The default plan's placements: 16 slots in R1–R5. Bay column 4 holds six 600 mm racks of each row.
     const { ctx, racks } = setup(GB300.id, DLC.id, ['R1', 'R2', 'R3', 'R4', 'R5'].flatMap((r) => slotsInRow(r, 16)))
     const result = floorLoads(ctx, racks, [])
@@ -242,7 +242,7 @@ describe('floorLoads', () => {
     expect(b42.utilization).toBeGreaterThan(1)
     const check = result.checks.find((c) => c.id === 'layout.floorBay:B4-2')!
     expect(check.status).toBe('fail')
-    expect(check.limit).toBe(7.2)
+    expect(check.limit).toBe(7.3)
     expect(check.explanation).toContain('6 racks')
     expect(check.advice).toBeDefined()
     expect(result.checks.filter((c) => c.kind === 'layout.floorBay' && c.status === 'fail').length).toBeGreaterThanOrEqual(5)

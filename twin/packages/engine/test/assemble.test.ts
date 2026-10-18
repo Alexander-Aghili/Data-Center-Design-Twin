@@ -28,17 +28,7 @@ import { makeCatalogIndex, type EvalContext } from '../src/context'
 import { emptyCost, emptyNetwork } from '../src/empty'
 import { powerBudget } from '../src/power'
 import { computeRacks } from '../src/racks'
-
-/** Fails with the path of the first NaN or ±Infinity found anywhere in `value`. */
-function assertFinite(value: unknown, path = 'evaluation'): void {
-  if (typeof value === 'number') {
-    if (!Number.isFinite(value)) throw new Error(`${path} is ${value}`)
-  } else if (Array.isArray(value)) {
-    value.forEach((v, i) => assertFinite(v, `${path}[${i}]`))
-  } else if (value !== null && typeof value === 'object') {
-    for (const [k, v] of Object.entries(value)) assertFinite(v, `${path}.${k}`)
-  }
-}
+import { assertFinite } from './integrationFixture'
 
 const est = (value: number, unit: string) => qty(value, unit, 'estimate', { note: 'test fixture' })
 const hgx: RackEntry = {
@@ -164,7 +154,7 @@ describe('assemble', () => {
     const network = { network: emptyNetwork(1), checks: [], metrics: [] }
     return {
       racks,
-      air: { rows: [{ rowId: 'R1', airW: 112_000 }], checks: [check('air', 'pass')], metrics: [], crahLoads: {} },
+      air: { rows: [{ rowId: 'R1', airW: 112_000 }], checks: [check('air', 'pass')], metrics: [], crahLoads: {}, racks },
       liquid: { racks, rowFlows: [{ rowId: 'R1', liquidW: 5, flowLps: 1.5 }], checks: [], metrics: [] },
       sizing: { equipment: [cdu], checks: [check('sizing', 'warn')] },
       rejection,
