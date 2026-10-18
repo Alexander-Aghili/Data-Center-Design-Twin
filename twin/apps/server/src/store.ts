@@ -1,5 +1,5 @@
 import { createDefaultPlan, loadBuiltins, snapshotCatalog } from '@twin/catalog'
-import { applyCommand, applyCommands, History, type Registry } from '@twin/commands'
+import { applyCommands, History, type Registry } from '@twin/commands'
 import { evaluate, makeCatalogIndex } from '@twin/engine'
 import type { Builtins, Command, Evaluation, Plan } from '@twin/schema'
 import type { DispatchAllResult, DispatchResult, PlanStore, StoreChange } from './contracts'
@@ -8,7 +8,7 @@ import { createPlanWriter, loadPlan } from './persist'
 /** Debounce for writing `dataDir/plan.json`. */
 const PERSIST_DELAY_MS = 300
 
-export type CommandApplier = Pick<Registry, 'applyCommand' | 'applyCommands'>
+export type CommandApplier = Pick<Registry, 'applyCommands'>
 
 export interface PlanStoreOptions {
   dataDir: string
@@ -29,7 +29,7 @@ const message = (err: unknown) => (err instanceof Error ? err.message : String(e
 
 export function createPlanStore(opts: PlanStoreOptions): ServerPlanStore {
   const builtins = opts.builtins ?? loadBuiltins()
-  const registry = opts.registry ?? { applyCommand, applyCommands }
+  const registry = opts.registry ?? { applyCommands }
   const onError = opts.onError ?? ((err, context) => console.error(context, err))
   const writer = createPlanWriter(opts.dataDir, PERSIST_DELAY_MS, (err) => onError(err, 'Could not write plan.json'))
   const listeners = new Set<(change: StoreChange) => void>()
@@ -57,25 +57,21 @@ export function createPlanStore(opts: PlanStoreOptions): ServerPlanStore {
     emit({ prev, next: nextEvaluation, author, summary, kind })
   }
 
-  /** Applies a plan transformation; nothing changes if it or the evaluation throws. */
-  function attempt<T>(
-    run: () => { plan: Plan; result: T },
-    summarize: (result: T) => string,
-    author: StoreChange['author'],
-  ): { ok: true; result: T } | { ok: false; error: string } {
+  /** Applies commands as one history step; nothing changes if a command or the evaluation throws. */
+  function apply(cmds: Command[], author: StoreChange['author']): DispatchAllResult {
     let next: Plan
-    let result: T
+    let summaries: string[]
     let nextEvaluation: Evaluation
     try {
-      ;({ plan: next, result } = run())
+      ;({ plan: next, summaries } = registry.applyCommands(history.current, cmds, catalogFor(history.current)))
       nextEvaluation = evaluate(next, builtins)
     } catch (err) {
       return { ok: false, error: message(err) }
     }
-    const summary = summarize(result)
+    const summary = summaries.join('; ')
     history.push(next, summary)
     settle(nextEvaluation, author, summary, 'command')
-    return { ok: true, result }
+    return { ok: true, summaries }
   }
 
   return {
@@ -89,28 +85,12 @@ export function createPlanStore(opts: PlanStoreOptions): ServerPlanStore {
     },
 
     dispatch(cmd: Command, author): DispatchResult {
-      const outcome = attempt(
-        () => {
-          const { plan, summary } = registry.applyCommand(history.current, cmd, catalogFor(history.current))
-          return { plan, result: summary }
-        },
-        (summary) => summary,
-        author,
-      )
-      return outcome.ok ? { ok: true, summary: outcome.result } : outcome
+      const result = apply([cmd], author)
+      return result.ok ? { ok: true, summary: result.summaries[0] ?? '' } : result
     },
 
     dispatchAll(cmds: Command[], author): DispatchAllResult {
-      if (cmds.length === 0) return { ok: true, summaries: [] }
-      const outcome = attempt(
-        () => {
-          const { plan, summaries } = registry.applyCommands(history.current, cmds, catalogFor(history.current))
-          return { plan, result: summaries }
-        },
-        (summaries) => summaries.join('; '),
-        author,
-      )
-      return outcome.ok ? { ok: true, summaries: outcome.result } : outcome
+      return cmds.length === 0 ? { ok: true, summaries: [] } : apply(cmds, author)
     },
 
     undo() {
