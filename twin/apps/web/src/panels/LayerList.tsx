@@ -46,9 +46,7 @@ export function LayerList() {
       <ul className="layer-list">
         {LAYER_IDS.map((id) => {
           const owner = owners?.[id]
-          const fixed = owner?.initials === '—'
-          const who = owner ? (fixed ? owner.name.toLowerCase() : `owner ${owner.initials}`) : null
-          const label = [LAYER_NAMES[id], who, describeIssues(issues[id])].filter(Boolean).join(', ')
+          const label = [LAYER_NAMES[id], owner?.name, describeIssues(issues[id])].filter(Boolean).join(', ')
           const { fail, warn } = issues[id]
           return (
             <li key={id}>
