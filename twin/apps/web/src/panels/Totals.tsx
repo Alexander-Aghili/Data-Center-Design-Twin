@@ -10,7 +10,10 @@ interface Row {
   value: string
   /** The limit the value is read against, shown quieter: "of 10.0 MW". */
   limit?: string
-  /** Share of the limit used, drawn on the row's rule; colored by the matching check's status. */
+  /**
+   * Share of the limit used, drawn on the row's rule. A failing or warning check colors the fill and
+   * puts its status mark on the label, so the color never stands alone.
+   */
   meter?: { ratio: number; status: Status }
 }
 
@@ -106,7 +109,13 @@ export function Totals({ allOpen, onToggleAll }: { allOpen: boolean; onToggleAll
         <tbody>
           {rows(plan, evaluation).map((r) => (
             <tr key={r.label}>
-              <th scope="row">{r.label}</th>
+              <th scope="row">
+                {r.meter && (r.meter.status === 'fail' || r.meter.status === 'warn') ? (
+                  <StatusMark status={r.meter.status} label={r.label} />
+                ) : (
+                  r.label
+                )}
+              </th>
               <td>
                 <span className="totals-table__value">{r.value}</span>
                 {r.limit && <span className="totals-table__limit"> {r.limit}</span>}

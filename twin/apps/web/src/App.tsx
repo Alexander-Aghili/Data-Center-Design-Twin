@@ -105,9 +105,7 @@ function SceneRegion({ layer, children }: { layer: LayerId; children?: ReactNode
       <LayerHeader />
       <div className="scene-stage">
         <Scene />
-        <div className="scene-stage__annotations">
-          <RevisionClouds />
-        </div>
+        <RevisionClouds />
         <Inspector />
       </div>
       <div className="strip-slot">

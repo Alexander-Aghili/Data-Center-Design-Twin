@@ -14,15 +14,22 @@ const HOURLY_BY_LAYER: Partial<Record<LayerId, HourlySeriesKey[]>> = {
   power: ['facilityW', 'itW'],
 }
 
+const FOCUSABLE = 'button:not(:disabled), input:not(:disabled), select, textarea, a[href], [tabindex]:not([tabindex="-1"])'
+
 function groupMetrics(metrics: readonly Metric[]): [string | undefined, Metric[]][] {
   const groups = new Map<string | undefined, Metric[]>()
-  for (const m of metrics) groups.set(m.group, [...(groups.get(m.group) ?? []), m])
+  for (const m of metrics) {
+    const group = groups.get(m.group)
+    if (group) group.push(m)
+    else groups.set(m.group, [m])
+  }
   return [...groups]
 }
 
 /**
  * Every number the engine produced, grouped by layer, with its basis, plus every check.
- * A drawer over the center column; Escape or Close returns focus to whatever opened it.
+ * A modal drawer over the center column: focus moves in on open and stays inside; Escape or Close
+ * returns focus to whatever opened it.
  */
 export function AllVariables({ onClose }: { onClose: () => void }) {
   const evaluation = useTwinStore((s) => s.evaluation)
@@ -37,10 +44,25 @@ export function AllVariables({ onClose }: { onClose: () => void }) {
     return () => opener?.focus()
   }, [])
 
-  const onKeyDown = (e: KeyboardEvent) => {
+  // Modal while open: Tab cycles inside the drawer, Escape closes it.
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Escape') {
       e.stopPropagation()
       onClose()
+      return
+    }
+    if (e.key !== 'Tab') return
+    // Filtering all elements keeps document order (some engines group a selector list by selector).
+    const focusable = [...e.currentTarget.querySelectorAll<HTMLElement>('*')].filter((el) => el.matches(FOCUSABLE))
+    const first = focusable[0]
+    const last = focusable.at(-1)
+    if (!first || !last) return
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault()
+      last.focus()
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault()
+      first.focus()
     }
   }
 
@@ -56,7 +78,7 @@ export function AllVariables({ onClose }: { onClose: () => void }) {
   })).filter((s) => s.metrics.length > 0 || s.checks.length > 0)
 
   return (
-    <div className="drawer" role="dialog" aria-labelledby={titleId} onKeyDown={onKeyDown}>
+    <div className="drawer" role="dialog" aria-modal="true" aria-labelledby={titleId} onKeyDown={onKeyDown}>
       <header className="drawer__head">
         <h2 id={titleId} className="drawer__title">
           All variables

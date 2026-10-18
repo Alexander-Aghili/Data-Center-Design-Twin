@@ -1,0 +1,34 @@
+.number {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  border-bottom: 1px solid var(--graphite);
+  transition: border-color var(--dur-fast) var(--ease);
+}
+
+.number:focus-within {
+  border-bottom-color: var(--ink);
+  box-shadow: 0 1px 0 var(--ink);
+}
+
+.number input {
+  flex: 1;
+  min-width: 0;
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.number input:focus-visible {
+  outline: none;
+}
+
+.unit {
+  flex: none;
+  font-size: var(--text-sm);
+  color: var(--graphite);
+}
