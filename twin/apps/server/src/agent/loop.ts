@@ -101,10 +101,36 @@ function echoable(content: BetaContentBlock[]): BetaContentBlock[] {
   return content.filter((b, i) => i >= boundary || !declined.has(b.type))
 }
 
-const callSummary = (input: unknown) => {
-  const json = JSON.stringify(input) ?? ''
-  if (json === '{}') return ''
-  return json.length > 120 ? `${json.slice(0, 119)}…` : json
+/** What a running tool call is doing, in words; the result line then says what it found. */
+const CALL_LABELS: Record<string, string> = {
+  get_plan: 'Reading the plan',
+  get_evaluation: 'Reading the evaluation',
+  explain_check: 'Tracing the cause of a check',
+  get_hourly: 'Reading hourly results',
+  list_catalog: 'Searching the catalog',
+  get_catalog_entry: 'Reading a catalog entry',
+  get_notes: 'Reading the notes',
+  search_knowledge: 'Searching the knowledge base',
+  read_knowledge: 'Reading a knowledge article',
+  undo: 'Undoing the last change',
+  redo: 'Redoing the last change',
+  propose_change: 'Drafting a proposal',
+  what_if: 'Trying a change',
+  set_layer: 'Switching the layer',
+  focus: 'Moving the camera',
+  set_overlay: 'Switching the overlay',
+  annotate: 'Marking the drawing',
+  clear_annotations: 'Clearing the marks',
+  generate_simulation_brief: 'Writing the simulation brief',
+  export_plan: 'Exporting the plan',
+}
+
+/** "cmd_setRackType" → "Set rack type"; other tools use their label. */
+function callSummary(name: string): string {
+  const label = CALL_LABELS[name]
+  if (label) return label
+  const words = name.replace(/^cmd_/, '').replace(/_/g, ' ').replace(/([A-Z])/g, ' $1').toLowerCase().trim()
+  return words.charAt(0).toUpperCase() + words.slice(1)
 }
 
 export interface TurnContext {
@@ -190,7 +216,7 @@ async function callModel(ctx: TurnContext, out: TurnOutput): Promise<FinalMessag
 
 async function runTool(ctx: TurnContext, out: TurnOutput, block: BetaToolUseBlock): Promise<BetaToolResultBlockParam> {
   out.start()
-  ctx.emit({ kind: 'toolCall', messageId: ctx.messageId, callId: block.id, name: block.name, summary: callSummary(block.input) })
+  ctx.emit({ kind: 'toolCall', messageId: ctx.messageId, callId: block.id, name: block.name, summary: callSummary(block.name) })
   const tool = ctx.tools.find((t) => t.name === block.name)
   let outcome: ToolOutcome
   try {

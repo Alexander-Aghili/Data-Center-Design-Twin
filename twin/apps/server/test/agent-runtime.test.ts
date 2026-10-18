@@ -265,6 +265,8 @@ describe('agent runtime', () => {
       ],
     })
     expect(rec.events.filter((e) => e.kind === 'toolCall').map((e) => e.kind === 'toolCall' && e.name)).toEqual(['get_plan', 'get_evaluation'])
+    // The call line is a plain phrase, never the raw input JSON.
+    expect(rec.events.flatMap((e) => (e.kind === 'toolCall' ? [e.summary] : []))).toEqual(['Reading the plan', 'Reading the evaluation'])
     const results = rec.events.filter((e) => e.kind === 'toolResult')
     expect(results).toContainEqual({ kind: 'toolResult', callId: 't2', ok: true, summary: 'get_evaluation done', numbers: [1.32, 1.41] })
   })

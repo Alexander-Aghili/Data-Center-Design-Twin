@@ -73,7 +73,8 @@ export function reduceView(s: TwinState, a: ViewAction): Partial<TwinState> {
     case 'clearAnnotations':
       return { annotations: [] }
     case 'previewProposal':
-      return { previewProposalId: a.proposalId }
+      // The ghost and the proposal's clouds need the whole hall in view.
+      return a.proposalId === null ? { previewProposalId: null } : { previewProposalId: a.proposalId, shot: 'hall' }
   }
 }
 

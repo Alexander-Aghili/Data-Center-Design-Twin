@@ -89,10 +89,10 @@ describe('twin store', () => {
     const store = createTwinStore({ backend })
     backend.onMsg({ t: 'agent', event: { kind: 'proposal', messageId: 'm1', proposal } })
     backend.onMsg({ t: 'agent', event: { kind: 'proposal', messageId: 'm1', proposal: { ...proposal, id: 'p2' } } })
-    store.getState().dispatchView({ type: 'setLayer', layer: 'compute' })
     store.getState().dispatchView({ type: 'previewProposal', proposalId: 'p1' })
+    store.getState().dispatchView({ type: 'focus', target: { kind: 'rack', id: 'R3-07' } })
     backend.onMsg({ t: 'agent', event: { kind: 'proposalStatus', proposalId: 'p2', status: 'dismissed' } })
-    expect(store.getState()).toMatchObject({ previewProposalId: 'p1', shot: 'gpu' })
+    expect(store.getState()).toMatchObject({ previewProposalId: 'p1', shot: 'rack' })
     backend.onMsg({ t: 'agent', event: { kind: 'proposalStatus', proposalId: 'p1', status: 'applied' } })
     expect(store.getState()).toMatchObject({ previewProposalId: null, shot: 'hall' })
   })
@@ -118,6 +118,16 @@ describe('twin store', () => {
     expect(store.getState()).toMatchObject({ activeLayer: 'compute', pipeFill: 0 })
     backend.onMsg({ t: 'agent', event: { kind: 'proposalStatus', proposalId: 'pc', status: 'applied' } })
     expect(store.getState()).toMatchObject({ activeLayer: 'cooling', overlay: 'liquid', shot: 'hall', pipeFill: 1 })
+  })
+
+  it('previewing a proposal pulls the camera back to the hall so its ghost and clouds are in view', () => {
+    const store = createTwinStore({ backend: new FakeBackend() })
+    store.getState().dispatchView({ type: 'setLayer', layer: 'compute' })
+    store.getState().dispatchView({ type: 'previewProposal', proposalId: 'p1' })
+    expect(store.getState()).toMatchObject({ previewProposalId: 'p1', shot: 'hall', activeLayer: 'compute' })
+    store.getState().dispatchView({ type: 'setLayer', layer: 'compute' })
+    store.getState().dispatchView({ type: 'previewProposal', proposalId: null })
+    expect(store.getState()).toMatchObject({ previewProposalId: null, shot: 'gpu' })
   })
 
   it('resetChat asks the server for a new conversation', () => {

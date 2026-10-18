@@ -525,6 +525,14 @@ describe('read', () => {
     expect(missing.ok).toBe(false)
   })
 
+  it('list_catalog names what it listed', async () => {
+    const { run } = setup()
+    const outcome = await run('list_catalog', { kind: 'rackCooling' })
+    expect(outcome.ok && outcome.summary).toMatch(/^Listed \d+ rack cooling methods?$/)
+    const all = await run('list_catalog', {})
+    expect(all.ok && all.summary).toMatch(/^Listed \d+ catalog entr(y|ies)$/)
+  })
+
   it('list_catalog and get_catalog_entry read the plan catalog merged over the built-ins', async () => {
     const { run, store } = setup()
     const custom = { id: 'coolant.test', kind: 'coolant', name: 'Test glycol', asOf: '2026-10', summary: 'A test coolant', custom: true } as const

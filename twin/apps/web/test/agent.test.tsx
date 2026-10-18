@@ -104,7 +104,7 @@ describe('agent thread', () => {
     setup(problemTurn)
     const lines = document.querySelectorAll<HTMLElement>('.ag-tool')
     expect(lines).toHaveLength(3)
-    expect(lines[0].textContent).toBe('✓Done: Read the evaluation: 1 check fails')
+    expect(lines[0].textContent).toBe('✓Done: 1 check fails')
     expect(lines[0].title).toBe('get_evaluation')
   })
 
