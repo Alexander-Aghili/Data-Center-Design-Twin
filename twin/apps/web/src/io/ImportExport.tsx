@@ -1,5 +1,6 @@
 import type { Command, Plan } from '@twin/schema'
 import { useRef, useState, type ChangeEvent } from 'react'
+import { StatusMark } from '../panels/StatusMark'
 import { useTwinStore } from '../state/store'
 
 interface ImportReport {
@@ -108,26 +109,23 @@ export function ImportExport() {
       <style href="twin-import-export" precedence="twin">
         {CSS}
       </style>
-      <button type="button" className="io-btn" disabled={busy} onClick={() => fileRef.current?.click()}
+      <button type="button" className="btn" disabled={busy} onClick={() => fileRef.current?.click()}
         title="Import a plan, or a catalog pack (a JSON array of entries)">
         {busy ? 'Importing' : 'Import'}
       </button>
       <input ref={fileRef} type="file" accept=".json,application/json" aria-label="Import file" hidden onChange={onFile} />
-      <button type="button" className="io-btn" disabled={!plan} onClick={() => plan && downloadJson(plan.name, plan)}>
+      <button type="button" className="btn" disabled={!plan} onClick={() => plan && downloadJson(plan.name, plan)}>
         Export plan
       </button>
       {report && (
         <div className={report.ok ? 'io-report' : 'io-report io-problem'} role={report.ok ? 'status' : 'alert'}>
           <p className="io-title">
-            <span className="io-mark" aria-hidden="true">
-              {report.ok ? '✓' : '✕'}
-            </span>
-            {report.title}
+            <StatusMark status={report.ok ? 'pass' : 'fail'} label={report.title} />
           </p>
           {report.lines.length > 0 && (
             <ul className="io-lines">
               {report.lines.map((l, i) => {
-                const at = l.lastIndexOf(': ')
+                const at = l.indexOf(': ')
                 return (
                   <li key={i}>
                     {at > 0 ? (
@@ -142,7 +140,7 @@ export function ImportExport() {
               })}
             </ul>
           )}
-          <button type="button" className="io-close" onClick={() => setReport(null)}>
+          <button type="button" className="btn btn--quiet io-close" onClick={() => setReport(null)}>
             Close
           </button>
         </div>
@@ -153,29 +151,17 @@ export function ImportExport() {
 
 const CSS = `
 .io { position: relative; display: inline-flex; gap: var(--space-2); align-items: center; }
-.io-btn {
-  height: 28px; padding: 0 var(--space-3);
-  font: inherit; font-size: var(--text-md); font-weight: 500; color: var(--ink);
-  background: transparent; border: var(--rule); border-radius: var(--radius); cursor: pointer;
-}
-.io-btn:hover:not(:disabled) { background: var(--clay-mid); border-color: var(--graphite); }
-.io-btn:disabled { color: var(--graphite); cursor: default; }
 .io-report {
-  position: absolute; top: calc(100% + var(--space-2)); right: 0; z-index: 20;
-  width: min(440px, calc(100vw - 32px)); max-height: 60vh; overflow: auto;
+  position: absolute; top: calc(100% + var(--space-2)); right: 0; z-index: var(--z-drawer);
+  width: min(460px, calc(100vw - 32px)); max-height: 60vh; overflow: auto;
   padding: var(--space-3) var(--space-4);
-  background: var(--panel); border: var(--rule); border-top: 3px solid var(--ok);
+  background: var(--panel-raised); border: var(--rule); border-top: 3px solid var(--ok);
   box-shadow: 0 6px 18px rgb(23 32 38 / 0.12);
 }
 .io-problem { border-top-color: var(--heat); }
-.io-title { margin: 0; display: flex; gap: var(--space-2); font-weight: 500; line-height: 1.4; }
-.io-mark { color: var(--ok); font-weight: 700; }
-.io-problem .io-mark { color: var(--heat); }
-.io-lines { margin: var(--space-3) 0 0; padding: 0; list-style: none; border-top: var(--rule); }
-.io-lines li { padding: 6px 0; border-bottom: var(--rule); font-size: var(--text-sm); line-height: 1.4; overflow-wrap: anywhere; }
-.io-path { font-stretch: var(--stretch-label); font-weight: 600; }
-.io-close {
-  margin-top: var(--space-3); padding: 0; font: inherit; font-size: var(--text-sm);
-  color: var(--graphite); background: none; border: 0; text-decoration: underline; cursor: pointer;
-}
+.io-title { font-weight: var(--weight-medium); line-height: var(--leading); }
+.io-lines { margin-top: var(--space-3); border-top: var(--rule); }
+.io-lines li { padding: 6px 0; border-bottom: var(--rule); font-size: var(--text-sm); overflow-wrap: anywhere; }
+.io-path { font-stretch: var(--stretch-label); font-weight: var(--weight-semibold); }
+.io-close { margin-top: var(--space-2); margin-left: calc(-1 * var(--space-3)); }
 `

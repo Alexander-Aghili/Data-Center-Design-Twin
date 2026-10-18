@@ -1,5 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { loadBuiltins } from '@twin/catalog'
 import { EQUIPMENT_CATEGORIES, type CatalogEntry, type Command, type RackCoolingEntry } from '@twin/schema'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
@@ -26,13 +25,7 @@ beforeAll(async () => {
 
 afterEach(cleanup)
 
-const dataDir = join(__dirname, '../../../packages/catalog/data')
-function builtinEntries(): CatalogEntry[] {
-  return readdirSync(dataDir, { withFileTypes: true })
-    .filter((d) => d.isDirectory())
-    .flatMap((d) => readdirSync(join(dataDir, d.name)).map((f) => join(dataDir, d.name, f)))
-    .map((f) => JSON.parse(readFileSync(f, 'utf8')) as CatalogEntry)
-}
+const builtinEntries = (): CatalogEntry[] => loadBuiltins().entries
 
 function mockSend(impl: (cmd: Command) => Promise<void> = () => Promise.resolve()) {
   const send = vi.fn(impl)
@@ -159,7 +152,6 @@ describe('schema-driven entry form', () => {
       this.open = true
     }
     const builtins = builtinEntries()
-    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response(JSON.stringify({ entries: builtins, rules: {} })))))
     const mine = { ...builtins.find((e) => e.id === 'coolant.water')!, id: 'coolant.site-water', name: 'Site water', custom: true }
     useTwinStore.setState({ plan: { catalog: { [mine.id]: mine } } as never })
     render(<CatalogBrowser kind="coolant" />)
@@ -176,6 +168,5 @@ describe('schema-driven entry form', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Copy as custom entry' }))
     expect((screen.getByLabelText('ID') as HTMLInputElement).value).toBe('coolant.water-custom')
     expect((screen.getByLabelText('Specific heat') as HTMLInputElement).value).not.toBe('')
-    vi.unstubAllGlobals()
   })
 })

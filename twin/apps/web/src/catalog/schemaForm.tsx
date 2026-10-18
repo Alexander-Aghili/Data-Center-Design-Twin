@@ -156,6 +156,7 @@ const OPTION_LABELS: Record<string, string> = {
   crah: 'CRAH',
   ups: 'UPS',
   leaf: 'Leaf switch',
+  // Power distribution codes stay as written.
   ac54: 'ac54',
   dc800: 'dc800',
 }
@@ -327,7 +328,7 @@ export function initialValues(fields: FieldSpec[], from?: CatalogEntry): FormVal
   return values
 }
 
-export type BuildResult = { ok: true; entry: CatalogEntry } | { ok: false; errors: Record<string, string> }
+type BuildResult = { ok: true; entry: CatalogEntry } | { ok: false; errors: Record<string, string> }
 
 function parseNumber(raw: string): number | null | 'invalid' {
   const t = raw.trim()

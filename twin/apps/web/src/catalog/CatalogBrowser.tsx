@@ -1,41 +1,11 @@
-import { CATALOG_KINDS, type Builtins, type CatalogEntry, type CatalogKind, type Quantity } from '@twin/schema'
+import { loadBuiltins } from '@twin/catalog'
+import { CATALOG_KINDS, type CatalogEntry, type CatalogKind, type Quantity } from '@twin/schema'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { fmtNumber } from '../format'
 import { downloadJson } from '../io/ImportExport'
 import { useTwinStore } from '../state/store'
 import { EntryForm, type EntryIntent } from './EntryForm'
 import { fieldLabel, formFields, isFormKind, KIND_NAMES, optionLabel, unitText, type FieldSpec } from './schemaForm'
-
-let builtinsRequest: Promise<CatalogEntry[]> | undefined
-
-/** Built-in entries from `GET /api/catalog`, requested once per page load (a failed request is retried next time). */
-function loadBuiltins(): Promise<CatalogEntry[]> {
-  builtinsRequest ??= fetch('/api/catalog')
-    .then(async (res) => {
-      if (!res.ok) throw new Error(`GET /api/catalog failed with ${res.status}`)
-      return ((await res.json()) as Builtins).entries
-    })
-    .catch((error: unknown) => {
-      builtinsRequest = undefined
-      throw error
-    })
-  return builtinsRequest
-}
-
-function useBuiltins(active: boolean) {
-  const [state, setState] = useState<{ entries: CatalogEntry[]; error: string | null }>({ entries: [], error: null })
-  useEffect(() => {
-    if (!active) return
-    let live = true
-    loadBuiltins().then(
-      (entries) => live && setState({ entries, error: null }),
-      (error: unknown) => live && setState({ entries: [], error: error instanceof Error ? error.message : String(error) }),
-    )
-    return () => {
-      live = false
-    }
-  }, [active])
-  return state
-}
 
 type Pane = { type: 'detail' } | { type: 'form'; intent: EntryIntent }
 
@@ -58,7 +28,7 @@ export function CatalogBrowser({ kind = 'gpu' }: { kind?: CatalogKind }) {
       <style href="twin-catalog-browser" precedence="twin">
         {CSS}
       </style>
-      <button type="button" className="cb-trigger" onClick={() => setOpen(true)}>
+      <button type="button" className="btn" onClick={() => setOpen(true)}>
         Catalog
       </button>
       {open && (
@@ -72,17 +42,16 @@ export function CatalogBrowser({ kind = 'gpu' }: { kind?: CatalogKind }) {
 
 function CatalogPanel({ initialKind, onClose }: { initialKind: CatalogKind; onClose(): void }) {
   const plan = useTwinStore((s) => s.plan)
-  const builtins = useBuiltins(true)
   const [kind, setKind] = useState<CatalogKind>(initialKind)
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [pane, setPane] = useState<Pane>({ type: 'detail' })
 
   const all = useMemo(() => {
-    const byId = new Map(builtins.entries.map((e) => [e.id, e]))
+    const byId = new Map(loadBuiltins().entries.map((e) => [e.id, e]))
     for (const e of Object.values(plan?.catalog ?? {})) byId.set(e.id, e)
     return [...byId.values()]
-  }, [builtins.entries, plan])
+  }, [plan])
 
   const counts = useMemo(() => {
     const c = Object.fromEntries(CATALOG_KINDS.map((k) => [k, 0])) as Record<CatalogKind, number>
@@ -108,7 +77,9 @@ function CatalogPanel({ initialKind, onClose }: { initialKind: CatalogKind; onCl
   return (
     <div className="cb-frame">
       <header className="cb-head">
-        <h2 id="cb-title">Catalog</h2>
+        <h2 id="cb-title" className="cb-title">
+          Catalog
+        </h2>
         <p className="cb-sub">
           Built-in entries and the custom entries saved in this plan. To add many at once, use Import in the top bar with a catalog pack, a
           JSON array of entries.
@@ -116,13 +87,13 @@ function CatalogPanel({ initialKind, onClose }: { initialKind: CatalogKind; onCl
         <div className="cb-head-actions">
           <button
             type="button"
-            className="cb-btn"
+            className="btn"
             disabled={customs.length === 0}
             onClick={() => downloadJson(`${plan?.name ?? 'Plan'} custom catalog`, customs)}
           >
             Export custom entries
           </button>
-          <button type="button" className="cb-btn" onClick={onClose}>
+          <button type="button" className="btn" onClick={onClose}>
             Close
           </button>
         </div>
@@ -140,7 +111,7 @@ function CatalogPanel({ initialKind, onClose }: { initialKind: CatalogKind; onCl
       <section className="cb-list" aria-label={`${KIND_NAMES[kind].plural} entries`}>
         <div className="cb-list-tools">
           <input
-            className="cb-search"
+            className="input cb-search"
             type="search"
             placeholder="Filter"
             aria-label="Filter entries"
@@ -148,16 +119,11 @@ function CatalogPanel({ initialKind, onClose }: { initialKind: CatalogKind; onCl
             onChange={(e) => setQuery(e.target.value)}
           />
           {isFormKind(kind) && (
-            <button type="button" className="cb-btn" onClick={() => setPane({ type: 'form', intent: { type: 'add', kind } })}>
+            <button type="button" className="btn" onClick={() => setPane({ type: 'form', intent: { type: 'add', kind } })}>
               New entry
             </button>
           )}
         </div>
-        {builtins.error && (
-          <p className="cb-note" role="alert">
-            The built-in catalog did not load ({builtins.error}). Entries saved in this plan are still listed.
-          </p>
-        )}
         <ul className="cb-entries">
           {list.map((e) => (
             <li key={e.id}>
@@ -216,14 +182,16 @@ function isQuantity(v: unknown): v is Quantity {
   return Boolean(v && typeof v === 'object' && 'unit' in v && 'basis' in v)
 }
 
-const NUMBER = new Intl.NumberFormat('en-US', { maximumFractionDigits: 4 })
+/** Catalog numbers: small coefficients (viscosity, fractions of a percent) keep their significant digits. */
+function catalogNumber(n: number): string {
+  return n !== 0 && Math.abs(n) < 1 ? fmtNumber(n, 5) : fmtNumber(n)
+}
 
-const PERCENT = new Intl.NumberFormat('en-US', { style: 'percent', maximumFractionDigits: 1 })
 
 function QuantityValue({ q }: { q: Quantity }) {
   // Fractions read as percentages; everything else keeps its catalog unit.
   const percent = q.unit === 'fraction'
-  const fmt = (n: number) => (percent ? PERCENT.format(n) : NUMBER.format(n))
+  const fmt = (n: number) => (percent ? `${catalogNumber(n * 100)}%` : catalogNumber(n))
   const unit = percent ? '' : unitText(q.unit)
   const range = q.low !== undefined && q.high !== undefined ? `${fmt(q.low)}–${fmt(q.high)}` : null
   return (
@@ -267,9 +235,9 @@ function PlainValue({ row, all }: { row: Row; all: CatalogEntry[] }) {
   const { value } = row
   const text = (v: unknown) => (row.enumerated ? optionLabel(String(v)) : String(v))
   if (typeof value === 'boolean') return <>{value ? 'Yes' : 'No'}</>
-  if (typeof value === 'number') return <span className="cb-num">{NUMBER.format(value)}</span>
+  if (typeof value === 'number') return <span className="cb-num">{catalogNumber(value)}</span>
   if (Array.isArray(value)) {
-    if (value.length > 0 && value.every((v) => typeof v === 'number')) return <>{`${NUMBER.format(value.length)} hourly values`}</>
+    if (value.length > 0 && value.every((v) => typeof v === 'number')) return <>{`${fmtNumber(value.length)} hourly values`}</>
     return <>{value.length === 0 ? 'None' : value.map(text).join(', ')}</>
   }
   if (typeof value === 'string' && row.key.endsWith('Id')) return <>{all.find((e) => e.id === value)?.name ?? value}</>
@@ -309,12 +277,12 @@ function EntryDetail({ entry, all, onCopy, onEdit }: EntryDetailProps) {
         </div>
         <div className="cb-detail-actions">
           {onEdit && (
-            <button type="button" className="cb-btn" onClick={onEdit}>
+            <button type="button" className="btn" onClick={onEdit}>
               Edit
             </button>
           )}
           {onCopy && (
-            <button type="button" className="cb-btn" onClick={onCopy}>
+            <button type="button" className="btn" onClick={onCopy}>
               Copy as custom entry
             </button>
           )}
@@ -322,7 +290,7 @@ function EntryDetail({ entry, all, onCopy, onEdit }: EntryDetailProps) {
       </header>
       {entry.summary && <p className="cb-summary">{entry.summary}</p>}
       {entry.kind === 'climate' && <p className="cb-note">Climate presets carry 8,760 hourly values, so they are added through a catalog pack, not a form.</p>}
-      <table className="cb-params">
+      <table className="data-table cb-params">
         <thead>
           <tr>
             <th scope="col">Parameter</th>
@@ -335,14 +303,14 @@ function EntryDetail({ entry, all, onCopy, onEdit }: EntryDetailProps) {
             <tr key={r.key} title={isQuantity(r.value) ? r.value.note : undefined}>
               <th scope="row">{r.label}</th>
               <td>{isQuantity(r.value) ? <QuantityValue q={r.value} /> : <PlainValue row={r} all={all} />}</td>
-              <td className="cb-basis">{isQuantity(r.value) ? <Basis q={r.value} /> : null}</td>
+              <td className="data-table__basis cb-basis">{isQuantity(r.value) ? <Basis q={r.value} /> : null}</td>
             </tr>
           ))}
         </tbody>
       </table>
       {sources.length > 0 && (
         <section className="cb-sources">
-          <h4>Sources</h4>
+          <h4 className="section-title">Sources</h4>
           <ol>
             {sources.map((s) => (
               <li key={s.id}>
@@ -359,12 +327,6 @@ function EntryDetail({ entry, all, onCopy, onEdit }: EntryDetailProps) {
 }
 
 const CSS = `
-.cb-trigger {
-  height: 28px; padding: 0 var(--space-3);
-  font: inherit; font-size: var(--text-md); font-weight: 500; color: var(--ink);
-  background: transparent; border: var(--rule); border-radius: var(--radius); cursor: pointer;
-}
-.cb-trigger:hover { background: var(--clay-mid); border-color: var(--graphite); }
 .cb {
   width: min(1180px, calc(100vw - 48px)); height: min(780px, calc(100vh - 48px));
   max-width: none; max-height: none; padding: 0;
@@ -383,69 +345,53 @@ const CSS = `
   grid-area: head; display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--space-5);
   align-items: end; padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--graphite);
 }
-.cb-head h2 { margin: 0; font-size: var(--text-xl); font-weight: 600; letter-spacing: -0.01em; }
-.cb-sub { grid-column: 1; margin: var(--space-1) 0 0; color: var(--graphite); font-size: var(--text-sm); max-width: 78ch; }
+.cb-title { font-size: var(--text-xl); font-weight: var(--weight-semibold); font-stretch: var(--stretch-display); line-height: var(--leading-tight); }
+.cb-sub { grid-column: 1; margin-top: var(--space-1); color: var(--graphite); font-size: var(--text-sm); max-width: 78ch; }
 .cb-head-actions { grid-column: 2; grid-row: 1 / 3; display: flex; gap: var(--space-2); }
 .cb-kinds { grid-area: kinds; display: flex; flex-direction: column; padding: var(--space-3) 0; border-right: var(--rule); background: var(--paper); overflow: auto; }
 .cb-kind {
   display: flex; justify-content: space-between; align-items: baseline;
-  padding: 7px var(--space-4); font: inherit; text-align: left; color: var(--graphite);
+  padding: 7px var(--space-4); text-align: left; color: var(--graphite);
   background: none; border: 0; border-left: 3px solid transparent; cursor: pointer;
 }
-.cb-kind:hover { color: var(--ink); background: var(--clay-mid); }
-.cb-kind[aria-current="true"] { color: var(--ink); font-weight: 600; border-left-color: var(--ink); background: var(--panel); }
-.cb-count { font-stretch: var(--stretch-label); font-size: var(--text-sm); color: var(--graphite); font-weight: 400; }
+.cb-kind:hover { color: var(--ink); background: var(--hover); }
+.cb-kind[aria-current="true"] { color: var(--ink); font-weight: var(--weight-semibold); border-left-color: var(--ink); background: var(--panel); }
+.cb-count { font-stretch: var(--stretch-label); font-size: var(--text-sm); color: var(--graphite); font-weight: var(--weight-regular); }
 .cb-list { grid-area: list; display: flex; flex-direction: column; min-height: 0; border-right: var(--rule); }
 .cb-list-tools { display: flex; gap: var(--space-2); padding: var(--space-3); border-bottom: var(--rule); }
-.cb-search {
-  flex: 1; min-width: 0; height: 28px; padding: 0 var(--space-2);
-  font: inherit; color: var(--ink); background: var(--clay-light); border: var(--rule); border-radius: var(--radius);
-}
-.cb-entries { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1; }
+.cb-search { flex: 1; min-width: 0; }
+.cb-entries { overflow: auto; flex: 1; }
 .cb-entry {
   display: grid; gap: 2px; width: 100%; padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
-  font: inherit; text-align: left; color: var(--ink); background: none;
+  text-align: left; background: none;
   border: 0; border-bottom: var(--rule); border-left: 3px solid transparent; cursor: pointer;
 }
-.cb-entry:hover { background: var(--clay-mid); }
-.cb-entry[aria-current="true"] { background: var(--clay-light); border-left-color: var(--supply); }
-.cb-entry-name { font-weight: 500; }
+.cb-entry:hover { background: var(--hover); }
+.cb-entry[aria-current="true"] { background: var(--panel-raised); border-left-color: var(--ink); }
+.cb-entry-name { font-weight: var(--weight-medium); }
 .cb-entry-id { display: flex; gap: var(--space-2); align-items: baseline; font-stretch: var(--stretch-label); font-size: var(--text-sm); color: var(--graphite); overflow-wrap: anywhere; }
 .cb-tag {
-  font-stretch: var(--stretch-label); font-size: var(--text-xs); font-weight: 600; color: var(--ink);
+  font-stretch: var(--stretch-label); font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--ink);
   padding: 0 5px; border: 1px solid currentColor; border-radius: var(--radius); line-height: 16px;
 }
 .cb-note { margin: var(--space-3); color: var(--graphite); font-size: var(--text-sm); }
 .cb-pane { grid-area: pane; min-height: 0; min-width: 0; overflow: hidden; background: var(--canvas); }
 .cb-detail { height: 100%; overflow: auto; padding: var(--space-4) var(--space-5) var(--space-5); }
 .cb-detail-head { display: flex; justify-content: space-between; gap: var(--space-4); align-items: flex-start; }
-.cb-detail-head h3 { margin: 0; font-size: var(--text-lg); font-weight: 600; }
-.cb-meta { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); margin: var(--space-1) 0 0; font-stretch: var(--stretch-label); font-size: var(--text-sm); color: var(--graphite); }
+.cb-detail-head h3 { font-size: var(--text-lg); font-weight: var(--weight-semibold); }
+.cb-meta { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); margin-top: var(--space-1); font-stretch: var(--stretch-label); font-size: var(--text-sm); color: var(--graphite); }
 .cb-detail-actions { display: flex; gap: var(--space-2); flex-shrink: 0; }
-.cb-summary { margin: var(--space-3) 0 0; max-width: 72ch; line-height: 1.5; }
-.cb-params { width: 100%; margin-top: var(--space-4); border-collapse: collapse; font-size: var(--text-md); }
-.cb-params thead th {
-  padding: 0 var(--space-2) var(--space-1) 0; text-align: left; font-weight: 600;
-  font-stretch: var(--stretch-label); font-size: var(--text-sm); color: var(--graphite); border-bottom: 1px solid var(--graphite);
-}
-.cb-params tbody th { width: 42%; padding: 5px var(--space-2) 5px 0; text-align: left; font-weight: 400; font-stretch: var(--stretch-label); }
-.cb-params td { padding: 5px var(--space-2) 5px 0; vertical-align: baseline; }
-.cb-params tbody tr { border-bottom: var(--rule); }
-.cb-num { font-variant-numeric: tabular-nums; font-weight: 500; }
+.cb-summary { margin-top: var(--space-3); max-width: 72ch; }
+.cb-params { margin-top: var(--space-4); }
+.cb-params tbody th { width: 42%; font-stretch: var(--stretch-label); }
+.cb-num { font-weight: var(--weight-medium); }
 .cb-unit { color: var(--graphite); }
 .cb-range { margin-left: var(--space-2); font-size: var(--text-sm); color: var(--graphite); }
-.cb-basis { width: 84px; font-stretch: var(--stretch-label); font-size: var(--text-sm); color: var(--graphite); }
+.cb-basis { width: 84px; }
 .cb-basis a, .cb-sources a { color: var(--ink); text-underline-offset: 2px; text-decoration-color: var(--graphite); }
 .cb-sources { margin-top: var(--space-5); }
-.cb-sources h4 { margin: 0 0 var(--space-2); font-size: var(--text-sm); font-weight: 600; color: var(--graphite); }
+.cb-sources h4 { margin: 0 0 var(--space-2); }
 .cb-sources ol { margin: 0; padding-left: var(--space-5); font-size: var(--text-sm); line-height: 1.6; }
-.cb-btn {
-  height: 28px; padding: 0 var(--space-3); white-space: nowrap;
-  font: inherit; font-weight: 500; color: var(--ink);
-  background: var(--panel); border: 1px solid var(--graphite); border-radius: var(--radius); cursor: pointer;
-}
-.cb-btn:hover:not(:disabled) { background: var(--clay-mid); }
-.cb-btn:disabled { color: var(--graphite); border-color: var(--hairline); cursor: default; }
 @media (max-width: 860px) {
   .cb-frame { grid-template-columns: 1fr; grid-template-rows: auto auto minmax(160px, 30%) minmax(0, 1fr); grid-template-areas: "head" "kinds" "list" "pane"; }
   .cb-kinds { flex-direction: row; overflow-x: auto; padding: 0; border-right: 0; border-bottom: var(--rule); }
