@@ -172,7 +172,8 @@ def test_details_carry_tracked_views(tmp_path):
     st = d["static"]
     for key in ("capex_usd", "job_latency_us", "pumps", "pipes", "row_design_kw", "link_lengths_m"):
         assert key in st
-    assert st["job_latency_us"]["serve"]["max_us"] <= 1.95
+    sla = json.loads((HILL / "challenge_spec.json").read_text())["jobs"]["serve"]["latency_sla_us"]
+    assert st["job_latency_us"]["serve"]["max_us"] <= sla
 
 
 def test_power_breakdown_is_additive():
@@ -210,3 +211,47 @@ def test_garbage_values_never_crash(tmp_path):
         o[p[-1]] = rng.choice(junk)
         r = run(tmp_path, s)
         assert isinstance(r["passed"], bool)
+
+
+CATALOG = HILL.parents[2] / "catalog" / "dist" / "catalog.json"
+
+
+@pytest.mark.skipif(not CATALOG.is_file(), reason="catalog only exists inside the Data-Center-Design-Twin repo")
+def test_spec_matches_catalog():
+    """challenge_spec.json must be the build of spec_base.json + the current catalog."""
+    import subprocess
+    import sys
+
+    r = subprocess.run([sys.executable, str(HILL / "tools" / "build_spec.py"), "--check"],
+                       capture_output=True, text=True)
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_every_number_has_provenance():
+    spec = json.loads((HILL / "challenge_spec.json").read_text())
+    prov = spec["_provenance"]
+
+    def walk(d, prefix=""):
+        for k, v in d.items():
+            if k.startswith("_"):
+                continue
+            p = f"{prefix}.{k}" if prefix else k
+            if isinstance(v, dict):
+                yield from walk(v, p)
+            elif isinstance(v, (int, float)) and not isinstance(v, bool):
+                yield p
+
+    paths = list(walk(spec))
+    assert paths and all(p in prov for p in paths)
+    assert {"vendor_spec", "estimated"} <= {v["provenance"] for v in prov.values()}
+    for path in ("network.modules.acc.w_per_end", "network.modules.fr4_2x.reach_m"):
+        assert prov[path]["provenance"] == "vendor_spec"
+
+
+def test_new_cable_types_are_usable(tmp_path):
+    """ACC (5 m active copper) and 2xFR4 (2 km single-mode) are valid leaf modules."""
+    sub = base()
+    sub["network"]["leaf_module"] = "fr4_2x"
+    assert run(tmp_path, sub)["passed"]
+    sub["network"]["leaf_module"] = "acc"
+    assert_rejected(run(tmp_path, sub), "reaches")  # 5 m cannot span the hall to both spine racks

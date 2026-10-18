@@ -1,6 +1,6 @@
 spec_version: 2
 name: cool-the-cluster
-version: 0.1.0
+version: 0.2.0
 
 # What the evaluator reports, in ranking order: every passing report must start
 # with exactly these, and ranking is lexicographic in this order.

@@ -75,10 +75,10 @@ The baseline is a seeded random legal layout. It uses packet spines, sr8 optics,
 
 | mode | baseline annual kWh per rack-hour |
 |---|---|
-| validation (60-min steps) | 51.4229 |
-| final (15-min steps + utilization bursts) | 51.4562 |
+| validation (60-min steps) | 52.2948 |
+| final (15-min steps + utilization bursts) | 52.3297 |
 
-A plain local search reaches about 0.967. Realistic gains are a few percent, as in real facilities, where the IT load dominates.
+A plain local search reaches about 0.965. Realistic gains are a few percent, as in real facilities, where the IT load dominates.
 
 ## Hard constraints (illegal → `passed: false`, no score)
 
@@ -89,11 +89,12 @@ Checked before simulation:
 - **Reach.** Each GPU rack has 8 links to N0 and 8 to N1. A cable's length is the Manhattan slot distance plus 1.0 m of risers and 0.5 m of slack. It must be within the module's reach multiplied by:
   - the 5-year aging factor: 0.85 for DSP optics, 0.6 for LPO, 1.0 for copper
   - the spine factor: OCS insertion loss is 0.8 for dr8 and 0.6 for lpo_dr8
-- **Spine compatibility.** `packet_cpo` and `ocs` spines require single-mode leaf optics (`dr8` or `lpo_dr8`).
+- **Spine compatibility.** `packet_cpo` and `ocs` spines require single-mode leaf optics (`dr8`, `fr4_2x` or `lpo_dr8`).
+- **Leaf modules.** `dac` (2 m), `acc` (5 m active copper), `aec` (7 m), `sr8` (50 m), `dr8` (500 m), `fr4_2x` (2 km), `lpo_sr8`, `lpo_dr8`. Reach and watts for the first six come from `catalog/`; see `_provenance` in `challenge_spec.json`.
 - **Pipes.** The branch length is 2 × (Manhattan distance from rack to CDU + 3 m). At the fixed design flow of 0.75 kg/s, branch velocity must be within 0.5–2.0 m/s.
 - **Pump head.** Each CDU's pump head, computed with 5-year-aged pipe roughness, must be at most 185 kPa. Head is the worst branch plus 40 kPa inside the CDU, where a branch is its pipe friction plus K=10 of fittings plus the 110 kPa rack manifold.
 - **CDU capacity.** Design liquid heat must be at most 420 kW per CDU.
-- **Latency SLA.** The serving job's worst rack-to-rack latency must be at most 1.95 µs.
+- **Latency SLA.** The serving job's worst rack-to-rack latency must be at most 2.15 µs.
 - **Budget.** Capex must be at most $1,050,000. Capex covers containment, pipes, optics and cables, fiber, and the spine switch premium.
 - **Setpoint bounds.** Supply air must be in [16, 27] C and coolant in [18, 45] C.
 
@@ -129,12 +130,16 @@ The final run adds ±4% utilization bursts at 15-minute resolution. Keep a littl
 - **Network.**
   - Spine racks hold 4 switches each. Body power is 1.6 kW for packet and CPO switches, and 0.15 kW for OCS.
   - The spine end of a link mirrors the leaf module (packet), draws 5 W/port (CPO), or draws 0 W (OCS).
-  - Latency per path is `2 × 0.5 µs (leaf) + spine latency + module latencies + 4.9 ns/m`, averaged over the two spine racks. A job uses its worst pair.
+  - Latency per path is `2 × 0.6 µs (SN5600 leaf) + spine latency (0.6 µs packet) + module latencies + 5 ns/m`, averaged over the two spine racks. A job uses its worst pair.
 - **Step time.**
   `t_compute/speed + n_latency × hops × latency + max(0, bytes_term − overlap × t_compute/speed)`.
   - Ring: `hops = 2(R−1)` and `bytes_term = 2(R−1)/R × bytes / 1.6 TB/s`.
   - All-to-all: `hops = R−1`. On OCS, bandwidth is ×0.5 and latency is +0.5 µs.
 - **Scenarios.** Weather follows a daily cosine peaking at 15:00. Training jobs take a checkpoint dip to 55% utilization for 20 minutes every 6 hours. The serving job follows a diurnal sine.
+
+## Where the numbers come from
+
+`challenge_spec.json` is generated: `python3 tools/build_spec.py` merges `tools/spec_base.json` (twin-owned values) with 24 values read from the repo's `catalog/dist/catalog.json`. Every number has a `_provenance` entry, keyed by its dotted path, in the catalog's vocabulary. For example, `network.modules.acc.w_per_end` is `vendor_spec` from `equipment/nvidia-mca4j80-800g-acc`, and `air.recirc_same_aisle_k_per_kw` is `estimated`. `_gaps` lists what stays estimated and why. Edit `spec_base.json` or the catalog, never `challenge_spec.json`. `tests/test_hill.py` checks that the two are in sync whenever the catalog is present.
 
 ## Parameters
 
