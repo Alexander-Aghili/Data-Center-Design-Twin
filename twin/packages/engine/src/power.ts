@@ -39,11 +39,13 @@ const PEAK_TO_AVERAGE: Record<Purpose, RuleKey> = {
 }
 const DISTRIBUTION_LABEL: Record<PowerDistribution, string> = { ac54: '54 V AC busbar', dc800: '800 V DC' }
 
-/** A series of exactly `hours` finite numbers; missing or non-finite entries become 0. */
-export function toHours(values: readonly number[], hours: number): number[] {
+/** A series of exactly `hours` entries; missing or non-finite entries become `missing` (0 unless given). */
+export function toHours(values: readonly (number | null)[], hours: number): number[]
+export function toHours(values: readonly (number | null)[], hours: number, missing: null): (number | null)[]
+export function toHours(values: readonly (number | null)[], hours: number, missing: 0 | null = 0): (number | null)[] {
   return Array.from({ length: hours }, (_, h) => {
     const v = values[h]
-    return typeof v === 'number' && Number.isFinite(v) ? v : 0
+    return typeof v === 'number' && Number.isFinite(v) ? v : missing
   })
 }
 
@@ -300,71 +302,76 @@ export function powerBudget(
     return { checks: out, rowLoads }
   }
 
-  function upsCheck(): Check {
-    const item = equipment.find((e) => e.key === 'ups')
-    const moduleW = param(equipmentModel(ctx, item), 'moduleW')
-    const load = itPeakW / distEff
-    const loadText = `The UPS carries ${fmtW(load)} of critical load with racks at peak, including ${pct(1 - distEff)} distribution losses.`
-    const subject: Check['subject'] = { kind: 'equipment', id: 'ups', objectIds: item?.objectIds ?? [] }
-    if (!item || moduleW === null || moduleW <= 0) {
-      const none = load > 0 ? `${loadText} No UPS with a known module size is sized, so it cannot be checked.` : 'No IT load is placed, so the UPS carries nothing.'
-      return capacityCheck(
-        { kind: 'power.ups', subject, title: 'UPS capacity', value: load, limit: load > 0 ? null : 0, unit: 'W', explanation: none },
-        warnAt,
-      )
+  /** UPS or transformer: the load against the units left once redundant ones are set aside. */
+  function redundantUnitsCheck(spec: {
+    kind: 'power.ups' | 'power.transformer'
+    key: string
+    title: string
+    unit: string
+    fmt: (v: number) => string
+    load: number | null
+    unitCapacity: number | null
+    unitWord: string
+    loadText: string
+    unsized: string
+    idle: string
+  }): Check {
+    const item = equipment.find((e) => e.key === spec.key)
+    const base = { kind: spec.kind, subject: { kind: 'equipment' as const, id: spec.key, objectIds: item?.objectIds ?? [] }, title: spec.title, unit: spec.unit }
+    const { load, unitCapacity, fmt } = spec
+    if (load === 0) return capacityCheck({ ...base, value: 0, limit: 0, explanation: spec.idle }, warnAt)
+    if (!item || unitCapacity === null || unitCapacity <= 0 || load === null) {
+      return capacityCheck({ ...base, value: load, limit: null, explanation: `${spec.loadText} ${spec.unsized}` }, warnAt)
     }
     const serving = servingUnits(item.count, redundancy)
-    const needed = Math.ceil(load / moduleW)
+    const needed = Math.ceil(load / unitCapacity)
     return capacityCheck(
       {
-        kind: 'power.ups',
-        subject,
-        title: 'UPS capacity',
+        ...base,
         value: load,
-        limit: serving * moduleW,
-        unit: 'W',
-        explanation:
-          `${loadText} ${plural(item.count, 'module')} of ${fmtW(moduleW)} are installed for ${redundancy}; ${carrying(serving, serving * moduleW, load, fmtW)}`,
-        advice: `The load needs ${plural(needed, 'module')} of ${fmtW(moduleW)}, so ${redundancy} needs ${unitsWithRedundancy(needed, redundancy)}; ${item.count} installed.`,
+        limit: serving * unitCapacity,
+        explanation: `${spec.loadText} ${plural(item.count, spec.unitWord)} of ${fmt(unitCapacity)} are installed for ${redundancy}; ${carrying(serving, serving * unitCapacity, load, fmt)}`,
+        advice: `The load needs ${plural(needed, spec.unitWord)} of ${fmt(unitCapacity)}, so ${redundancy} needs ${unitsWithRedundancy(needed, redundancy)}; ${item.count} installed.`,
       },
       warnAt,
     )
   }
 
+  function upsCheck(): Check {
+    const load = itPeakW / distEff
+    return redundantUnitsCheck({
+      kind: 'power.ups',
+      key: 'ups',
+      title: 'UPS capacity',
+      unit: 'W',
+      fmt: fmtW,
+      load,
+      unitCapacity: param(equipmentModel(ctx, equipment.find((e) => e.key === 'ups')), 'moduleW'),
+      unitWord: 'module',
+      loadText: `The UPS carries ${fmtW(load)} of critical load with racks at peak, including ${pct(1 - distEff)} distribution losses.`,
+      unsized: 'No UPS with a known module size is sized, so it cannot be checked.',
+      idle: 'No IT load is placed, so the UPS carries nothing.',
+    })
+  }
+
   function transformerCheck(): Check {
-    const item = equipment.find((e) => e.key === 'transformer')
-    const ratingVa = param(equipmentModel(ctx, item), 'ratingVa')
     const pf = param(buswayModel(ctx, equipment.find((e) => e.category === 'busway')), 'powerFactor')
     const loadW = facilityAt(itPeakW, coolingWorst) * txEff
     const loadVa = pf ? loadW / pf : null
-    const subject: Check['subject'] = { kind: 'equipment', id: 'transformer', objectIds: item?.objectIds ?? [] }
-    const loadText =
-      loadVa === null
-        ? `The transformers feed ${fmtW(loadW)} at the worst hour with racks at peak.`
-        : `The transformers feed ${fmtW(loadW)} at the worst hour with racks at peak, ${fmtVA(loadVa)} at power factor ${pf}.`
-    if (!item || ratingVa === null || ratingVa <= 0 || loadVa === null) {
-      const none = loadW > 0 ? `${loadText} No transformer with a known rating and power factor is sized, so it cannot be checked.` : 'Nothing draws power, so the transformers carry no load.'
-      return capacityCheck(
-        { kind: 'power.transformer', subject, title: 'Transformer capacity', value: loadVa, limit: loadW > 0 ? null : 0, unit: 'VA', explanation: none },
-        warnAt,
-      )
-    }
-    const serving = servingUnits(item.count, redundancy)
-    const needed = Math.ceil(loadVa / ratingVa)
-    return capacityCheck(
-      {
-        kind: 'power.transformer',
-        subject,
-        title: 'Transformer capacity',
-        value: loadVa,
-        limit: serving * ratingVa,
-        unit: 'VA',
-        explanation:
-          `${loadText} ${plural(item.count, 'unit')} of ${fmtVA(ratingVa)} are installed for ${redundancy}; ${carrying(serving, serving * ratingVa, loadVa, fmtVA)}`,
-        advice: `The load needs ${plural(needed, 'transformer')} of ${fmtVA(ratingVa)}, so ${redundancy} needs ${unitsWithRedundancy(needed, redundancy)}; ${item.count} installed.`,
-      },
-      warnAt,
-    )
+    const atPeak = `The transformers feed ${fmtW(loadW)} at the worst hour with racks at peak`
+    return redundantUnitsCheck({
+      kind: 'power.transformer',
+      key: 'transformer',
+      title: 'Transformer capacity',
+      unit: 'VA',
+      fmt: fmtVA,
+      load: loadW === 0 ? 0 : loadVa,
+      unitCapacity: param(equipmentModel(ctx, equipment.find((e) => e.key === 'transformer')), 'ratingVa'),
+      unitWord: 'unit',
+      loadText: loadVa === null ? `${atPeak}.` : `${atPeak}, ${fmtVA(loadVa)} at power factor ${pf}.`,
+      unsized: 'No transformer with a known rating and power factor is sized, so it cannot be checked.',
+      idle: 'Nothing draws power, so the transformers carry no load.',
+    })
   }
 
   function inputCompatChecks(): Check[] {

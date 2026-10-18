@@ -86,10 +86,7 @@ export function assemble(ctx: EvalContext, s: EvalSlices): Evaluation {
     itW: toHours(s.power.hourly.itW, hours),
     coolingW: toHours(s.rejection.hourly.coolingW, hours),
     facilityW: toHours(s.power.hourly.facilityW, hours),
-    pue: Array.from({ length: hours }, (_, h) => {
-      const v = s.power.hourly.pue[h]
-      return typeof v === 'number' && Number.isFinite(v) ? v : null
-    }),
+    pue: toHours(s.power.hourly.pue, hours, null),
     waterM3,
     trimW: toHours(s.rejection.hourly.trimW, hours),
   }
