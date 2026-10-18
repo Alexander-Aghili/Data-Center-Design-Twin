@@ -221,6 +221,7 @@ describe('limits from the environment', () => {
       observationGapMs: 120_000,
       observationsPerHour: 10,
       observationReserve: 0.2,
+      maxToolResultChars: 30_000,
     })
     expect(limitsFromEnv({ AGENT_DAILY_BUDGET_USD: '12.5', AGENT_MAX_TOOL_CALLS_PER_TURN: '30', AGENT_REVIEW_MIN_GAP_S: '0' })).toMatchObject({
       dailyBudgetUsd: 12.5,
@@ -304,17 +305,51 @@ describe('per-turn caps', () => {
     expect(lastResults[1]!.content).toMatch(/not run/i)
   })
 
-  it('stops before the next request once the turn has spent its USD cap', async () => {
-    // 5000 output tokens = $0.10 per response
+  it('does not start a request that could take the turn over its USD cap', async () => {
+    // 5000 output tokens = $0.10 per response, so the next one is estimated at $0.10 too.
     const { client, requests } = scriptedClient(toolSteps(4, 1, { input: 0, output: 5000 }))
     const rt = createAgentRuntime({ store: fakeStore(), tools: [countingTool('get_plan')], client, dataDir, limits: limits({ maxTurnUsd: 0.15 }) })
     const rec = recorder(rt)
     rt.handleChat('fix it')
     await rec.idleAfter(1)
-    expect(requests).toHaveLength(2)
+    expect(requests).toHaveLength(1)
     expect(rec.notices()).toEqual([
-      'I stopped after this turn spent $0.20, over its $0.15 limit, to save your API budget. Say continue to keep going.',
+      'I stopped because the next request could take this turn over its $0.15 limit ($0.10 spent so far), to save your API budget. Say continue to keep going.',
     ])
+    expect(rt.status()!.turnUsd).toBeLessThanOrEqual(0.15)
+  })
+
+  it('does not start a request that alone could cost more than the turn cap, and says how to make it smaller', async () => {
+    // 40 000 characters of prompt are estimated at 20 000 tokens, written to the cache at $5 per million: $0.10.
+    const { client, requests } = scriptedClient([reply('Never sent.')])
+    const rt = createAgentRuntime({ store: fakeStore(), tools: [], client, dataDir, limits: limits({ maxTurnUsd: 0.1 }) })
+    const rec = recorder(rt)
+    rt.handleChat('x'.repeat(40_000))
+    await vi.waitFor(() => expect(rec.notices()).toHaveLength(1))
+    expect(requests).toHaveLength(0)
+    expect(rec.notices()[0]).toMatch(
+      /^The next request alone could cost about \$0\.1\d, more than this turn's \$0\.10 limit\. Start a new conversation to make requests smaller, or raise AGENT_MAX_TURN_USD\.$/,
+    )
+  })
+
+  it('answers a tool result over the size limit as an error instead of sending it', async () => {
+    const big: AgentTool = {
+      name: 'get_hourly',
+      description: 'Hourly series.',
+      inputSchema: { type: 'object', properties: {} },
+      run: async () => ({ ok: true, content: 'x'.repeat(64_002), summary: 'Read pue for hours 0 to 8759' }),
+    }
+    const { client, requests } = scriptedClient([{ content: [toolUse('t0', 'get_hourly')] }, reply('Asked for less.')])
+    const rt = createAgentRuntime({ store: fakeStore(), tools: [big], client, dataDir, limits: limits({ maxToolResultChars: 30_000 }) })
+    const rec = recorder(rt)
+    rt.handleChat('hourly pue')
+    await rec.idleAfter(1)
+    const result = (requests[1]!.messages.at(-1)!.content as { is_error?: boolean; content: string }[])[0]!
+    expect(result.is_error).toBe(true)
+    expect(result.content).toBe(
+      'Not sent: the result is 64,002 characters, over the 30,000-character limit for one tool result. Ask for less: a shorter range, a larger step, fewer series, or the summary detail.',
+    )
+    expect(rec.events).toContainEqual({ kind: 'toolResult', callId: 't0', ok: false, summary: 'Result too large to send (64,002 characters)', numbers: [] })
   })
 })
 
@@ -344,16 +379,21 @@ describe('daily budget', () => {
     expect(rec.notices()).toEqual([BUDGET_MESSAGE])
   })
 
-  it('a turn that reaches the budget stops before its next request', async () => {
-    spent(4.99)
-    const { client, requests } = scriptedClient(toolSteps(3, 1, { input: 0, output: 1500 }))
+  it('a turn does not start a request that could take the day over its budget', async () => {
+    // Each response costs $0.03; the next is estimated at the 2000-token output floor ($0.04) plus its prompt.
+    spent(4.8)
+    const { client, requests } = scriptedClient(toolSteps(10, 1, { input: 0, output: 1500 }))
     const rt = createAgentRuntime({ store: fakeStore(), tools: [countingTool('get_plan')], client, dataDir })
     const rec = recorder(rt)
     rt.handleChat('fix it')
     await rec.idleAfter(1)
-    expect(requests).toHaveLength(1)
-    expect(rec.notices()).toEqual([BUDGET_MESSAGE])
-    expect(rt.status()).toMatchObject({ budgetSpent: true })
+    expect(requests.length).toBeGreaterThan(1)
+    expect(requests.length).toBeLessThan(7)
+    expect(rec.notices()).toHaveLength(1)
+    expect(rec.notices()[0]).toMatch(
+      /^I stopped because the next request could take today's API spend over the \$5\.00 daily budget \(\$4\.9\d spent so far\)\. To raise it, set AGENT_DAILY_BUDGET_USD in \.env and restart the server\.$/,
+    )
+    expect(rt.status()!.todayUsd).toBeLessThanOrEqual(5)
   })
 })
 
@@ -460,15 +500,15 @@ describe('automatic review', () => {
 
   it('skips reviews when less than the reserve share of the daily budget is left', async () => {
     vi.useFakeTimers()
-    const { client, requests } = scriptedClient([toolSteps(1, 1, { input: 0, output: 210_000 })[0]!, reply('Done.'), reply('Review.')])
+    const { client, requests } = scriptedClient([reply('Done.', { input: 0, output: 210_000 }), reply('Review.')])
     // One chat turn spends $4.20 of $5.00, leaving 16 %.
-    const rt = createAgentRuntime({ store: fakeStore(), tools: [countingTool('get_plan')], client, dataDir, diff: testDiff, limits: limits({ maxTurnUsd: 10 }) })
+    const rt = createAgentRuntime({ store: fakeStore(), tools: [], client, dataDir, diff: testDiff })
     rt.handleChat('expensive')
     await vi.advanceTimersByTimeAsync(10)
-    expect(requests).toHaveLength(2)
+    expect(requests).toHaveLength(1)
     rt.handleChange(userEdit('edit'))
     await settle()
-    expect(requests).toHaveLength(2)
+    expect(requests).toHaveLength(1)
     expect(rt.status()?.budgetSpent).toBe(false)
   })
 

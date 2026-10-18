@@ -14,6 +14,8 @@ export interface AgentLimits {
   observationsPerHour: number
   /** Automatic reviews stop when less than this share of the daily budget is left, keeping it for chat. */
   observationReserve: number
+  /** Characters one tool result may have; a longer one is answered as an error, since every later request re-sends it. */
+  maxToolResultChars: number
 }
 
 /** The product owner's defaults (2026-10-18): about $5 a day, with no single turn above $0.75. */
@@ -25,6 +27,9 @@ export const DEFAULT_LIMITS: AgentLimits = {
   observationGapMs: 120_000,
   observationsPerHour: 10,
   observationReserve: 0.2,
+  // The largest results in normal use are about 14 000 characters (get_hourly, all eight series at the default step);
+  // get_evaluation "full" (101 000) and get_hourly at step 1 (164 000, about 77 000 tokens) are over it.
+  maxToolResultChars: 30_000,
 }
 
 const ENV: Record<keyof AgentLimits, { name: string; scale: number; integer: boolean }> = {
@@ -35,6 +40,7 @@ const ENV: Record<keyof AgentLimits, { name: string; scale: number; integer: boo
   observationGapMs: { name: 'AGENT_REVIEW_MIN_GAP_S', scale: 1000, integer: false },
   observationsPerHour: { name: 'AGENT_REVIEWS_PER_HOUR', scale: 1, integer: true },
   observationReserve: { name: 'AGENT_REVIEW_BUDGET_RESERVE', scale: 1, integer: false },
+  maxToolResultChars: { name: 'AGENT_MAX_TOOL_RESULT_CHARS', scale: 1, integer: true },
 }
 
 /** The limits with any `AGENT_*` overrides from the environment. A malformed value stops the server with its name. */

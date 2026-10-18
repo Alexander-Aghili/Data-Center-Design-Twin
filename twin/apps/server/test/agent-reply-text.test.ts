@@ -26,7 +26,7 @@ const toolUse = (id: string): BetaContentBlock => ({ type: 'tool_use', id, name:
 
 const start = (index: number, block: BetaContentBlock): BetaRawMessageStreamEvent => ({ type: 'content_block_start', index, content_block: block })
 const textDelta = (index: number, t: string): BetaRawMessageStreamEvent => ({ type: 'content_block_delta', index, delta: { type: 'text_delta', text: t } })
-const thinkingDelta = (index: number, t: string): BetaRawMessageStreamEvent => ({ type: 'content_block_delta', index, delta: { type: 'thinking_delta', thinking: t } })
+const thinkingDelta = (index: number, t: string): BetaRawMessageStreamEvent => ({ type: 'content_block_delta', index, delta: { type: 'thinking_delta', thinking: t, estimated_tokens: null } })
 const stop = (index: number): BetaRawMessageStreamEvent => ({ type: 'content_block_stop', index })
 
 /** The usual stream: each block opens empty, its text arrives in deltas. */

@@ -90,7 +90,7 @@ The cached prefix (system prompt plus 56 tool schemas) is about 87,000 character
 
 The server records the `usage` of every Claude API response (input, output, cache write and cache read tokens), prices it at the `claude-opus-5-5` rates above, adds it to the day's total in `.data/usage.json`, and logs each request's tokens and cost at info level. The agent panel shows today's spend against the daily budget and, while a turn runs, its cost so far next to a Stop button. Stop aborts the stream: the text so far stays, a "Stopped" line follows, and the conversation history stays valid.
 
-A turn ends with a plain message, such as "I stopped after 16 tool calls to save your API budget. Say continue to keep going.", when it reaches any per-turn cap. The request and cost caps are checked before each model request, and a tool call over the cap is answered as not run. When the day's spend reaches the budget, chat and automatic reviews stop until local midnight, and the thread says how much was spent and how to raise the limit.
+A turn ends with a plain message, such as "I stopped after 16 tool calls to save your API budget. Say continue to keep going.", when it reaches any per-turn cap. A tool call over the cap is answered as not run. Before each model request the server estimates what it could cost and does not start it if that could take the turn or the day over its limit. The estimate counts the prompt at two characters per token (this agent's JSON measures 2.2), prices the part the previous request already sent within the 5-minute cache lifetime as a cache read and the rest as a cache write, and adds at least 2,000 output tokens. A tool result longer than the size limit is not sent to the model; the agent is told to ask for less. Every later request of a conversation re-sends each result, and one `get_hourly` call at step 1 (164,000 characters, about 77,000 tokens) once made a two-request question cost $0.59. When the day's spend reaches the budget, chat and automatic reviews stop until local midnight, and the thread says how much was spent and how to raise the limit.
 
 Automatic reviews of your edits (observation turns) are paid turns too. They wait at least the minimum gap after the previous one (edits made meanwhile merge into the next review), stop for the hour once the hourly count is reached, and stop when less than the reserve share of the daily budget is left. The "Automatic review" switch in the agent panel turns them off. The setting is kept in `.data/agent-settings.json`.
 
@@ -105,6 +105,7 @@ Each limit can be set in the shell or in the repo-root `.env`; restart the serve
 | `AGENT_REVIEW_MIN_GAP_S` | `120` | Seconds between automatic reviews |
 | `AGENT_REVIEWS_PER_HOUR` | `10` | Automatic reviews in any 60 minutes |
 | `AGENT_REVIEW_BUDGET_RESERVE` | `0.2` | Share of the daily budget kept for chat; reviews stop below it |
+| `AGENT_MAX_TOOL_RESULT_CHARS` | `30000` | Characters of one tool result sent to the model |
 
 ## Using the twin from Claude Code (MCP)
 

@@ -279,7 +279,14 @@ describe.skipIf(!LIVE)('design agent behavior (live)', () => {
       severity: 'info',
       emit: (e) => events.push(e),
       signal: new AbortController().signal,
-      meter: new TurnMeter({ model: AGENT_MODEL, limits: DEFAULT_LIMITS, ledger: new UsageLedger(null), onChange: () => {} }),
+      meter: new TurnMeter({
+        model: AGENT_MODEL,
+        limits: DEFAULT_LIMITS,
+        ledger: new UsageLedger(null),
+        cache: { last: null },
+        now: Date.now,
+        onChange: () => {},
+      }),
     })
     transcript('rename app event', events)
     expect(textOf(events)).toBe('')

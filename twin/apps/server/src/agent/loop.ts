@@ -219,12 +219,15 @@ class TurnOutput {
   }
 }
 
-async function callModel(ctx: TurnContext, out: TurnOutput): Promise<FinalMessage> {
+/** The characters of a request's prompt, for the meter's cost estimate. */
+const promptChars = (params: BetaMessageStreamParams) => JSON.stringify([params.system, params.tools, params.messages]).length
+
+async function callModel(ctx: TurnContext, out: TurnOutput, params: BetaMessageStreamParams): Promise<FinalMessage> {
   let rateLimited = 0
   for (;;) {
     out.newRequest()
     try {
-      const stream = ctx.client.beta.messages.stream(request(ctx.model, ctx.toolParams, ctx.conversation), { signal: ctx.signal })
+      const stream = ctx.client.beta.messages.stream(params, { signal: ctx.signal })
       let usage = { input: 0, output: 0, cacheWrite: 0, cacheRead: 0 }
       for await (const event of stream) {
         if (ctx.signal.aborted) throw new Anthropic.APIUserAbortError()
@@ -270,6 +273,13 @@ async function runTool(ctx: TurnContext, out: TurnOutput, block: BetaToolUseBloc
     ctx.emit({ kind: 'toolResult', callId: block.id, ok: false, summary: outcome.error, numbers: [] })
     return { type: 'tool_result', tool_use_id: block.id, is_error: true, content: outcome.error }
   }
+  // Every later request of the conversation re-sends a result, so one oversized result makes all of them dear.
+  const oversize = ctx.meter.oversizeMessage(outcome.content.length)
+  if (oversize) {
+    const summary = `Result too large to send (${outcome.content.length.toLocaleString('en-US')} characters)`
+    ctx.emit({ kind: 'toolResult', callId: block.id, ok: false, summary, numbers: [] })
+    return { type: 'tool_result', tool_use_id: block.id, is_error: true, content: oversize }
+  }
   ctx.emit({ kind: 'toolResult', callId: block.id, ok: true, summary: outcome.summary, numbers: toolResultNumbers(outcome.content) })
   for (const e of outcome.events ?? []) ctx.emit({ ...e, messageId: ctx.messageId })
   return { type: 'tool_result', tool_use_id: block.id, content: outcome.content }
@@ -289,9 +299,10 @@ export async function runTurn(ctx: TurnContext): Promise<void> {
   const out = new TurnOutput(ctx)
   try {
     for (;;) {
-      const cap = ctx.meter.stopBeforeRequest()
+      const params = request(ctx.model, ctx.toolParams, ctx.conversation)
+      const cap = ctx.meter.stopBeforeRequest(promptChars(params))
       if (cap) return out.notice(cap)
-      const message = await callModel(ctx, out)
+      const message = await callModel(ctx, out, params)
       // A refusal can cut a tool call off mid-input: never run its tools, and keep the partial out of history.
       if (message.stop_reason === 'refusal') return out.error(MESSAGES.refusal)
       out.catchUp(message.content)

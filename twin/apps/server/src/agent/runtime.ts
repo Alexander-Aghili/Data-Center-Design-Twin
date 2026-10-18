@@ -10,7 +10,7 @@ import { AGENT_MODEL, createAnthropicClient, type AnthropicLike } from './client
 import { Conversation, type Effort } from './conversation'
 import { DEFAULT_LIMITS, type AgentLimits } from './limits'
 import { callSummary, errorText, runTurn, toolParams } from './loop'
-import { dailyBudgetMessage, TurnMeter, type SpendLog } from './meter'
+import { dailyBudgetMessage, TurnMeter, type CacheState, type SpendLog } from './meter'
 import { ChangeCoalescer, formatAppEvent, isWorthObserving, severityOf, type MergedChanges } from './observe'
 import { toolResultNumbers, type AgentTool, type ToolOutcome } from './tools/index'
 import { UsageLedger } from './usage'
@@ -98,6 +98,7 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
   /** The turn now running: its meter for the live cost, its controller for Stop. */
   let running: { meter: TurnMeter; abort: AbortController } | null = null
   let lastTurnUsd = 0
+  const cache: CacheState = { last: null }
   /** When each automatic review of the last hour started. */
   let reviewTimes: number[] = []
   let conversation = new Conversation(file)
@@ -159,7 +160,7 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
       const messageId = randomUUID()
       turnMessageId = messageId
       const abort = new AbortController()
-      const meter = new TurnMeter({ model, limits, ledger, ...(deps.log ? { log: deps.log } : {}), onChange: emitStatus })
+      const meter = new TurnMeter({ model, limits, ledger, cache, now, ...(deps.log ? { log: deps.log } : {}), onChange: emitStatus })
       running = { meter, abort }
       emitStatus()
       try {

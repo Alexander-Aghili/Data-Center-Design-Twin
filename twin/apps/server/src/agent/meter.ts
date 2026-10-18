@@ -8,7 +8,24 @@ export interface SpendLog {
 }
 
 const usd = (amount: number) => `$${amount.toFixed(2)}`
+const count = (n: number) => n.toLocaleString('en-US')
 const KEEP_GOING = 'to save your API budget. Say continue to keep going.'
+
+/**
+ * Characters per prompt token assumed for the estimate. count_tokens measured 2.2 for this agent's JSON (87 000
+ * characters of tools and system prompt are 39 000 tokens; a 164 000-character numeric tool result is 77 000); 2 errs
+ * high, so the estimate does too.
+ */
+const CHARS_PER_TOKEN = 2
+/** Output assumed for a request when the turn has seen no larger one. Live steps of this agent wrote 27 to 361 tokens. */
+const OUTPUT_FLOOR_TOKENS = 2000
+/** The prompt cache lives 5 minutes after its last use; within that the previous prompt is read, not written. */
+const CACHE_TTL_MS = 5 * 60_000
+
+/** The prompt size of the agent's last request and when it ended, shared by all turns. */
+export interface CacheState {
+  last: { promptTokens: number; at: number } | null
+}
 
 export function dailyBudgetMessage(todayUsd: number, budgetUsd: number): string {
   return `The agent is paused until tomorrow: today's API spend is ${usd(todayUsd)} of the ${usd(budgetUsd)} daily budget. To raise it, set AGENT_DAILY_BUDGET_USD in .env and restart the server.`
@@ -37,9 +54,18 @@ export class TurnMeter {
   #toolCalls = 0
   #settledUsd = 0
   #pending: TokenUsage | null = null
+  #maxOutput = 0
 
   constructor(
-    private readonly opts: { model: string; limits: AgentLimits; ledger: UsageLedger; log?: SpendLog; onChange: () => void },
+    private readonly opts: {
+      model: string
+      limits: AgentLimits
+      ledger: UsageLedger
+      cache: CacheState
+      now: () => number
+      log?: SpendLog
+      onChange: () => void
+    },
   ) {}
 
   /** What the turn has cost so far, including the request in flight. */
@@ -47,13 +73,37 @@ export class TurnMeter {
     return this.#settledUsd + (this.#pending ? costUsd(this.opts.model, this.#pending) : 0)
   }
 
-  /** The message to post instead of the next request when it would break a cap; null when it may go. */
-  stopBeforeRequest(): string | null {
+  /**
+   * A high estimate of what a request with this many prompt characters costs: the part the last request (within the
+   * cache lifetime) already had is read from the cache, the rest is written to it, and the output is the larger of
+   * the floor and the turn's largest so far.
+   */
+  estimateUsd(promptChars: number): number {
+    const { model, cache, now } = this.opts
+    const tokens = Math.ceil(promptChars / CHARS_PER_TOKEN)
+    const warm = cache.last && now() - cache.last.at < CACHE_TTL_MS ? Math.min(cache.last.promptTokens, tokens) : 0
+    return costUsd(model, { input: 0, output: Math.max(OUTPUT_FLOOR_TOKENS, this.#maxOutput), cacheWrite: tokens - warm, cacheRead: warm })
+  }
+
+  /**
+   * The message to post instead of the next request when it could break a cap; null when it may go. The request
+   * is priced in advance, so a cap is overshot by no more than the estimate's error.
+   */
+  stopBeforeRequest(promptChars: number): string | null {
     const { limits, ledger } = this.opts
+    const estimate = this.estimateUsd(promptChars)
     const today = ledger.todayUsd()
     if (today >= limits.dailyBudgetUsd) return dailyBudgetMessage(today, limits.dailyBudgetUsd)
+    if (today + estimate > limits.dailyBudgetUsd) {
+      return `I stopped because the next request could take today's API spend over the ${usd(limits.dailyBudgetUsd)} daily budget (${usd(today)} spent so far). To raise it, set AGENT_DAILY_BUDGET_USD in .env and restart the server.`
+    }
     if (this.#requests >= limits.maxRequestsPerTurn) return `I stopped after ${this.#requests} model requests ${KEEP_GOING}`
-    if (this.usd >= limits.maxTurnUsd) return `I stopped after this turn spent ${usd(this.usd)}, over its ${usd(limits.maxTurnUsd)} limit, ${KEEP_GOING}`
+    if (estimate > limits.maxTurnUsd) {
+      return `The next request alone could cost about ${usd(estimate)}, more than this turn's ${usd(limits.maxTurnUsd)} limit. Start a new conversation to make requests smaller, or raise AGENT_MAX_TURN_USD.`
+    }
+    if (this.usd + estimate > limits.maxTurnUsd) {
+      return `I stopped because the next request could take this turn over its ${usd(limits.maxTurnUsd)} limit (${usd(this.usd)} spent so far), ${KEEP_GOING}`
+    }
     this.#requests++
     return null
   }
@@ -68,9 +118,11 @@ export class TurnMeter {
     const usage = this.#pending
     if (!usage) return
     this.#pending = null
-    const { model, ledger, log } = this.opts
+    const { model, ledger, log, cache, now } = this.opts
     const cost = ledger.record(model, usage)
     this.#settledUsd += cost
+    this.#maxOutput = Math.max(this.#maxOutput, usage.output)
+    cache.last = { promptTokens: usage.input + usage.cacheRead + usage.cacheWrite, at: now() }
     log?.info({ model, ...usage, usd: cost, turnUsd: this.#settledUsd, todayUsd: ledger.todayUsd() }, 'Claude API request')
     this.opts.onChange()
   }
@@ -84,6 +136,13 @@ export class TurnMeter {
 
   toolCapMessage(): string {
     return `I stopped after ${this.#toolCalls} tool calls ${KEEP_GOING}`
+  }
+
+  /** The tool_result text for a result too long to send, or null when it fits. */
+  oversizeMessage(chars: number): string | null {
+    const limit = this.opts.limits.maxToolResultChars
+    if (chars <= limit) return null
+    return `Not sent: the result is ${count(chars)} characters, over the ${count(limit)}-character limit for one tool result. Ask for less: a shorter range, a larger step, fewer series, or the summary detail.`
   }
 
   /** The tool_result text for a call the cap kept from running. */
