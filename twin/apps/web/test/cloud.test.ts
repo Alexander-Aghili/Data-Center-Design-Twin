@@ -1,8 +1,11 @@
 import type { Annotation } from '@twin/schema'
+import { create } from '@react-three/test-renderer'
 import { act, render } from '@testing-library/react'
-import { createElement } from 'react'
-import { Box3, PerspectiveCamera, Vector3 } from 'three'
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { useThree } from '@react-three/fiber'
+import { Fragment, createElement } from 'react'
+import { Box3, PerspectiveCamera, Vector3, type Camera } from 'three'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { CameraBridge, useCameraBridge } from '../src/scene/annotations/cameraBridge'
 import {
   CLOUD_OFFSET_PX,
   cloudPath,
@@ -220,6 +223,7 @@ describe('revision clouds', () => {
     let RevisionClouds: typeof import('../src/scene/annotations/RevisionClouds').RevisionClouds
     let useTwinStore: typeof import('../src/state/store').useTwinStore
     let useSceneRegistry: typeof import('../src/scene/registry').useSceneRegistry
+    const boxes = new Map<string, Box3>()
 
     beforeAll(async () => {
       // The store module creates the app's store on import; keep it from opening a real socket.
@@ -229,40 +233,88 @@ describe('revision clouds', () => {
       ;({ useSceneRegistry } = await import('../src/scene/registry'))
     })
 
-    afterEach(() => vi.useRealTimers())
-
-    it('draws a cloud and tag for a registered object and drops it once the object is removed', () => {
+    beforeEach(() => {
       vi.useFakeTimers({ toFake: ['requestAnimationFrame', 'cancelAnimationFrame', 'performance'] })
-      const cam = camera()
-      const boxes = new Map([['rack:R3-00', rackBox(12, 10)], ['rack:R5-00', rackBox(12, 17.2)]])
-      const real = useSceneRegistry.getState().worldBox
+      boxes.clear()
+      boxes.set('rack:R3-00', rackBox(12, 10))
+      boxes.set('rack:R5-00', rackBox(12, 17.2))
       useSceneRegistry.setState({ worldBox: (id: string) => boxes.get(id)?.clone() ?? null })
-      const view = () => ({ camera: cam, ...VIEW, left: 0, top: 0 })
-      const { container, unmount } = render(createElement(RevisionClouds, { view }))
+    })
+
+    afterEach(() => {
+      act(() => useTwinStore.getState().dispatchView({ type: 'clearAnnotations' }))
+      useCameraBridge.setState({ view: null })
+      vi.useRealTimers()
+    })
+
+    const annotate = () =>
       act(() => {
-        useTwinStore.getState().dispatchView({
+        const { dispatchView } = useTwinStore.getState()
+        dispatchView({
           type: 'annotate',
           annotation: { tag: 1, objectIds: ['rack:R3-00'], label: 'Air can’t carry 132 kW per rack', severity: 'problem' },
         })
-        useTwinStore.getState().dispatchView({
-          type: 'annotate',
-          annotation: { tag: 2, objectIds: ['rack:R5-00'], label: 'CDU at 96%', severity: 'warning' },
-        })
+        dispatchView({ type: 'annotate', annotation: { tag: 2, objectIds: ['rack:R5-00'], label: 'CDU at 96%', severity: 'warning' } })
+        dispatchView({ type: 'annotate', annotation: { tag: 3, objectIds: ['rack:R5-00'], label: 'No uplink', severity: 'info' } })
       })
+    const notes = (root: HTMLElement) => [...root.querySelectorAll('[role="note"]')].map((n) => n.getAttribute('aria-label'))
+
+    it('draws clouds from the camera the bridge publishes', () => {
+      const { container, unmount } = render(createElement(RevisionClouds))
+      annotate()
       act(() => vi.advanceTimersByTime(100))
-      const notes = () => [...container.querySelectorAll('[role="note"]')].map((n) => n.getAttribute('aria-label'))
-      expect(notes()).toEqual(['Revision 1: Air can’t carry 132 kW per rack', 'Revision 2: CDU at 96%'])
+      expect(notes(container)).toEqual([])
+      act(() => useCameraBridge.setState({ view: { camera: camera(), ...VIEW } }))
+      act(() => vi.advanceTimersByTime(100))
+      expect(notes(container)).toHaveLength(3)
       expect(container.querySelector('.rc-line')?.getAttribute('d')).toMatch(/^M.* Z$/)
       expect(container.querySelector('.rc-num')?.textContent).toBe('1')
+      unmount()
+    })
 
+    it('shows severity by shape and words, not color alone', () => {
+      const { container, unmount } = render(createElement(RevisionClouds, { view: () => ({ camera: camera(), ...VIEW }) }))
+      annotate()
+      act(() => vi.advanceTimersByTime(100))
+      expect(notes(container)).toEqual([
+        'Revision 1, problem: Air can’t carry 132 kW per rack',
+        'Revision 2, warning: CDU at 96%',
+        'Revision 3, information: No uplink',
+      ])
+      const shapes = [...container.querySelectorAll('.rc-severity')].map((g) => g.getAttribute('data-severity'))
+      expect(shapes).toEqual(['problem', 'warning', 'info'])
+      const paths = [...container.querySelectorAll('.rc-severity')].map((g) => g.innerHTML)
+      expect(new Set(paths).size).toBe(3)
+      unmount()
+    })
+
+    it('drops the cloud once its object is removed from the scene', () => {
+      const { container, unmount } = render(createElement(RevisionClouds, { view: () => ({ camera: camera(), ...VIEW }) }))
+      annotate()
+      act(() => vi.advanceTimersByTime(100))
+      expect(notes(container)).toHaveLength(3)
       boxes.delete('rack:R3-00')
       act(() => vi.advanceTimersByTime(100))
-      expect(notes()).toEqual(['Revision 2: CDU at 96%'])
-
+      expect(notes(container)).toEqual(['Revision 2, warning: CDU at 96%', 'Revision 3, information: No uplink'])
       act(() => useTwinStore.getState().dispatchView({ type: 'clearAnnotations' }))
-      expect(notes()).toEqual([])
+      expect(notes(container)).toEqual([])
       unmount()
-      useSceneRegistry.setState({ worldBox: real })
     })
+  })
+
+  it('<CameraBridge /> publishes the canvas camera and size while mounted', async () => {
+    let canvasCamera: Camera | null = null
+    const Probe = () => {
+      canvasCamera = useThree((s) => s.camera)
+      return null
+    }
+    const renderer = await create(createElement(Fragment, null, createElement(CameraBridge), createElement(Probe)))
+    const view = useCameraBridge.getState().view
+    expect(canvasCamera).not.toBeNull()
+    expect(view?.camera).toBe(canvasCamera)
+    expect(view?.width).toBeGreaterThan(0)
+    expect(view?.height).toBeGreaterThan(0)
+    await renderer.unmount()
+    expect(useCameraBridge.getState().view).toBeNull()
   })
 })
