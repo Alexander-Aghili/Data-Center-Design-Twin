@@ -1,0 +1,462 @@
+/* Agent thread (Task 22). Drafting language: plain text on the panel, red only for problems, one card per proposal. */
+
+.ag-thread {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--panel);
+}
+
+.ag-thread__title {
+  margin: 0;
+  padding: var(--space-4) var(--space-4) var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  font-stretch: var(--stretch-label);
+  color: var(--graphite);
+}
+
+.ag-thread__log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-1) var(--space-4) var(--space-3);
+  line-height: 1.45;
+}
+
+.ag-empty {
+  margin: 0;
+  max-width: 34ch;
+  color: var(--graphite);
+}
+
+.ag-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Messages */
+
+.ag-msg {
+  position: relative;
+}
+
+.ag-msg--problem,
+.ag-msg--warning {
+  padding-left: 28px;
+}
+
+.ag-msg--problem {
+  --sev: var(--heat);
+}
+
+.ag-msg--warning {
+  --sev: var(--warning);
+}
+
+.ag-msg__gutter {
+  position: absolute;
+  top: 1px;
+  bottom: 2px;
+  left: 0;
+  width: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* The leader line from the revision triangle down the length of the message. */
+.ag-msg__rule {
+  flex: 1;
+  width: 1px;
+  margin-top: 3px;
+  background: var(--sev);
+}
+
+.ag-msg__mark {
+  font-weight: 700;
+  line-height: 18px;
+  color: var(--sev);
+}
+
+.ag-msg__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ag-msg__body p,
+.ag-msg__body ul,
+.ag-msg__body ol {
+  margin: 0;
+}
+
+.ag-msg__body ul,
+.ag-msg__body ol {
+  padding-left: 18px;
+}
+
+.ag-msg__body li + li {
+  margin-top: 2px;
+}
+
+.ag-msg__body strong {
+  font-weight: 650;
+}
+
+.ag-msg--problem .ag-msg__body > p strong {
+  color: var(--heat);
+}
+
+.ag-msg__body code {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 0.9em;
+  padding: 0 3px;
+  border-radius: var(--radius);
+  background: var(--clay-mid);
+}
+
+.ag-grounded {
+  text-decoration: underline dotted var(--graphite);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
+.ag-caret {
+  display: inline-block;
+  width: 0.45em;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -0.12em;
+  background: var(--ink);
+  animation: ag-blink 1s steps(2, start) infinite;
+}
+
+@keyframes ag-blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ag-caret {
+    animation: none;
+  }
+}
+
+.ag-user {
+  margin: 0;
+  padding: 2px 0 2px 10px;
+  border-left: 2px solid var(--ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ag-error {
+  margin: 0;
+  color: var(--heat);
+}
+
+.ag-error__mark,
+.ag-tool__mark {
+  display: inline-block;
+  width: 14px;
+  font-weight: 700;
+}
+
+/* Tool calls: one quiet line each. */
+
+.ag-tool {
+  overflow: hidden;
+  font-size: var(--text-xs);
+  font-stretch: var(--stretch-label);
+  line-height: 1.35;
+  color: var(--graphite);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ag-tool + .ag-tool {
+  margin-top: -4px;
+}
+
+.ag-tool--failed .ag-tool__mark {
+  color: var(--heat);
+}
+
+.ag-link {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+  font-weight: 500;
+  text-underline-offset: 3px;
+}
+
+.ag-link svg {
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+}
+
+.ag-link:hover {
+  color: var(--supply);
+}
+
+/* Revision triangle */
+
+.ag-delta {
+  flex: none;
+  overflow: visible;
+  --sev: var(--heat);
+}
+
+.ag-delta--warning {
+  --sev: var(--warning);
+}
+
+.ag-delta--info {
+  --sev: var(--graphite);
+}
+
+.ag-delta path {
+  fill: var(--canvas);
+  stroke: var(--sev);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+
+.ag-delta text {
+  font-family: var(--font);
+  font-size: 9px;
+  font-weight: 700;
+  fill: var(--sev);
+}
+
+/* Proposal card */
+
+.ag-card {
+  padding: 10px 12px 12px;
+  border: var(--rule);
+  border-radius: var(--radius);
+  background: var(--clay-light);
+}
+
+.ag-card--previewing {
+  border-color: var(--ink);
+}
+
+.ag-card--dismissed {
+  color: var(--graphite);
+}
+
+.ag-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.ag-card__title {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.ag-msg__body .ag-card__why {
+  margin: 2px 0 var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--graphite);
+}
+
+.ag-msg__body .ag-card__changes {
+  padding: 0;
+  list-style: none;
+}
+
+.ag-card__changes li {
+  position: relative;
+  padding: 1px 0 1px 16px;
+}
+
+.ag-card__changes li::before {
+  content: attr(data-mark);
+  position: absolute;
+  left: 0;
+  font-weight: 700;
+  color: var(--graphite);
+}
+
+.ag-card__changes li[data-mark='+']::before {
+  color: var(--ok);
+}
+
+.ag-card__changes li.ag-card__breaks::before {
+  font-size: 0.85em;
+  color: var(--warning);
+}
+
+.ag-msg__body .ag-card__effect {
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px dashed var(--hairline);
+  font-size: var(--text-sm);
+  color: var(--graphite);
+}
+
+.ag-card__check {
+  display: block;
+  margin-top: 2px;
+  font-weight: 600;
+}
+
+.ag-card__check > span {
+  display: inline-block;
+  width: 14px;
+}
+
+.ag-card__check--warn {
+  color: var(--warning);
+}
+
+.ag-card__check--fail {
+  color: var(--heat);
+}
+
+.ag-card__check--unknown {
+  color: var(--ink);
+}
+
+.ag-card__check--pass {
+  color: var(--ok);
+}
+
+.ag-msg__body .ag-card__status {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.ag-card__status--stale {
+  color: var(--warning);
+}
+
+.ag-card__status--applied {
+  color: var(--ok);
+}
+
+.ag-card__actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: 10px;
+}
+
+.ag-btn {
+  padding: 5px 12px;
+  border: var(--rule);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease);
+}
+
+.ag-btn:hover:not(:disabled) {
+  border-color: var(--graphite);
+}
+
+.ag-btn[aria-pressed='true'] {
+  border-color: var(--ink);
+  background: var(--clay-mid);
+}
+
+.ag-btn--primary {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #fff;
+}
+
+.ag-btn--primary:hover:not(:disabled) {
+  background: var(--graphite);
+  border-color: var(--graphite);
+}
+
+.ag-btn--quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--graphite);
+}
+
+.ag-btn--quiet:hover:not(:disabled) {
+  border-color: transparent;
+  color: var(--ink);
+}
+
+.ag-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+/* Chat input */
+
+.ag-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--space-2);
+  padding: 10px var(--space-4) 14px;
+  border-top: var(--rule);
+}
+
+.ag-input textarea {
+  display: block;
+  width: 100%;
+  padding: 7px 10px;
+  border: var(--rule);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  line-height: 1.4;
+  resize: none;
+}
+
+.ag-input textarea::placeholder {
+  color: var(--graphite);
+}
+
+.ag-input textarea:disabled {
+  background: transparent;
+  cursor: not-allowed;
+}
+
+.ag-input__send {
+  padding: 7px 4px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ag-input__send:disabled {
+  color: var(--graphite);
+  opacity: 0.5;
+  cursor: default;
+}
