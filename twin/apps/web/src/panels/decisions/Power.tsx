@@ -3,6 +3,7 @@ import { POWER_OVERSUBSCRIPTION_RANGE, type EquipmentEntry, type Plan } from '@t
 import { useTwinStore } from '../../state/store'
 import { useCatalog } from '../fields/CatalogPicker'
 import { Field, useField } from '../fields/Field'
+import { MoreSettings } from '../fields/MoreSettings'
 import { NumberInput } from '../fields/Number'
 import { Select } from '../fields/Select'
 import s from './decisions.module.css'
@@ -71,7 +72,7 @@ export function PowerDecisions({ plan }: { plan: Plan }) {
         : `800 V DC needs a DC input, which ${noDc} lacks.`
   return (
     <>
-      <Field label="Redundancy" target="decision:power.redundancy" hint="Sets how many spare UPS modules, transformers and feeds the engine sizes.">
+      <Field label="Redundancy" target="decision:power.redundancy" hint="How many spare UPS modules, transformers and feeds to plan for.">
         <Select
           value={p.redundancy}
           options={[
@@ -82,11 +83,7 @@ export function PowerDecisions({ plan }: { plan: Plan }) {
           onChange={(redundancy) => send({ type: 'setRedundancy', payload: { redundancy } })}
         />
       </Field>
-      <Field
-        label="Distribution"
-        target="decision:power.distribution"
-        hint={dcHint}
-      >
+      <Field label="Power distribution" target="decision:power.distribution" hint={dcHint}>
         <Select
           value={p.distribution}
           options={[
@@ -96,22 +93,24 @@ export function PowerDecisions({ plan }: { plan: Plan }) {
           onChange={(distribution) => send({ type: 'setDistribution', payload: { distribution } })}
         />
       </Field>
-      <Field
-        label="Oversubscription allowance"
-        target="decision:power.oversubscription"
-        hint="How far rack load may exceed busway rating, from 1.0 (none) to 2.0."
-      >
-        <NumberInput
-          value={p.oversubscription}
-          unit="× rating"
-          min={POWER_OVERSUBSCRIPTION_RANGE.min}
-          max={POWER_OVERSUBSCRIPTION_RANGE.max}
-          onCommit={(factor) => send({ type: 'setOversubscription', payload: { factor } })}
-        />
-      </Field>
-      <Field label="Busway per row" target="decision:overrides.busway" hint="Auto-sized rows follow the load; a fixed model is checked as chosen.">
-        <BuswayPerRow plan={plan} />
-      </Field>
+      <MoreSettings>
+        <Field
+          label="Busway oversubscription"
+          target="decision:power.oversubscription"
+          hint="How far rack load may exceed busway rating, from 1.0 (none) to 2.0."
+        >
+          <NumberInput
+            value={p.oversubscription}
+            unit="× rating"
+            min={POWER_OVERSUBSCRIPTION_RANGE.min}
+            max={POWER_OVERSUBSCRIPTION_RANGE.max}
+            onCommit={(factor) => send({ type: 'setOversubscription', payload: { factor } })}
+          />
+        </Field>
+        <Field label="Busway per row" target="decision:overrides.busway" hint="Auto-sized rows follow the load; a fixed model is checked as chosen.">
+          <BuswayPerRow plan={plan} />
+        </Field>
+      </MoreSettings>
     </>
   )
 }

@@ -89,7 +89,7 @@
 }
 
 .editor textarea:focus-visible {
-  outline: 2px solid var(--supply);
+  outline: var(--focus-ring);
   outline-offset: -1px;
 }
 

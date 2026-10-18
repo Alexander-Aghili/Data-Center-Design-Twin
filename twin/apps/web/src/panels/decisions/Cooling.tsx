@@ -3,6 +3,7 @@ import { useTwinStore } from '../../state/store'
 import { CatalogPicker, useCatalog, type Assessment } from '../fields/CatalogPicker'
 import { Field, FieldGroup, ReadOnly } from '../fields/Field'
 import { fmtPower, fmtValue } from '../../format'
+import { MoreSettings } from '../fields/MoreSettings'
 import { NumberInput } from '../fields/Number'
 import { Select } from '../fields/Select'
 import { Toggle } from '../fields/Toggle'
@@ -86,54 +87,52 @@ export function CoolingDecisions({ plan }: { plan: Plan }) {
   const c = plan.cooling
   return (
     <>
-      {plan.rackGroups.map((g) => (
-        <GroupCooling key={g.id} plan={plan} group={g} catalog={catalog} />
-      ))}
-      <FieldGroup title="Facility plant" subject="the facility plant" target="decision:cooling">
-        <Field label="Heat rejection" target="decision:cooling.heatRejectionId">
-          <CatalogPicker
-            kind="heatRejection"
-            value={c.heatRejectionId}
-            onChange={(heatRejectionId) => send({ type: 'setHeatRejection', payload: { heatRejectionId } })}
-          />
-        </Field>
-        <Field
-          label="Facility supply temperature"
-          target="decision:cooling.facilitySupplyC"
-          hint={limit ? `${limit.rack} accepts coolant up to ${fmtValue(limit.celsius, '°C')}.` : undefined}
-        >
-          <NumberInput
-            value={c.facilitySupplyC}
-            unit="°C"
-            onCommit={(celsius) => send({ type: 'setFacilitySupplyTemp', payload: { celsius } })}
-          />
-        </Field>
-        <Field label="Piping route" target="decision:cooling.pipingRoute">
-          <Select
-            value={c.pipingRoute}
-            options={[
-              { value: 'raisedFloor', label: 'Under raised floor' },
-              { value: 'overhead', label: 'Overhead' },
-            ]}
-            onChange={(route) => send({ type: 'setPipingRoute', payload: { route } })}
-          />
-        </Field>
-        <Field
-          label="Flow balancing"
-          target="decision:cooling.flowBalancing"
-          hint="Valves even out flow along each row manifold, at the cost of pump head."
-        >
-          <Toggle
-            checked={c.flowBalancing}
-            on="Balancing valves fitted"
-            off="No balancing valves"
-            onChange={(enabled) => send({ type: 'setFlowBalancing', payload: { enabled } })}
-          />
-        </Field>
-        <Field label="Buffer tank" target="decision:cooling.bufferTankM3" hint="Chilled water that carries the load through a chiller restart. 0 means no tank.">
-          <NumberInput value={c.bufferTankM3} unit="m³" min={0} onCommit={(m3) => send({ type: 'setBufferTank', payload: { m3 } })} />
-        </Field>
-      </FieldGroup>
+      <Field label="Heat rejection" target="decision:cooling.heatRejectionId">
+        <CatalogPicker
+          kind="heatRejection"
+          value={c.heatRejectionId}
+          onChange={(heatRejectionId) => send({ type: 'setHeatRejection', payload: { heatRejectionId } })}
+        />
+      </Field>
+      <Field
+        label="Supply water temperature"
+        target="decision:cooling.facilitySupplyC"
+        hint={limit ? `${limit.rack} accepts coolant up to ${fmtValue(limit.celsius, '°C')}.` : undefined}
+      >
+        <NumberInput value={c.facilitySupplyC} unit="°C" onCommit={(celsius) => send({ type: 'setFacilitySupplyTemp', payload: { celsius } })} />
+      </Field>
+      <Field label="Pipe route" target="decision:cooling.pipingRoute">
+        <Select
+          value={c.pipingRoute}
+          options={[
+            { value: 'raisedFloor', label: 'Under raised floor' },
+            { value: 'overhead', label: 'Overhead' },
+          ]}
+          onChange={(route) => send({ type: 'setPipingRoute', payload: { route } })}
+        />
+      </Field>
+      <MoreSettings>
+        {plan.rackGroups.map((g) => (
+          <GroupCooling key={g.id} plan={plan} group={g} catalog={catalog} />
+        ))}
+        <FieldGroup title="Facility plant" subject="the facility plant" target="decision:cooling">
+          <Field
+            label="Flow balancing"
+            target="decision:cooling.flowBalancing"
+            hint="Valves even out flow along each row manifold, at the cost of pump head."
+          >
+            <Toggle
+              checked={c.flowBalancing}
+              on="Balancing valves fitted"
+              off="No balancing valves"
+              onChange={(enabled) => send({ type: 'setFlowBalancing', payload: { enabled } })}
+            />
+          </Field>
+          <Field label="Buffer tank" target="decision:cooling.bufferTankM3" hint="Chilled water that carries the load through a chiller restart. 0 means no tank.">
+            <NumberInput value={c.bufferTankM3} unit="m³" min={0} onCommit={(m3) => send({ type: 'setBufferTank', payload: { m3 } })} />
+          </Field>
+        </FieldGroup>
+      </MoreSettings>
     </>
   )
 }

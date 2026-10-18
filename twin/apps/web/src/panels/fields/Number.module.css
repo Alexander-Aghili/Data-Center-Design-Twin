@@ -7,8 +7,8 @@
 }
 
 .number:focus-within {
-  border-bottom-color: var(--ink);
-  box-shadow: 0 1px 0 var(--ink);
+  border-bottom-color: var(--action);
+  box-shadow: 0 1px 0 var(--action);
 }
 
 .number input {

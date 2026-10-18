@@ -17,9 +17,9 @@ export function WorkloadDecisions({ plan }: { plan: Plan }) {
   return (
     <>
       <Field
-        label="Purpose"
+        label="Main workload"
         target="decision:workload.purpose"
-        hint="Training swings power in step across racks; busways need more headroom for it."
+        hint="Training swings power across many racks at once, so busways need more headroom."
       >
         <Select
           value={plan.workload.purpose}

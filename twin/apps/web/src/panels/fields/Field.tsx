@@ -3,6 +3,7 @@ import type { Note } from '@twin/schema'
 import { useTwinStore } from '../../state/store'
 import { NoteBadge } from '../notes/NoteBadge'
 import { NoteEditor, NoteList } from '../notes/NoteEditor'
+import { useTrackTarget } from './MoreSettings'
 import s from './Field.module.css'
 
 /** Props that name a control by the field's label and tie it to the field's error. */
@@ -51,32 +52,30 @@ function useNotes(target: string): Note[] {
   return useMemo(() => (notes ?? []).filter((n) => n.target === target), [notes, target])
 }
 
-/** Note badge, the notes themselves and the editor, for one note target. */
-function useNoted(target: string, subject: string) {
+/** Note flag with its count; it opens the notes themselves and the editor inline. */
+export function useNoted(target: string, subject: string) {
+  useTrackTarget(target)
   const notes = useNotes(target)
-  const [editing, setEditing] = useState(false)
-  const editorId = useId()
-  const badge = (
-    <NoteBadge notes={notes} subject={subject} expanded={editing} controls={editorId} onToggle={() => setEditing((v) => !v)} />
-  )
-  const body = (
-    <>
+  const [open, setOpen] = useState(false)
+  const bodyId = useId()
+  const badge = <NoteBadge notes={notes} subject={subject} expanded={open} controls={bodyId} onToggle={() => setOpen((v) => !v)} />
+  const body = open && (
+    <div id={bodyId} className={s.notes}>
       {notes.length > 0 && <NoteList notes={notes} />}
-      {editing && (
-        <div id={editorId}>
-          <NoteEditor target={target} onAdded={() => setEditing(false)} />
-        </div>
-      )}
-    </>
+      <NoteEditor target={target} onAdded={() => setOpen(false)} />
+    </div>
   )
   return { badge, body }
 }
 
-/** One decision: label, note badge, the control, an optional hint, errors and notes. */
-export function Field(props: { label: string; target: string; hint?: ReactNode; children?: ReactNode }) {
+/**
+ * One decision: label, note badge, the control, an optional hint, errors and notes.
+ * Without a `target` it is a plain labelled control with no notes of its own.
+ */
+export function Field(props: { label: string; target?: string; hint?: ReactNode; children?: ReactNode }) {
   const id = useId()
   const [error, setError] = useState<string | null>(null)
-  const { badge, body } = useNoted(props.target, props.label)
+  const { badge, body } = useNoted(props.target ?? '', props.label)
   const errorId = `${id}-error`
   const ctx = useMemo<FieldContextValue>(
     () => ({
@@ -97,7 +96,7 @@ export function Field(props: { label: string; target: string; hint?: ReactNode; 
         <span id={ctx.labelId} className={s.label}>
           {props.label}
         </span>
-        {badge}
+        {props.target && badge}
       </div>
       <FieldContext value={ctx}>{props.children}</FieldContext>
       {props.hint && <div className={s.hint}>{props.hint}</div>}
@@ -106,7 +105,7 @@ export function Field(props: { label: string; target: string; hint?: ReactNode; 
           ✕ {error}
         </p>
       )}
-      {body}
+      {props.target && body}
     </div>
   )
 }
