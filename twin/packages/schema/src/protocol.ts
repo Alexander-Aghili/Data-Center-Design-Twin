@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { AgentEventSchema } from './agent'
 import { CommandSchema } from './commands'
-import { EvaluationSchema } from './evaluation'
+import { EvaluationSchema, HourlySeriesSchema } from './evaluation'
 import { PlanSchema } from './plan'
 import { ViewActionSchema } from './view'
 
@@ -24,9 +24,23 @@ export const ClientMsgSchema = z.discriminatedUnion('t', [
 ])
 export type ClientMsg = z.infer<typeof ClientMsgSchema>
 
+/**
+ * The evaluation in a `state` push. `hourly` (8760 values per series, most of the bytes) is left out when it equals the
+ * series this client already has; the client then keeps that one.
+ */
+const StateEvaluationSchema = EvaluationSchema.extend({ hourly: HourlySeriesSchema.optional() })
+
 /** Messages from the server to the browser over `/ws` (JSON). */
 export const ServerMsgSchema = z.discriminatedUnion('t', [
-  z.object({ t: z.literal('state'), plan: PlanSchema, evaluation: EvaluationSchema, history: HistoryInfoSchema }),
+  // hourlyVersion names the hourly series this evaluation goes with. A client always gets the series in its first
+  // state push (and after `hello`), and again whenever the version changes.
+  z.object({
+    t: z.literal('state'),
+    plan: PlanSchema,
+    evaluation: StateEvaluationSchema,
+    history: HistoryInfoSchema,
+    hourlyVersion: z.number().int().nonnegative(),
+  }),
   z.object({ t: z.literal('commandResult'), id: z.string(), ok: z.boolean(), error: z.string().optional() }),
   z.object({ t: z.literal('agent'), event: AgentEventSchema }),
   z.object({ t: z.literal('view'), action: ViewActionSchema }),
