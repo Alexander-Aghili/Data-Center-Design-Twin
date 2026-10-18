@@ -1,6 +1,6 @@
+import { formatIssues } from '@twin/commands'
 import { ClientMsgSchema, type ClientMsg, type ServerMsg } from '@twin/schema'
 import type { FastifyBaseLogger } from 'fastify'
-import { formatIssues } from '@twin/commands'
 import WebSocket from 'ws'
 import type { AgentRuntime, PlanStore } from './contracts'
 
