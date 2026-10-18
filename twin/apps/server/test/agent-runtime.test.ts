@@ -9,7 +9,7 @@ import type {
 import { createDefaultPlan, loadBuiltins, snapshotCatalog } from '@twin/catalog'
 import { applyCommand, applyCommands } from '@twin/commands'
 import { emptyEvaluation, evaluate, makeCatalogIndex } from '@twin/engine'
-import type { AgentEvent, Check, Command, EvalDiff, Evaluation, Plan, Proposal, Status } from '@twin/schema'
+import type { AgentEvent, Check, Command, EvalDiff, Evaluation, Plan, Proposal, Status, ViewAction } from '@twin/schema'
 import { existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -267,6 +267,40 @@ describe('agent runtime', () => {
     expect(rec.events.filter((e) => e.kind === 'toolCall').map((e) => e.kind === 'toolCall' && e.name)).toEqual(['get_plan', 'get_evaluation'])
     const results = rec.events.filter((e) => e.kind === 'toolResult')
     expect(results).toContainEqual({ kind: 'toolResult', callId: 't2', ok: true, summary: 'get_evaluation done', numbers: [1.32, 1.41] })
+  })
+
+  it('annotate view actions from a turn carry that turn\'s messageId, so the thread can show the cloud\'s tag', async () => {
+    const viewListeners = new Set<(a: ViewAction) => void>()
+    const emitView = (a: ViewAction) => viewListeners.forEach((cb) => cb(a))
+    const annotation = { tag: 1, objectIds: ['rack:R3-00'], label: 'Air limit', severity: 'problem' as const }
+    const annotate = tool('annotate', async () => {
+      emitView({ type: 'annotate', annotation })
+      emitView({ type: 'setOverlay', overlay: 'temperature' })
+      return { ok: true, content: '{"tag":1}', summary: 'Marked' }
+    })
+    const step1: Step = { content: [toolUse('t1', 'annotate', {})], stop_reason: 'tool_use' }
+    const { client } = fakeClient([step1, reply('See tag 1.')])
+    const rt = createAgentRuntime({
+      store: fakeStore(),
+      tools: [annotate],
+      client,
+      dataDir,
+      views: { subscribe: (cb) => (viewListeners.add(cb), () => viewListeners.delete(cb)) },
+    })
+    const views: ViewAction[] = []
+    rt.onView((a) => views.push(a))
+    const rec = recorder(rt)
+    rt.handleChat('mark it')
+    await rec.turnsDone(1)
+    const start = rec.events.find((e) => e.kind === 'messageStart')
+    expect(views).toEqual([
+      { type: 'annotate', annotation: { ...annotation, messageId: start?.kind === 'messageStart' && start.messageId } },
+      { type: 'setOverlay', overlay: 'temperature' },
+    ])
+    // After the turn has settled, a view action belongs to no message.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    emitView({ type: 'annotate', annotation })
+    expect(views.at(-1)).toEqual({ type: 'annotate', annotation })
   })
 
   it('invalid tool input yields is_error tool_result and loop continues', async () => {

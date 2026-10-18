@@ -1,4 +1,4 @@
-import { createDefaultPlan } from '@twin/catalog'
+import { createDefaultPlan, loadBuiltins } from '@twin/catalog'
 import { applyCommand } from '@twin/commands'
 import { evaluate, makeCatalogIndex } from '@twin/engine'
 import { CommandError, type AgentEvent, type Builtins, type ClientMsg, type Plan, type ServerMsg } from '@twin/schema'
@@ -20,8 +20,9 @@ export class LocalBackend implements Backend {
   private emit: (m: ServerMsg) => void = () => {}
   private readonly loadBuiltins: () => Promise<Builtins>
 
-  constructor(loadBuiltins: () => Promise<Builtins>, initialPlan: Plan = createDefaultPlan()) {
-    this.loadBuiltins = loadBuiltins
+  /** The built-in catalog is bundled with the app, so local mode works with no server at all. */
+  constructor(builtins: () => Promise<Builtins> = async () => loadBuiltins(), initialPlan: Plan = createDefaultPlan()) {
+    this.loadBuiltins = builtins
     this.present = { plan: initialPlan }
   }
 

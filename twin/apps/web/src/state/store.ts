@@ -2,7 +2,6 @@ import {
   LAYER_DEFAULTS,
   type AgentEvent,
   type Annotation,
-  type Builtins,
   type Command,
   type Evaluation,
   type HistoryInfo,
@@ -39,6 +38,8 @@ export interface TwinState {
   chat(text: string): void
   applyProposal(id: string): void
   dismissProposal(id: string): void
+  /** Starts a new agent conversation (offered after importing or starting a new plan). */
+  resetChat(): void
   /** Local view change; also used for server-pushed view actions. */
   dispatchView(a: ViewAction): void
 }
@@ -76,6 +77,15 @@ function withProposalEvent(proposals: Record<string, Proposal>, e: AgentEvent): 
   const proposal = e.kind === 'proposalStatus' ? proposals[e.proposalId] : undefined
   if (e.kind === 'proposalStatus' && proposal) return { ...proposals, [proposal.id]: { ...proposal, status: e.status } }
   return proposals
+}
+
+/** A settled proposal is no longer previewed; an applied one sends the camera back to the hall to show the result. */
+function settleView(s: TwinState, proposalId: string, status: Proposal['status']): Partial<TwinState> {
+  if (status === 'open') return {}
+  return {
+    ...(s.previewProposalId === proposalId ? { previewProposalId: null } : {}),
+    ...(status === 'applied' ? { shot: 'hall' as const } : {}),
+  }
 }
 
 export interface TwinStoreOptions {
@@ -129,6 +139,7 @@ export function createTwinStore({ backend, fallback }: TwinStoreOptions): UseBou
       chat: (text) => post({ t: 'chat', text }),
       applyProposal: (proposalId) => post({ t: 'proposal', proposalId, action: 'apply' }),
       dismissProposal: (proposalId) => post({ t: 'proposal', proposalId, action: 'dismiss' }),
+      resetChat: () => post({ t: 'resetChat' }),
       dispatchView: (a) => set(reduceView(get(), a)),
     }
   })
@@ -152,9 +163,15 @@ export function createTwinStore({ backend, fallback }: TwinStoreOptions): UseBou
         }
         return
       }
-      case 'agent':
-        store.setState({ thread: [...s.thread, m.event], proposals: withProposalEvent(s.proposals, m.event) })
+      case 'agent': {
+        const e = m.event
+        store.setState({
+          thread: [...s.thread, e],
+          proposals: withProposalEvent(s.proposals, e),
+          ...(e.kind === 'proposalStatus' ? settleView(s, e.proposalId, e.status) : {}),
+        })
         return
+      }
       case 'thread':
         store.setState({ thread: m.events, proposals: m.events.reduce(withProposalEvent, {}) })
         return
@@ -189,17 +206,10 @@ export function createTwinStore({ backend, fallback }: TwinStoreOptions): UseBou
   return store
 }
 
-/** Built-in catalog from the server (`GET /api/catalog`). */
-async function fetchBuiltins(): Promise<Builtins> {
-  const res = await fetch('/api/catalog')
-  if (!res.ok) throw new Error(`GET /api/catalog failed with ${res.status}`)
-  return (await res.json()) as Builtins
-}
-
 const localOnly = new URLSearchParams(location.search).get('local') === '1'
 
 export const useTwinStore = createTwinStore(
   localOnly
-    ? { backend: new LocalBackend(fetchBuiltins) }
-    : { backend: new SocketBackend(), fallback: () => new LocalBackend(fetchBuiltins) },
+    ? { backend: new LocalBackend() }
+    : { backend: new SocketBackend(), fallback: () => new LocalBackend() },
 )

@@ -563,6 +563,28 @@ describe('view', () => {
       { type: 'clearAnnotations' },
     ])
   })
+
+  it('annotate maps placement ids, row ids, bay ids and equipment keys to scene object ids', async () => {
+    const { run, views, store } = setup()
+    const { plan, evaluation } = store.state()
+    const first = plan.placements[0]!
+    const rowRacks = evaluation.racks.filter((r) => r.rowId === first.rowId).map((r) => r.objectId)
+    const bayRacks = evaluation.racks.filter((r) => r.bayId === 'B3-2').map((r) => r.objectId)
+    await run('annotate', { objectIds: [first.id, `rack:${first.id}`], label: 'One rack', severity: 'problem' })
+    await run('annotate', { objectIds: [first.rowId], label: 'A row', severity: 'problem' })
+    await run('annotate', { objectIds: ['B3-2', 'crah:Z3'], label: 'Bay and CRAH', severity: 'warning' })
+    await run('propose_change', {
+      title: 'Rename',
+      rationale: 'Test',
+      commands: [{ type: 'renamePlan', payload: { name: 'X' } }],
+      respectsNotes: [],
+      violatesNotes: [],
+      annotate: { objectIds: [first.id], label: 'Here' },
+    })
+    const ids = views.map((v) => (v.type === 'annotate' ? v.annotation.objectIds : []))
+    expect(ids).toEqual([[`rack:${first.id}`], rowRacks, [...bayRacks, 'crah-3'], [`rack:${first.id}`]])
+    expect(rowRacks.length).toBeGreaterThan(1)
+  })
 })
 
 describe('documents', () => {

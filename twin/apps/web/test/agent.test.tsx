@@ -38,6 +38,7 @@ function setup(thread: AgentEvent[], over: Partial<TwinState> = {}) {
     applyProposal: vi.fn(),
     dismissProposal: vi.fn(),
     dispatchView: vi.fn(),
+    resetChat: vi.fn(),
   }
   const proposals: Record<string, Proposal> = {}
   for (const e of thread) if (e.kind === 'proposal') proposals[e.proposal.id] = e.proposal
@@ -84,6 +85,18 @@ describe('agent thread', () => {
     expect(msg?.className).toContain('ag-msg--info')
     expect(msg?.querySelector('.ag-msg__rule')).toBeNull()
     expect(within(msg as HTMLElement).queryByRole('img', { name: /Revision/ })).toBeNull()
+  })
+
+  it('offers a new conversation once there is a thread, and only while online', () => {
+    const actions = setup(chatTurn)
+    fireEvent.click(screen.getByRole('button', { name: 'New conversation' }))
+    expect(actions.resetChat).toHaveBeenCalledTimes(1)
+    cleanup()
+    setup([])
+    expect(screen.queryByRole('button', { name: 'New conversation' })).toBeNull()
+    cleanup()
+    setup(chatTurn, { connection: 'local' })
+    expect(screen.queryByRole('button', { name: 'New conversation' })).toBeNull()
   })
 
   it('tool calls render as one quiet line with summary', () => {

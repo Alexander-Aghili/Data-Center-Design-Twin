@@ -4,7 +4,7 @@ import { diffEvaluations, evaluate, makeCatalogIndex } from '@twin/engine'
 import type { Builtins, Command, EvalDiff, Evaluation, Plan, Proposal, ProposalStatus, ViewAction } from '@twin/schema'
 import type { PlanStore } from '../../contracts.js'
 import { compactDiff, defineTool, describeDiff, failure, success, type AgentTool } from './schema.js'
-import type { TagCounter } from './view.js'
+import { sceneObjectIds, type TagCounter } from './view.js'
 
 /** What the tools need to try commands without touching the store. Injectable for tests. */
 export interface PlanEngine {
@@ -151,8 +151,13 @@ export class ProposalBook {
   }
 }
 
-export function proposeTools(deps: { proposals: ProposalBook; tags: TagCounter; emitView: (a: ViewAction) => void }): AgentTool[] {
-  const { proposals, tags, emitView } = deps
+export function proposeTools(deps: {
+  store: PlanStore
+  proposals: ProposalBook
+  tags: TagCounter
+  emitView: (a: ViewAction) => void
+}): AgentTool[] {
+  const { store, proposals, tags, emitView } = deps
   return [
     defineTool(
       'propose_change',
@@ -173,7 +178,7 @@ export function proposeTools(deps: { proposals: ProposalBook; tags: TagCounter; 
           preview,
         )
         if (input.annotate && annotationTag !== undefined) {
-          emitView({ type: 'annotate', annotation: { tag: annotationTag, objectIds: input.annotate.objectIds, label: input.annotate.label, severity: 'info' } })
+          emitView({ type: 'annotate', annotation: { tag: annotationTag, objectIds: sceneObjectIds(store, input.annotate.objectIds), label: input.annotate.label, severity: 'info' } })
         }
         return success(
           { proposalId: proposal.id, status: proposal.status, annotationTag: proposal.annotationTag, changes: preview.summaries, diff: compactDiff(preview.diff) },

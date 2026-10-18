@@ -90,6 +90,8 @@ const STICK_PX = 32
 export function Thread() {
   const thread = useTwinStore((s) => s.thread)
   const annotations = useTwinStore((s) => s.annotations)
+  const online = useTwinStore((s) => s.connection === 'online')
+  const resetChat = useTwinStore((s) => s.resetChat)
   const items = useMemo(() => buildItems(thread), [thread])
   const streaming = items.some((it) => it.kind === 'agent' && it.message.streaming)
   const log = useRef<HTMLDivElement>(null)
@@ -102,7 +104,14 @@ export function Thread() {
 
   return (
     <div className="ag-thread">
-      <h2 className="ag-thread__title">Design agent</h2>
+      <div className="ag-thread__head">
+        <h2 className="ag-thread__title">Design agent</h2>
+        {online && items.length > 0 && (
+          <button type="button" className="btn btn--quiet ag-thread__reset" onClick={resetChat}>
+            New conversation
+          </button>
+        )}
+      </div>
       <div
         ref={log}
         className="ag-thread__log"

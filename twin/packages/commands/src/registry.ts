@@ -39,6 +39,14 @@ export function formatIssues(error: z.ZodError, prefix = ''): string {
     .join('\n')
 }
 
+/**
+ * The plan as `summarize` reads it: catalog entries the plan holds no copy of yet resolve from the catalog index,
+ * so change records name them ("GB300 NVL72") instead of showing their ids.
+ */
+export function withCatalogNames(plan: Plan, catalog: CatalogIndex): Plan {
+  return { ...plan, catalog: { ...Object.fromEntries(catalog.all().map((e) => [e.id, e])), ...plan.catalog } }
+}
+
 export function createRegistry(defs: AnyCommandDef[]): Registry {
   const registry = new Map<string, AnyCommandDef>()
   for (const def of defs) {
@@ -60,7 +68,7 @@ export function createRegistry(defs: AnyCommandDef[]): Registry {
       def.apply(draft, payload, { catalog })
       draft.updatedAt = new Date().toISOString()
     })
-    return { plan: next, summary: def.summarize(payload, plan) }
+    return { plan: next, summary: def.summarize(payload, withCatalogNames(plan, catalog)) }
   }
 
   /** Applies commands in order; if any throws, nothing is applied. */

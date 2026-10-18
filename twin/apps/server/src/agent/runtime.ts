@@ -44,6 +44,8 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
   let conversation = new Conversation(file)
   let planId = deps.store.state().plan.id
   let queue = Promise.resolve()
+  /** The message of the turn now running; its tools' revision clouds are tied to it in the thread. */
+  let turnMessageId: string | null = null
 
   /** Events of a conversation that has since been reset are kept out of the live thread. */
   const emitTo = (conv: Conversation) => (e: AgentEvent) => {
@@ -68,17 +70,23 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
     queue = queue.then(async () => {
       const conv = conversation
       conv.appendUserTurn(turn.text, turn.effort)
-      await runTurn({
-        client,
-        model,
-        tools: deps.tools,
-        toolParams: tools,
-        conversation: conv,
-        messageId: randomUUID(),
-        trigger: turn.trigger,
-        severity: turn.severity,
-        emit: emitTo(conv),
-      })
+      const messageId = randomUUID()
+      turnMessageId = messageId
+      try {
+        await runTurn({
+          client,
+          model,
+          tools: deps.tools,
+          toolParams: tools,
+          conversation: conv,
+          messageId,
+          trigger: turn.trigger,
+          severity: turn.severity,
+          emit: emitTo(conv),
+        })
+      } finally {
+        turnMessageId = null
+      }
       save(conv)
     })
   }
@@ -145,7 +153,10 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
       }
     },
 
-    onView: (cb) => deps.views?.subscribe(cb) ?? (() => undefined),
+    onView: (cb) =>
+      deps.views?.subscribe((a) =>
+        cb(a.type === 'annotate' && turnMessageId ? { ...a, annotation: { ...a.annotation, messageId: turnMessageId } } : a),
+      ) ?? (() => undefined),
 
     threadEvents: () => conversation.thread(),
 

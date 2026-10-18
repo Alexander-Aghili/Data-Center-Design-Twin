@@ -12,6 +12,25 @@ export function createTagCounter(): TagCounter {
   return { next: () => ++last }
 }
 
+const SCENE_PREFIXES = ['rack:', 'eq:']
+
+/**
+ * Scene object ids (`rack:R3-07`, `eq:cdu:R3:0`) for annotation targets. The model often passes plan ids, so a
+ * placement id becomes its rack, a row or bay id the racks on it, and an equipment key its units. Scene ids and
+ * anything unrecognized pass through unchanged (the web hides clouds whose objects are not rendered).
+ */
+export function sceneObjectIds(store: PlanStore, ids: string[]): string[] {
+  const { plan, evaluation } = store.state()
+  const expand = (id: string): string[] => {
+    if (SCENE_PREFIXES.some((p) => id.startsWith(p))) return [id]
+    if (plan.placements.some((p) => p.id === id)) return [`rack:${id}`]
+    const racks = evaluation.racks.filter((r) => r.rowId === id || r.bayId === id).map((r) => r.objectId)
+    if (racks.length > 0) return racks
+    return evaluation.equipment.find((e) => e.key === id)?.objectIds ?? [id]
+  }
+  return [...new Set(ids.flatMap(expand))]
+}
+
 type FocusKind = Extract<ViewAction, { type: 'focus' }>['target']['kind']
 
 /** Returns an error when the id does not name an object of that kind in the current plan. */
@@ -68,7 +87,7 @@ export function viewTools(deps: { store: PlanStore; emitView: (a: ViewAction) =>
       'Draws a revision cloud with a numbered tag around 3D objects, such as the objectIds of a failing check. Use it to point at a problem while you explain it; problem severity draws in red. Returns the tag number so you can refer to it in your message.',
       (input) => {
         const tag = tags.next()
-        emitView({ type: 'annotate', annotation: { tag, objectIds: input.objectIds, label: input.label, severity: input.severity } })
+        emitView({ type: 'annotate', annotation: { tag, objectIds: sceneObjectIds(store, input.objectIds), label: input.label, severity: input.severity } })
         return success({ tag }, `Marked ${input.label} (tag ${tag})`)
       },
     ),
