@@ -14,6 +14,7 @@ import { Hall, equipmentUnits } from './models/Hall'
 import { Pipes, pipeRuns } from './models/Pipes'
 import { Site } from './models/Site'
 import { Overlays } from './overlays'
+import { PipeFillTransition } from './overlays/pipeFill'
 import { PALETTE } from './palette'
 import { Picking } from './Picking'
 import { useSceneRegistry } from './registry'
@@ -85,6 +86,7 @@ export function Scene({ children }: { children?: ReactNode }) {
       <Lighting />
       <World />
       <Overlays />
+      <PipeFillTransition />
       <CameraRig />
       <CameraBridge />
       <Picking />

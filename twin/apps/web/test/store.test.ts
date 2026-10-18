@@ -107,6 +107,19 @@ describe('twin store', () => {
     expect(store.getState().lastError).toBe('commands.1: rejected')
   })
 
+  it('applying a cooling proposal switches to the cooling layer and starts a pipe fill; other proposals do not', () => {
+    const backend = new FakeBackend()
+    const store = createTwinStore({ backend })
+    const cooling = { ...proposal, id: 'pc', commands: [{ type: 'setCoolingMethod', payload: { groupId: 'g2', coolingMethodId: 'rackCooling.dlc-1p' } }] }
+    const rename = { ...proposal, id: 'pr', commands: [{ type: 'renamePlan', payload: { name: 'B' } }] }
+    for (const p of [cooling, rename]) backend.onMsg({ t: 'agent', event: { kind: 'proposal', messageId: 'm1', proposal: p } })
+    store.getState().dispatchView({ type: 'setLayer', layer: 'compute' })
+    backend.onMsg({ t: 'agent', event: { kind: 'proposalStatus', proposalId: 'pr', status: 'applied' } })
+    expect(store.getState()).toMatchObject({ activeLayer: 'compute', pipeFill: 0 })
+    backend.onMsg({ t: 'agent', event: { kind: 'proposalStatus', proposalId: 'pc', status: 'applied' } })
+    expect(store.getState()).toMatchObject({ activeLayer: 'cooling', overlay: 'liquid', shot: 'hall', pipeFill: 1 })
+  })
+
   it('resetChat asks the server for a new conversation', () => {
     const backend = new FakeBackend()
     const store = createTwinStore({ backend })

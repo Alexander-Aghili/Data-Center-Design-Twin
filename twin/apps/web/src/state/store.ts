@@ -13,6 +13,7 @@ import {
   type ShotId,
   type ViewAction,
 } from '@twin/schema'
+import { registry } from '@twin/commands'
 import { create, type StoreApi, type UseBoundStore } from 'zustand'
 import { SocketBackend, type Backend, type BackendStatus } from './backend'
 import { LocalBackend } from './localBackend'
@@ -30,6 +31,8 @@ export interface TwinState {
   thread: AgentEvent[]
   proposals: Record<string, Proposal>
   previewProposalId: string | null
+  /** Counts applied cooling changes; the scene refills the liquid network from the plant each time it rises. */
+  pipeFill: number
   lastError: string | null
   /** Resolves when the command is applied; rejects with the reason (also stored in `lastError`). */
   send(cmd: Command): Promise<void>
@@ -81,13 +84,18 @@ function withProposalEvent(proposals: Record<string, Proposal>, e: AgentEvent): 
   return proposals
 }
 
-/** A settled proposal is no longer previewed; an applied one sends the camera back to the hall to show the result. */
+const changesCooling = (p: Proposal | undefined) => p?.commands.some((c) => registry.get(c.type)?.layer === 'cooling') === true
+
+/**
+ * A settled proposal is no longer previewed. An applied one sends the camera back to the hall to show the result;
+ * a cooling change also opens the cooling layer and fills the pipes from the plant outward.
+ */
 function settleView(s: TwinState, proposalId: string, status: Proposal['status']): Partial<TwinState> {
   if (status === 'open') return {}
-  return {
-    ...(s.previewProposalId === proposalId ? { previewProposalId: null } : {}),
-    ...(status === 'applied' ? { shot: 'hall' as const } : {}),
-  }
+  const preview = s.previewProposalId === proposalId ? { previewProposalId: null } : {}
+  if (status !== 'applied') return preview
+  if (!changesCooling(s.proposals[proposalId])) return { ...preview, shot: 'hall' }
+  return { ...preview, activeLayer: 'cooling', ...LAYER_DEFAULTS.cooling, shot: 'hall', pipeFill: s.pipeFill + 1 }
 }
 
 export interface TwinStoreOptions {
@@ -121,6 +129,7 @@ export function createTwinStore({ backend, fallback }: TwinStoreOptions): UseBou
       thread: [],
       proposals: {},
       previewProposalId: null,
+      pipeFill: 0,
       lastError: null,
       send(command) {
         const id = globalThis.crypto.randomUUID()
