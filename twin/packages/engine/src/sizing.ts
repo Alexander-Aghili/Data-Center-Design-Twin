@@ -76,7 +76,7 @@ export function sumBy<T>(items: T[], f: (t: T) => number): number {
 }
 
 /** Units needed for `n` working units: N adds none, N+1 adds one, 2N doubles. */
-export function withRedundancy(n: number, redundancy: Redundancy): number {
+function withRedundancy(n: number, redundancy: Redundancy): number {
   if (n === 0) return 0
   if (redundancy === 'N+1') return n + 1
   return redundancy === '2N' ? 2 * n : n
@@ -142,7 +142,7 @@ interface Demand {
   redundancy: Redundancy
 }
 
-export interface Fill {
+interface Fill {
   item: SizedEquipment
   model: Candidate | null
   /** Units asked for: the override count, or what load and redundancy need. */
@@ -284,14 +284,14 @@ export function cduPumpW(f: CduFill): number | null {
 
 // CRAHs: one group per zone, keyed "crah:<zoneId>".
 
-export interface CrahZone {
+interface CrahZone {
   id: string
   positions: EquipmentPosition[]
   rows: string[]
 }
 
 /** CRAH positions that share a served row form one zone, numbered Z1… in position order. */
-export function crahZones(plan: Plan): CrahZone[] {
+function crahZones(plan: Plan): CrahZone[] {
   let zones: { positions: EquipmentPosition[]; rows: Set<string> }[] = []
   for (const p of plan.hall.positions.filter((q) => q.kind === 'crah')) {
     const touching = zones.filter((z) => p.servesRows.some((r) => z.rows.has(r)))
@@ -305,7 +305,7 @@ export function crahZones(plan: Plan): CrahZone[] {
   return zones.map((z, i) => ({ id: `Z${i + 1}`, positions: z.positions, rows: [...z.rows] }))
 }
 
-export interface CrahFill extends Fill {
+interface CrahFill extends Fill {
   zone: CrahZone
   airflowM3s: number | null
 }

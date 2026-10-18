@@ -6,7 +6,7 @@ import {
   RulesSchema,
   qty,
   type CatalogEntry,
-  type EquipmentOverride,
+  type ClimateEntry,
   type Plan,
   type RackEntry,
   type RackResult,
@@ -67,7 +67,7 @@ export const airRack: RackEntry = {
   scaleOutPorts: 16,
 }
 
-const climate: CatalogEntry = {
+const climate: ClimateEntry = {
   id: CLIMATE.DALLAS,
   kind: 'climate',
   name: 'Flat test climate',
@@ -88,7 +88,7 @@ export const builtinEntries: CatalogEntry[] = [
   climate,
 ]
 
-export interface GroupSpec {
+interface GroupSpec {
   id: string
   rackTypeId: string
   coolingMethodId: string
@@ -113,8 +113,8 @@ export function makePlan(groups: GroupSpec[], patch: Partial<Pick<Plan, 'cooling
   }
 }
 
-export function makeCtx(plan: Plan, extra: CatalogEntry[] = []): EvalContext {
-  return { plan, catalog: makeCatalogIndex([...builtinEntries, ...extra]), rules, climate: climate as EvalContext['climate'] }
+export function makeCtx(plan: Plan): EvalContext {
+  return { plan, catalog: makeCatalogIndex(builtinEntries), rules, climate }
 }
 
 /** Rack results as Task 7 would produce them: heat = nominal power, split by the method capped by the rack. */
@@ -149,8 +149,4 @@ export function makeRacks(ctx: EvalContext): RackResult[] {
       coolingOk: true,
     }
   })
-}
-
-export function override(o: EquipmentOverride): Pick<Plan, 'overrides'> {
-  return { overrides: [o] }
 }
