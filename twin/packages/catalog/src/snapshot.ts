@@ -36,5 +36,5 @@ export function snapshotCatalog(plan: Plan, entries: readonly CatalogEntry[]): P
     catalog[id] = structuredClone(entry)
     pending.push(...entryReferences(entry))
   }
-  return { ...plan, catalog: Object.fromEntries(Object.entries(catalog).sort(([a], [b]) => a.localeCompare(b))) }
+  return { ...plan, catalog: Object.fromEntries(Object.entries(catalog).sort(([a], [b]) => (a < b ? -1 : 1))) }
 }
