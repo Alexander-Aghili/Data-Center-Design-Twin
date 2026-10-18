@@ -96,6 +96,8 @@ export function fixturePlan(): Plan {
     ...plan,
     id: 'fixture-plan',
     updatedAt: '2026-10-18T09:00:00.000Z',
+    // A 10 MW cap, so the fixture's air-chiller hall runs over it on hot hours.
+    site: { ...plan.site, gridCapacityW: 10_000_000 },
     hall: { ...plan.hall, positions: plan.hall.positions.filter((p) => p.kind !== 'cdu') },
     rackGroups: [
       { id: 'g1', name: 'Inference block', rackTypeId: RACK.HGX_B300_AIR, coolingMethodId: RACK_COOLING.AIR_CONTAINED },
