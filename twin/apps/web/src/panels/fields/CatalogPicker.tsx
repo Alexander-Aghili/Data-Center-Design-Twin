@@ -211,12 +211,24 @@ export function CatalogPicker(props: PickerProps) {
   return (
     <div className={s.picker}>
       <div className={s.current}>
-        <div className={s.currentText}>
-          <span className={s.name}>{current?.name ?? `Unknown entry ${props.value}`}</span>
-          {current && !open && <Facts id={`${id}-facts`} facts={factsOf(current)} full={details} />}
-          {current && <Verdict assessment={assess(current)} />}
-        </div>
-        <div className={s.buttons}>
+        <span className={s.name}>{current?.name ?? `Unknown entry ${props.value}`}</span>
+        <button
+          type="button"
+          id={`${id}-change`}
+          className={`btn btn--secondary ${s.change}`}
+          aria-labelledby={`${id}-change ${labelledBy}`}
+          aria-invalid={a11y['aria-invalid']}
+          aria-describedby={a11y['aria-describedby']}
+          aria-expanded={open}
+          aria-controls={listId}
+          onClick={() => setOpen((v) => !v)}
+        >
+          {open ? 'Close' : 'Change'}
+        </button>
+      </div>
+      {current && (
+        <div className={s.summary}>
+          {!open && <Facts id={`${id}-facts`} facts={factsOf(current)} full={details} />}
           <button
             type="button"
             id={`${id}-details`}
@@ -225,27 +237,15 @@ export function CatalogPicker(props: PickerProps) {
             aria-expanded={details}
             onClick={() => setDetails((v) => !v)}
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true">
               <circle cx="7" cy="7" r="6" />
               <path d="M7 6.2 V10 M7 4 V4.2" />
             </svg>
             <span>Details</span>
           </button>
-          <button
-            type="button"
-            id={`${id}-change`}
-            className={`btn btn--secondary ${s.change}`}
-            aria-labelledby={`${id}-change ${labelledBy}`}
-            aria-invalid={a11y['aria-invalid']}
-            aria-describedby={a11y['aria-describedby']}
-            aria-expanded={open}
-            aria-controls={listId}
-            onClick={() => setOpen((v) => !v)}
-          >
-            {open ? 'Close' : 'Change'}
-          </button>
+          <Verdict assessment={assess(current)} />
         </div>
-      </div>
+      )}
       {open && (
         <div id={listId} role="radiogroup" {...a11y} aria-labelledby={labelledBy} className={s.options}>
           {options.map((e) => {

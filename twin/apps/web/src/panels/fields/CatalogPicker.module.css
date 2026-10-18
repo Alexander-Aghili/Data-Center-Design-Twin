@@ -6,14 +6,34 @@
 .current {
   display: flex;
   align-items: flex-start;
+  justify-content: space-between;
   gap: var(--space-2);
 }
 
-.currentText {
-  flex: 1;
+/* Deciding number and the Details toggle on one line; the full sheet, when open, spans the width. */
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--space-2);
+  row-gap: 2px;
+}
+
+.summary > .headline {
+  flex: 0 1 auto;
   min-width: 0;
-  display: grid;
-  gap: 2px;
+  margin-right: var(--space-2);
+}
+
+.summary > .facts {
+  flex: 1 0 100%;
+  order: 2;
+}
+
+.summary > .blocked,
+.summary > .caution {
+  flex: 1 0 100%;
+  order: 3;
 }
 
 .name {
@@ -21,14 +41,8 @@
   line-height: 1.35;
 }
 
-.buttons {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
 .change {
+  flex: none;
   height: 26px;
   padding: 0 var(--space-2);
   font-size: var(--text-sm);
@@ -39,7 +53,8 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  height: 26px;
+  height: 22px;
+  margin-left: -6px;
   padding: 0 6px;
   border: 0;
   border-radius: var(--radius-control);

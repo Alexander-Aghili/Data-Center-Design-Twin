@@ -47,7 +47,7 @@
 }
 
 .toggle input:focus-visible + .track {
-  outline: 2px solid var(--action, #1f4ed8);
+  outline: 2px solid var(--action-ring, #8db4ff);
   outline-offset: 2px;
 }
 
