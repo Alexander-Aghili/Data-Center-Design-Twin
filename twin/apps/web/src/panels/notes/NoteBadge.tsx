@@ -5,7 +5,7 @@ type NoteImportance = Note['importance']
 
 export const IMPORTANCE_ORDER: readonly NoteImportance[] = ['must', 'prefer', 'fyi']
 
-export const IMPORTANCE_LABEL: Record<NoteImportance, string> = { must: 'Must', prefer: 'Prefer', fyi: 'FYI' }
+export const IMPORTANCE_LABEL: Record<NoteImportance, string> = { must: 'Must', prefer: 'Prefer', fyi: 'For info' }
 
 /** The most binding importance among the notes. */
 function strongest(notes: Note[]): NoteImportance | null {

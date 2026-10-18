@@ -7,6 +7,7 @@ import type {
   CatalogIndex,
   ClimateEntry,
   HeatRejectionEntry,
+  Plan,
   Quantity,
   RackCoolingEntry,
   RackEntry,
@@ -16,10 +17,24 @@ import { useField } from './Field'
 import { fmtMass, fmtMoney, fmtPct, fmtPower, fmtValue, fmtWeeks } from '../../format'
 import s from './CatalogPicker.module.css'
 
+const BUILTIN_ENTRIES = loadBuiltins().entries
+const BUILTIN_INDEX = makeCatalogIndex(BUILTIN_ENTRIES)
+// One index per plan catalog snapshot, shared by every component that reads it.
+const indexes = new WeakMap<Plan['catalog'], CatalogIndex>()
+
+function indexFor(planCatalog: Plan['catalog'] | undefined): CatalogIndex {
+  if (!planCatalog) return BUILTIN_INDEX
+  let index = indexes.get(planCatalog)
+  if (!index) {
+    index = makeCatalogIndex([...BUILTIN_ENTRIES, ...Object.values(planCatalog)])
+    indexes.set(planCatalog, index)
+  }
+  return index
+}
+
 /** Built-in entries merged with the plan's own catalog (plan entries, including custom ones, win). */
 export function useCatalog(): CatalogIndex {
-  const planCatalog = useTwinStore((st) => st.plan?.catalog)
-  return useMemo(() => makeCatalogIndex([...loadBuiltins().entries, ...Object.values(planCatalog ?? {})]), [planCatalog])
+  return useTwinStore((st) => indexFor(st.plan?.catalog))
 }
 
 type PickerKind = 'rack' | 'rackCooling' | 'heatRejection' | 'climate'
@@ -119,11 +134,11 @@ function orderOf(e: PickerEntry): number {
   }
 }
 
-const STATUS: Record<RackCoolingEntry['status'], string | null> = {
+const STATUS: Record<RackCoolingEntry['status'], { text: string; level: 'caution' | 'status' } | null> = {
   mainstream: null,
-  emerging: 'Emerging',
-  stalled: '▲ Stalled',
-  research: '▲ Research only',
+  emerging: { text: '▲ Emerging', level: 'status' },
+  stalled: { text: '▲ Stalled', level: 'caution' },
+  research: { text: '▲ Research only', level: 'caution' },
 }
 
 /** Why an option can't be picked here (`blocked`), or what to watch for (`caution`). */
@@ -132,7 +147,7 @@ export interface Assessment {
   caution?: string
 }
 
-function Facts(props: { id: string; facts: Fact[] }) {
+function Facts(props: { id?: string; facts: Fact[] }) {
   return (
     <span id={props.id} className={s.facts}>
       {props.facts.map((f) => (
@@ -145,7 +160,7 @@ function Facts(props: { id: string; facts: Fact[] }) {
   )
 }
 
-function Verdict(props: { id: string; assessment: Assessment }) {
+function Verdict(props: { id?: string; assessment: Assessment }) {
   const { blocked, caution } = props.assessment
   if (!blocked && !caution) return null
   return (
@@ -169,7 +184,8 @@ type PickerProps = { [K in PickerKind]: { kind: K; assess?: (entry: CatalogEntry
  */
 export function CatalogPicker(props: PickerProps) {
   const catalog = useCatalog()
-  const { labelId, run } = useField()
+  const { a11y, run } = useField()
+  const labelledBy = props.labelledBy ?? a11y['aria-labelledby']
   const id = useId()
   const [open, setOpen] = useState(false)
   const options = useMemo(
@@ -191,12 +207,16 @@ export function CatalogPicker(props: PickerProps) {
       <div className={s.current}>
         <div className={s.currentText}>
           <span className={s.name}>{current?.name ?? `Unknown entry ${props.value}`}</span>
-          {current && !open && <Facts id={`${id}-current`} facts={factsOf(current)} />}
-          {current && <Verdict id={`${id}-current-verdict`} assessment={assess(current)} />}
+          {current && !open && <Facts facts={factsOf(current)} />}
+          {current && <Verdict assessment={assess(current)} />}
         </div>
         <button
           type="button"
+          id={`${id}-change`}
           className={s.change}
+          aria-labelledby={`${id}-change ${labelledBy}`}
+          aria-invalid={a11y['aria-invalid']}
+          aria-describedby={a11y['aria-describedby']}
           aria-expanded={open}
           aria-controls={listId}
           onClick={() => setOpen((v) => !v)}
@@ -205,7 +225,7 @@ export function CatalogPicker(props: PickerProps) {
         </button>
       </div>
       {open && (
-        <div id={listId} role="radiogroup" aria-labelledby={props.labelledBy ?? labelId} className={s.options}>
+        <div id={listId} role="radiogroup" {...a11y} aria-labelledby={labelledBy} className={s.options}>
           {options.map((e) => {
             const verdict = assess(e)
             const status = e.kind === 'rackCooling' ? STATUS[e.status] : null
@@ -230,7 +250,7 @@ export function CatalogPicker(props: PickerProps) {
                     <span id={`${optionId}-name`} className={s.name} title={e.summary}>
                       {e.name}
                     </span>
-                    {status && <span className={status.startsWith('▲') ? s.caution : s.status}>{status}</span>}
+                    {status && <span className={s[status.level]}>{status.text}</span>}
                   </span>
                   <Facts id={`${optionId}-facts`} facts={factsOf(e)} />
                   <Verdict id={`${optionId}-verdict`} assessment={verdict} />
