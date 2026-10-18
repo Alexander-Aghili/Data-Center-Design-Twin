@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>Cool the Cluster</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -132,70 +133,44 @@ a { color: var(--accent); }
 <div class="wrap">
 
 <header class="top">
-  <div class="eyebrow">AutoLab hill · data center digital twin</div>
+  <div class="eyebrow">Data hall digital twin · AutoLab hill</div>
   <h1>Cool the Cluster</h1>
-  <p class="lede">A simulator of one AI data hall that scores any design on a single number: <b>energy per unit of useful GPU work</b>. Agents on AutoLab use it to search for better designs. A tracker uses the same simulator to read sensor data, spot what is degrading, predict where it leads, and rank fixes.</p>
+  <p class="lede">Which hall design does the most GPU work per kWh, and what is wearing out in a hall that's already running? One simulator answers both. It scores designs so agents can search for better ones, and it reads sensor data to predict failures and rank fixes.</p>
   <div class="stamp">
-    <span>hall <b>30 racks · ~1 MW IT</b></span>
-    <span>GPUs <b>768</b></span>
-    <span>eval <b>~14 ms</b></span>
-    <span>checks <b>21 / 21 passing</b></span>
-    <span>built <b>2026-10-18</b></span>
+    <span>hall <b>30 racks · 768 GPUs · ~1 MW</b></span>
+    <span>best design <b>3.3% less energy per unit of work</b></span>
+    <span>tracker <b>5 of 5 planted faults found</b></span>
   </div>
 </header>
 
 <section>
-  <div class="eyebrow">Where this came from</div>
-  <h2>What you asked, what got built</h2>
-  <div class="asked">
-    <div><q>teach me about fiber optics and organizing data centers so they are more efficient</q><p>Fiber became one of the twin's six dimensions. Each rack picks an optical module, which sets power, reach and latency. The spine picks packet, co-packaged optics, or an optical circuit switch.</p></div>
-    <div><q>a digital twin… so we can track and predict how things will change and suggest possible changes</q><p>One simulator with three jobs. It scores designs (the hill), calibrates to sensor data (the tracker), and re-runs itself for each candidate fix (suggestions).</p></div>
-    <div><q>rack layout, heating and cooling, latency of the rack layout, networking equipment, quality of pipes</q><p>Each one is modeled and coupled to the others: placement, recirculation and chillers, cable-length latency, the optics and switch catalog, and pipe friction and fouling.</p></div>
-    <div><q>tracking them and optimizing them</q><p>Optimizing: AutoLab agents edit a design file and climb the score. Tracking: a script reads telemetry and outputs findings, a forecast and ranked fixes.</p></div>
-  </div>
-</section>
-
-<section>
-  <div class="eyebrow">How it works</div>
-  <h2>One engine, three uses</h2>
+  <h2>How it works</h2>
   <div class="engine">
-    <div class="box"><span class="eyebrow">input</span><h3>A hall design</h3><p class="muted">Rack slots, jobs, optics, spine type, setpoints, containment, pipe per rack. One JSON file.</p></div>
+    <div class="box"><span class="eyebrow">input</span><h3>A hall design</h3><p class="muted">One JSON file covering rack slots, optics, setpoints, containment and pipes.</p></div>
     <div class="arrow" aria-hidden="true">→</div>
-    <div class="box core"><span class="eyebrow">twin.py</span><h3>The digital twin</h3><p class="muted">Simulates 5 scenarios × 24 h: summer, winter, inference peak, MoE all-to-all, 5-year-aged summer. It checks every hard limit, then returns kWh per rack-hour of work.</p></div>
+    <div class="box core"><span class="eyebrow">twin</span><h3>Simulate a year</h3><p class="muted">Summer, winter, an inference peak, a mixture-of-experts (MoE) training job, and the same hall after 5 years of aging. Any broken limit rejects the design.</p></div>
     <div class="arrow" aria-hidden="true">→</div>
-    <div class="uses">
-      <div class="box"><h3>Optimize</h3><p class="muted">AutoLab hill. Agents climb the score.</p></div>
-      <div class="box"><h3>Track + predict</h3><p class="muted">Calibrate to sensors, project +30 and +90 days.</p></div>
-      <div class="box"><h3>Suggest</h3><p class="muted">Re-run per fix, rank by MWh/yr saved.</p></div>
-    </div>
+    <div class="box"><span class="eyebrow">output</span><h3>kWh per unit of GPU work</h3><p class="muted">Throttling or a slow network lowers work, so they can't fake savings.</p></div>
   </div>
-  <p class="prose muted">The score is energy <i>per unit of work</i>, not raw energy. A hall that saves power by letting GPUs throttle, or by using a slower network, does less work, and the score catches it.</p>
 </section>
 
 <section>
-  <div class="eyebrow">The six dimensions</div>
-  <h2>What it tracks, models and optimizes</h2>
+  <h2>Six dimensions, coupled</h2>
   <div class="tbl"><table>
-    <thead><tr><th>Dimension</th><th>Tracked from sensors</th><th>How the twin models it</th><th>What a design can change</th></tr></thead>
+    <thead><tr><th>Dimension</th><th>Model</th><th>Design can change</th><th>Sensors tracked</th></tr></thead>
     <tbody>
-      <tr><td>Rack layout</td><td>Slot, rack type, row power</td><td>12 × 6 slot floor, 4 blocked slots, 230 kW per row busway. Distance sets cable length, pipe length and hot-air recirculation.</td><td>Slot of all 30 racks; which racks form each job</td></tr>
-      <tr><td>Heat &amp; cooling</td><td>Rack inlet °C, CRAH fans, chiller kW, outdoor wet bulb</td><td>Inlet = supply air + Σ recirculation from neighbours. Hot spots form at row ends. Containment cuts recirculation by 85%. Fans follow the cube law. Free cooling runs when the outdoor air allows, with a chiller otherwise.</td><td>Supply-air and coolant setpoints (per season); containment per hot aisle</td></tr>
-      <tr><td>Pipes</td><td>Branch ΔP, coolant °C, GPU junction °C</td><td>Darcy–Weisbach friction per branch. Pump head ≤ 185 kPa. Flow 0.5–2.0 m/s. Five-year aging fouls cold plates by 6% for copper, 2% for stainless and 15% for PEX.</td><td>CDU, pipe size (DN25/32/40) and material per rack</td></tr>
-      <tr><td>Network &amp; fiber</td><td>Optic Tx bias, Rx power, module temp</td><td>Six modules: copper DAC, AEC, SR8, DR8, LPO-SR8 and LPO-DR8, each with reach, watts and cost. Spine is packet, CPO or OCS. LPO reach is derated more for aging.</td><td>Module per rack, spine type, within a $1.05M budget</td></tr>
-      <tr><td>Latency</td><td>Link latency, step time</td><td>Two leaf hops + spine + module DSP time + 4.9 ns per metre of cable. The serving job has a hard 1.95 µs limit.</td><td>Follows from layout and gear</td></tr>
-      <tr><td>Work done</td><td>Throttle events, step time</td><td>GPUs slow 4% per °C above 87 °C, and a job runs at its slowest rack. Communication not hidden by compute adds to each step. OCS halves all-to-all bandwidth.</td><td>Follows from everything above</td></tr>
+      <tr><td>Rack layout</td><td>12 × 6 floor, 230 kW per row. Distance sets cable length, pipe length and how much hot air recirculates.</td><td>Slot of all 30 racks; which racks form each job</td><td>Row power</td></tr>
+      <tr><td>Cooling</td><td>Inlet temp = supply + recirculation from neighbours. Free cooling when outdoor air allows, chiller otherwise.</td><td>Air and coolant setpoints; hot-aisle containment</td><td>Inlet °C, chiller kW, wet bulb</td></tr>
+      <tr><td>Pipes</td><td>Pressure drop per branch; pump limit 185 kPa; aging fouls cold plates (PEX 15%, copper 6%, stainless 2%)</td><td>Coolant unit, pipe size and material per rack</td><td>Branch ΔP, GPU °C</td></tr>
+      <tr><td>Fiber &amp; network</td><td>Copper, pluggable and LPO optics, each with reach, watts and cost. Spine is packet, co-packaged (CPO) or optical circuit switch (OCS).</td><td>Module per rack, spine type, $1.05M budget</td><td>Laser bias, Rx power</td></tr>
+      <tr><td>Latency</td><td>Switch hops + optics delay + 4.9 ns per metre. Serving limit 1.95 µs.</td><td>Follows from layout and gear</td><td>Step time</td></tr>
+      <tr><td>GPU work</td><td>GPUs slow 4% per °C above 87 °C. A job runs at its slowest rack.</td><td>Follows from all of the above</td><td>Throttle events</td></tr>
     </tbody>
   </table></div>
 </section>
 
 <section>
-  <div class="eyebrow">Result of a 2,000-step search</div>
-  <h2>The hall it found</h2>
-  <div class="score">
-    <div><span class="eyebrow">random starting layout</span><span class="big num">1.000</span><span class="muted">51.42 kWh per rack-hour</span></div>
-    <div><span class="eyebrow">best found (3 seeds)</span><span class="big num acc">0.967</span><span class="muted">≈ 3.3% less energy for the same work</span></div>
-    <div><span class="eyebrow">final pass (15-min steps)</span><span class="big num">0.967</span><span class="muted">holds at finer resolution</span></div>
-  </div>
+  <h2>What the search found</h2>
   <figure>
     <div class="fp-wrap"><svg viewBox="0 0 786 567" role="img" aria-labelledby="fp-t" class="fp">
 <title id="fp-t">Floor plan of the optimized hall: six rows of racks, three contained hot aisles, three CDUs</title>
@@ -267,85 +242,62 @@ a { color: var(--accent); }
 </svg>
 </div>
     <div class="legend">
-      <span><i style="background:var(--job-a)"></i>train_a · 12 racks</span>
-      <span><i style="background:var(--job-b)"></i>train_b · 8 racks</span>
-      <span><i style="background:var(--job-s)"></i>serve · 4 racks</span>
+      <span><i style="background:var(--job-a)"></i>training job A</span>
+      <span><i style="background:var(--job-b)"></i>training job B</span>
+      <span><i style="background:var(--job-s)"></i>serving</span>
       <span><i style="background:var(--spine)"></i>spine switches</span>
       <span><i style="background:var(--storage)"></i>storage</span>
-      <span><i style="border:1px dashed var(--muted)"></i>blocked slot</span>
+      <span><i style="border:1px dashed var(--muted)"></i>building column</span>
     </div>
-    <figcaption>Optimized hall, top-down. Cool air enters from the CRAH walls at top and bottom. Every hot aisle got containment. Spine racks sit mid-floor so most uplinks fit low-power LPO optics (18 racks) or short copper AEC (4 racks). Setpoints rose from 18 °C air / 30 °C coolant to 26 °C / 33.5 °C. Coolant stops at the point where GPUs would start throttling.</figcaption>
+    <figcaption>Best design after 2,000 steps: 0.967, compared with 1.000 for a random layout. Same result on 3 seeds and at 15-minute resolution. Spine racks moved mid-floor so most racks are within reach of short, low-power optics.</figcaption>
   </figure>
   <div class="tbl"><table>
-    <thead><tr><th>Lever</th><th>Starting layout</th><th>Found</th><th>Why it helps</th></tr></thead>
+    <thead><tr><th>Lever</th><th>Random</th><th>Found</th><th>Effect</th></tr></thead>
     <tbody>
-      <tr><td>Optics</td><td>SR8 pluggables, 15 W per end</td><td>LPO 8–9 W, AEC 6 W</td><td>About half the optics power. Requires racks within ~12 m of the spines, which shaped the layout.</td></tr>
-      <tr><td>Containment</td><td>none</td><td>all 3 hot aisles</td><td>Less recirculation lets supply air run 8 °C warmer without breaking the 27 °C inlet limit</td></tr>
-      <tr><td>Coolant</td><td>30 °C</td><td>33.5 °C</td><td>Free cooling all summer. Any warmer and GPUs throttle, which loses more than it saves.</td></tr>
-      <tr><td>Spine</td><td>packet</td><td>packet</td><td>OCS saves switch power but halves all-to-all bandwidth (−17% on the MoE job) and breaks the budget with containment</td></tr>
+      <tr><td>Optics</td><td>Pluggable, 15 W</td><td>LPO 8 W, short copper 6 W</td><td>About half the optics power. Forces racks within ~12 m of spines.</td></tr>
+      <tr><td>Containment</td><td>None</td><td>All 3 hot aisles</td><td>Supply air can run 8 °C warmer</td></tr>
+      <tr><td>Coolant</td><td>30 °C</td><td>33.5 °C</td><td>Free cooling all summer. Warmer than this throttles GPUs.</td></tr>
+      <tr><td>CPO / OCS spine</td><td>—</td><td>Rejected</td><td>OCS cuts MoE bandwidth 17%; both strain the budget. Plain LPO wins in one hall.</td></tr>
     </tbody>
   </table></div>
 </section>
 
 <section>
-  <div class="eyebrow">Tracker demo · 120 days of synthetic telemetry</div>
-  <h2>Track, predict, suggest</h2>
-  <p class="prose">To test the tracker, five problems were planted in fake sensor data for the optimized hall. The tracker never sees the answer key. It found all five, and its estimates land close to the planted values.</p>
+  <h2>Tracker: find, predict, fix</h2>
   <div class="tbl"><table>
-    <thead><tr><th>Found</th><th>Asset</th><th>Evidence</th><th class="n">Estimated</th><th class="n">Planted</th><th>Status</th></tr></thead>
+    <thead><tr><th>Problem</th><th>Asset</th><th>Evidence</th><th class="n">Found / planted</th><th>Fix</th><th class="n">MWh/yr</th></tr></thead>
     <tbody>
-      <tr><td>Clogged cold plates</td><td class="mono">G21</td><td>junction 81 → 92 °C at the same power</td><td class="n">+21%</td><td class="n">+22%</td><td><span class="pill high">throttling now</span></td></tr>
-      <tr><td>Scale in a pipe</td><td class="mono">G08</td><td>branch ΔP 117 → 122 kPa</td><td class="n">673 µm</td><td class="n">656 µm</td><td><span class="pill med">pump limit ~485 d</span></td></tr>
-      <tr><td>Missing blanking panel</td><td class="mono">S2</td><td>inlet +0.85 K over the twin since day 60</td><td class="n">×3.3</td><td class="n">×3.5</td><td><span class="pill high">over 27 °C in summer</span></td></tr>
-      <tr><td>Laser wearing out</td><td class="mono">G03→N1 · 5</td><td>Tx bias 7.1 → 10.6 mA</td><td class="n">+49%</td><td class="n">drift</td><td><span class="pill high">past alarm</span></td></tr>
-      <tr><td>Dirty fiber connector</td><td class="mono">G19→N0 · 2</td><td>Rx power −2.6 → −5.8 dBm on day 75</td><td class="n">−3.2 dB</td><td class="n">−3.2 dB</td><td><span class="pill med">clean it</span></td></tr>
+      <tr><td>Clogged cold plate</td><td class="mono">G21</td><td>GPU 81 → 92 °C at equal power</td><td class="n">+21% / +22%</td><td>Flush now; colder coolant until then (+3.4)</td><td class="n">22.8</td></tr>
+      <tr><td>Blanking panel missing</td><td class="mono">S2</td><td>Inlet +0.85 K since day 60</td><td class="n">×3.3 / ×3.5</td><td>Refit now. Inlet goes over 27 °C in summer.</td><td class="n">—</td></tr>
+      <tr><td>Laser wearing out</td><td class="mono">G03→N1</td><td>Bias 7.1 → 10.6 mA</td><td class="n">flagged</td><td>Replace now</td><td class="n">—</td></tr>
+      <tr><td>Dirty connector</td><td class="mono">G19→N0</td><td>Rx −3.2 dB on day 75</td><td class="n">−3.2 / −3.2 dB</td><td>Clean</td><td class="n">—</td></tr>
+      <tr><td>Pipe scale</td><td class="mono">G08</td><td>ΔP 117 → 122 kPa</td><td class="n">673 / 656 µm</td><td>Descale within ~485 days</td><td class="n">—</td></tr>
     </tbody>
   </table></div>
   <div class="tbl"><table>
-    <thead><tr><th>Forecast</th><th class="n">kWh / rack-hr</th><th class="n">Summer job speed</th><th class="n">Hottest GPU °C</th></tr></thead>
+    <thead><tr><th>Forecast if nothing is fixed</th><th class="n">Today</th><th class="n">+30 d</th><th class="n">+90 d</th></tr></thead>
     <tbody>
-      <tr><td>As designed</td><td class="n">49.74</td><td class="n">1.000</td><td class="n">82.0</td></tr>
-      <tr><td>Today (calibrated)</td><td class="n">49.88</td><td class="n">0.966</td><td class="n">87.9</td></tr>
-      <tr><td>+30 days</td><td class="n">50.05</td><td class="n">0.928</td><td class="n">88.8</td></tr>
-      <tr><td>+90 days</td><td class="n">50.42</td><td class="n">0.861</td><td class="n">90.5</td></tr>
+      <tr><td>Summer GPU speed</td><td class="n">0.97</td><td class="n">0.93</td><td class="n">0.86</td></tr>
+      <tr><td>Hottest GPU °C</td><td class="n">87.9</td><td class="n">88.8</td><td class="n">90.5</td></tr>
     </tbody>
   </table></div>
-  <div class="tbl"><table>
-    <thead><tr><th>Suggested fix, ranked</th><th class="n">MWh / yr saved</th><th>When</th></tr></thead>
-    <tbody>
-      <tr><td>Flush loop + clean cold plates on G21; move PEX branches to stainless</td><td class="n">22.8</td><td>now</td></tr>
-      <tr><td>Stop-gap: run summer coolant 0.5 °C colder until the flush</td><td class="n">3.4</td><td>this week</td></tr>
-      <tr><td>Re-install blanking panel at S2</td><td class="n">—</td><td>now (inlet limit)</td></tr>
-      <tr><td>Descale branch G08; add strainer + water sampling</td><td class="n">—</td><td>within ~485 days</td></tr>
-      <tr><td>Replace transceiver G03→N1 lane 5</td><td class="n">—</td><td>now</td></tr>
-      <tr><td>Clean connector G19→N0 lane 2</td><td class="n">—</td><td>next walk-through</td></tr>
-    </tbody>
-  </table></div>
-  <p class="prose muted">Savings are measured at equal output. A throttled hall uses fewer kWh only because it does less work, so the ranking uses kWh per unit of work.</p>
 </section>
 
 <section>
-  <div class="eyebrow">Run it yourself</div>
-  <h2>Commands</h2>
-<pre>curl -fsSL https://app.autolab.ai/install.sh | sh     # autolab CLI
-autolab hills check cool-the-cluster                    # 21 tests
-autolab hills eval &lt;dir-with-submission.json&gt; -H cool-the-cluster [--final]
-
-cd twin-tracker
-python3 synth_telemetry.py    # 120 days of fake sensors, 5 planted faults
-python3 track.py              # → tracker_report.md</pre>
-  <p class="prose muted">A design is one <code>submission.json</code>. Every constant is in <code>challenge_spec.json</code>, and the hill README documents the full contract.</p>
-</section>
-
-<section>
-  <div class="eyebrow">Limits</div>
-  <h2>What this is not</h2>
+  <h2>What this does not prove</h2>
   <ul class="plain prose">
-    <li>Numbers are benchmark assumptions, not measurements from a real facility. They are good for comparing designs, not for quoting a real PUE.</li>
-    <li>Recirculation is a heat-flow matrix, not CFD. Humidity, N+1 redundancy and chiller part-load curves are not modeled.</li>
-    <li>Sensor data is synthetic. A real hall would feed the same CSV columns from its building-management system and optic diagnostics.</li>
-    <li>Gains top out around 3–4% because server power dominates. That matches real facilities, where cooling and network are about 10% of the load.</li>
+    <li><b>The tracker test is circular.</b> The same model generated the sensor data and read it back, so 5/5 is a pipeline check, not field accuracy. Real BMS and optics telemetry is the next test.</li>
+    <li><b>Coefficients are estimates,</b> not vendor-sourced. Results are good for ranking designs, not for quoting a real PUE.</li>
+    <li><b>3.3% is small but realistic.</b> Server power dominates; cooling and network are about 10% of the load.</li>
+    <li>No airflow simulation (CFD), humidity or N+1 redundancy.</li>
   </ul>
+</section>
+
+<section>
+  <h2>Run it</h2>
+<pre>autolab hills check cool-the-cluster        # 21 tests
+cd tracker &amp;&amp; python3 synth_telemetry.py &amp;&amp; python3 track.py</pre>
+  <p class="muted">Code: <a href="https://github.com/Alexander-Aghili/Data-Center-Design-Twin/pull/1">Data-Center-Design-Twin, PR #1</a> · <code>prototypes/cool-the-cluster/</code></p>
 </section>
 
 </div>
