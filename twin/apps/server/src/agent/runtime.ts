@@ -49,6 +49,8 @@ interface Turn {
   effort: Effort
   trigger: 'chat' | 'observation'
   severity: Severity
+  /** The conversation whose thread shows the person's message; the turn runs only while it is still the current one. */
+  shownIn?: Conversation
 }
 
 const MISSING_KEY = 'The agent needs an API key in .env'
@@ -147,7 +149,9 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
   const enqueueTurn = (next: Turn | (() => Turn | null)) => {
     queue = queue.then(async () => {
       const turn = typeof next === 'function' ? next() : next
-      if (!turn) return
+      // A chat sent before "New conversation" belongs to the cleared thread; running it would put a message in the
+      // new history that the person's thread does not show.
+      if (!turn || (turn.shownIn && turn.shownIn !== conversation)) return
       // A chat queued behind a turn that used up the budget is not sent.
       if (budgetSpent()) return budgetNotice()
       const conv = conversation
@@ -270,7 +274,7 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
       emit({ kind: 'userMessage', messageId: randomUUID(), text })
       if (missingKey) return emit({ kind: 'error', message: MISSING_KEY })
       if (budgetSpent()) return budgetNotice()
-      enqueueTurn({ text, effort: 'high', trigger: 'chat', severity: 'info' })
+      enqueueTurn({ text, effort: 'high', trigger: 'chat', severity: 'info', shownIn: conversation })
     },
 
     stopTurn() {
@@ -316,6 +320,8 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
     },
 
     resetConversation() {
+      // A turn of the old conversation would go on spending with nothing shown for it.
+      running?.abort.abort()
       coalescer.clear()
       pendingObservation = null
       conversation = new Conversation(file)

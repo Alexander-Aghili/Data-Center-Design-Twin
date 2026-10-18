@@ -191,6 +191,13 @@ function expectCompleteToolResults(messages: BetaMessageParam[]) {
   })
 }
 
+/** Every chat message in the API history has its userMessage in the thread the person sees. */
+function expectEveryUserTurnInThread(rt: AgentRuntime, messages: BetaMessageParam[]) {
+  const shown = rt.threadEvents().flatMap((e) => (e.kind === 'userMessage' ? [e.text] : []))
+  const sent = messages.flatMap((m) => (m.role === 'user' && typeof m.content === 'string' ? [m.content] : []))
+  expect(shown).toEqual(sent)
+}
+
 const limits = (over: Partial<AgentLimits>): AgentLimits => ({ ...DEFAULT_LIMITS, ...over })
 
 let dataDir: string
@@ -274,6 +281,7 @@ describe('per-turn caps', () => {
     const sent = requests[3]!.messages
     expectCompleteToolResults(sent)
     expect(sent.at(-1)).toEqual({ role: 'user', content: 'continue' })
+    expectEveryUserTurnInThread(rt, sent)
   })
 
   it('runs only the tool calls that fit under the tool-call cap and answers the rest as not run', async () => {
@@ -349,6 +357,30 @@ describe('daily budget', () => {
   })
 })
 
+describe('new conversation while a turn runs', () => {
+  it('stops the running turn, so it spends nothing more out of sight, and drops chat queued behind it', async () => {
+    const { client, requests } = scriptedClient([
+      { content: [text('never finished')], hangAfter: 'Looking ', usage: { input: 1000, output: 0 } },
+      reply('Fresh start.'),
+    ])
+    const rt = createAgentRuntime({ store: fakeStore(), tools: [countingTool('get_plan')], client, dataDir })
+    const rec = recorder(rt)
+    rt.handleChat('first')
+    rt.handleChat('second, sent while the first runs')
+    await vi.waitFor(() => expect(rec.events.some((e) => e.kind === 'textDelta')).toBe(true))
+    rt.resetConversation()
+    await vi.waitFor(() => expect(rt.status()?.running).toBe(false))
+    await new Promise((r) => setTimeout(r, 20))
+    expect(requests).toHaveLength(1)
+
+    rt.handleChat('third')
+    await rec.idleAfter(2)
+    expect(requests).toHaveLength(2)
+    expect(requests[1]!.messages).toEqual([{ role: 'user', content: 'third' }])
+    expectEveryUserTurnInThread(rt, requests[1]!.messages)
+  })
+})
+
 describe('stop', () => {
   it('aborts the running stream, keeps the partial text, shows Stopped and leaves a valid history', async () => {
     const { client, requests } = scriptedClient([
@@ -374,6 +406,7 @@ describe('stop', () => {
     expectCompleteToolResults(sent)
     expect(sent.filter((m) => m.role === 'assistant')).toHaveLength(1)
     expect(sent.at(-1)).toEqual({ role: 'user', content: 'try again' })
+    expectEveryUserTurnInThread(rt, sent)
   })
 
   it('does nothing when no turn runs', () => {
