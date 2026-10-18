@@ -43,7 +43,7 @@ describe('HourlyChart', () => {
     const { container } = render(<HourlyChart series={['facilityW']} />)
     const cap = plan.site.gridCapacityW
     const over = evaluation.hourly.facilityW.flatMap((w, h) => (w > cap ? [h] : []))
-    expect(screen.getAllByText('Grid cap 10 MW').length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/^Grid cap 10\.0\sMW$/).length).toBeGreaterThan(0)
     const marks = [...container.querySelectorAll('[data-over-cap]')].map((m) => Number(m.getAttribute('data-hour')))
     expect(marks).toEqual(over)
     expect(screen.getByText(`✕ ${over.length} hours over the cap`)).toBeTruthy()
@@ -86,9 +86,9 @@ describe('Strip', () => {
     const { container } = render(<Strip layer="power" />)
     expect(nodeLabels(container)).toEqual(['Utility', 'Transformers', 'UPS', 'R1', 'R2', 'R3', 'R4', 'R5'])
     const r3 = container.querySelector('[data-node="R3"]')!
-    expect(r3.textContent).toContain('2.1 MW')
+    expect(r3.textContent).toContain('2.1\u00a0MW')
     expect(r3.textContent).toContain('✕')
-    expect(container.querySelector('[data-node="Utility"]')!.textContent).toContain('10 MW cap')
+    expect(container.querySelector('[data-node="Utility"]')!.textContent).toContain('10.0\u00a0MW cap')
   })
 
   it('NetworkTiers shows racks→leaves→spine with copper/fiber counts', () => {
@@ -97,7 +97,7 @@ describe('Strip', () => {
     expect(nodeLabels(container)).toEqual(['R1', 'R2', 'R3', 'R4', 'R5', 'Leaf 1', 'Leaf 2', 'Spine'])
     const copper = evaluation.network.links.filter((l) => l.media !== 'fiber').length
     const fiber = evaluation.network.links.length - copper
-    expect(screen.getByText(`${copper} copper links, ${fiber} fiber links`)).toBeTruthy()
+    expect(screen.getByText(new RegExp(`^${copper} copper links, ${fiber} fiber links`))).toBeTruthy()
     expect(container.querySelector('[data-node="R1"]')!.textContent).toMatch(/\d+ copper, \d+ fiber|\d+ fiber|\d+ copper/)
   })
 

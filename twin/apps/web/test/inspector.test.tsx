@@ -33,7 +33,7 @@ describe('Inspector', () => {
       const fact = within(drawer).getByRole('group', { name: label })
       expect(within(fact).getByText(/^(Calculated from|Basis)/)).toBeTruthy()
     }
-    expect(within(drawer).getByRole('group', { name: 'Power' }).textContent).toContain('132 kW')
+    expect(within(drawer).getByRole('group', { name: 'Power' }).textContent).toContain('132\u00a0kW')
     expect(within(drawer).getByRole('group', { name: 'Heat split' }).textContent).toContain('85%')
     expect(within(drawer).getByRole('group', { name: 'Bay' }).textContent).toContain(evaluation.racks.find((r) => r.placementId === 'R3-07')!.bayId)
   })
@@ -46,7 +46,7 @@ describe('Inspector', () => {
   it('Inspector for a check lists causes as links that select the decision layer', () => {
     select('check', 'cooling.cduPositions:g2')
     const drawer = screen.getByRole('complementary', { name: 'Inspector' })
-    expect(within(drawer).getByText('✕')).toBeTruthy()
+    expect(drawer.querySelector('.status-mark[data-status="fail"]')).not.toBeNull()
     const causes = within(drawer).getByRole('list', { name: 'Causes' })
     expect(within(causes).getAllByRole('button')).toHaveLength(3)
     fireEvent.click(within(causes).getByRole('button', { name: /CDU positions in the hall/ }))
@@ -59,7 +59,7 @@ describe('Inspector', () => {
     const drawer = screen.getByRole('complementary', { name: 'Inspector' })
     expect(within(drawer).getByText(/Auto-sized/)).toBeTruthy()
     const headroom = within(drawer).getByRole('group', { name: 'Headroom' })
-    expect(headroom.textContent).toContain('−96 kW')
+    expect(headroom.textContent).toContain('−96\u00a0kW')
     expect(within(within(drawer).getByRole('group', { name: 'Capacity' })).getByText(/^Calculated from/)).toBeTruthy()
   })
 
