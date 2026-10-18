@@ -1,0 +1,120 @@
+{
+  "id": "rackCooling.rdhx-active",
+  "kind": "rackCooling",
+  "name": "Active rear-door heat exchanger",
+  "vendor": "Supermicro / Motivair class",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "smc-rdhx",
+      "url": "https://www.supermicro.com/datasheet/datasheet_Rear_Door_Heat_Exchanger_50kW.pdf",
+      "title": "Supermicro Rear Door Heat Exchanger (RDHx) data sheet"
+    }
+  ],
+  "summary": "A rear-door water coil with its own EC fans, so it can pull more air than the servers alone and cool roughly 50 to 75 kW per rack, with 120 kW models now listed. Fans add about 3% parasitic power.",
+  "category": "rdhx",
+  "maxRackW": {
+    "value": 75000,
+    "unit": "W",
+    "basis": "vendor",
+    "low": 50000,
+    "high": 120000,
+    "source": "https://www.supermicro.com/datasheet/datasheet_Rear_Door_Heat_Exchanger_50kW.pdf",
+    "note": "Supermicro lists active doors at 50, 80, 100 and 120 kW; Motivair ChilledDoor is marketed up to 75 kW. 75 kW is the common mid-range rating."
+  },
+  "toTechnicalLoop": {
+    "value": 0,
+    "unit": "fraction",
+    "basis": "textbook",
+    "note": "On facility water (or a dedicated loop), not a CDU technical loop."
+  },
+  "toFacilityWaterAtRack": {
+    "value": 1.0,
+    "unit": "fraction",
+    "basis": "vendor",
+    "low": 0.95,
+    "high": 1.0,
+    "source": "https://www.supermicro.com/datasheet/datasheet_Rear_Door_Heat_Exchanger_50kW.pdf",
+    "note": "Vendor positions the door to remove all residual rack heat."
+  },
+  "coolantId": "coolant.water",
+  "supplyRangeC": {
+    "min": {
+      "value": 14,
+      "unit": "°C",
+      "basis": "estimate",
+      "note": "Kept above room dew point to avoid condensation; vendors include anti-condensation control."
+    },
+    "max": {
+      "value": 24,
+      "unit": "°C",
+      "basis": "estimate",
+      "note": "Active fans let the door work with warmer water than a passive door, but rated duties assume about 18 °C (65 °F) water; capacity derates sharply toward 24 °C."
+    }
+  },
+  "deltaTK": {
+    "value": 8,
+    "unit": "K",
+    "basis": "estimate",
+    "low": 6,
+    "high": 10,
+    "note": "Typical water rise on active doors; no duty table was available in the Supermicro sheet."
+  },
+  "pressureDropKpa": {
+    "value": 50,
+    "unit": "kPa",
+    "basis": "estimate",
+    "low": 30,
+    "high": 80,
+    "note": "Larger coils at higher flow than the passive door (30 kPa at max duty), so higher drop."
+  },
+  "addedWeightKgPerRack": {
+    "value": 130,
+    "unit": "kg",
+    "basis": "vendor",
+    "low": 114,
+    "high": 160,
+    "source": "https://www.supermicro.com/datasheet/datasheet_Rear_Door_Heat_Exchanger_50kW.pdf",
+    "note": "Supermicro active doors weigh 114 to 160 kg without coolant; a few litres of water add ~5 kg."
+  },
+  "formFactor": "rack",
+  "requiresCdu": false,
+  "pumpPowerFraction": {
+    "value": 0.03,
+    "unit": "fraction",
+    "basis": "vendor",
+    "low": 0.026,
+    "high": 0.034,
+    "source": "https://www.supermicro.com/datasheet/datasheet_Rear_Door_Heat_Exchanger_50kW.pdf",
+    "note": "Fan power at max: 2.1 kW / 80 kW = 0.026, 3.6 kW / 120 kW = 0.030, 1.7 kW / 50 kW = 0.034."
+  },
+  "capexUsdPerKw": {
+    "value": 350,
+    "unit": "USD/kW",
+    "basis": "estimate",
+    "low": 250,
+    "high": 500,
+    "note": "Active doors are roughly 15,000 to 30,000 USD installed; divided by 50 to 75 kW."
+  },
+  "installWeeks": {
+    "value": 4,
+    "unit": "week",
+    "basis": "estimate",
+    "low": 2,
+    "high": 6,
+    "note": "Door mounting plus power and water hook-up per row."
+  },
+  "leadTimeWeeks": {
+    "value": 16,
+    "unit": "week",
+    "basis": "estimate",
+    "low": 10,
+    "high": 26,
+    "note": "Demand from AI retrofits has stretched active RDHx lead times beyond passive doors."
+  },
+  "risks": [
+    "rear-door-heat-exchanger",
+    "liquid-cooling-operations"
+  ],
+  "status": "mainstream"
+}

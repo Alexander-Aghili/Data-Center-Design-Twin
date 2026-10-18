@@ -1,0 +1,106 @@
+{
+  "id": "heatRejection.chiller-air",
+  "kind": "heatRejection",
+  "name": "Air-cooled chiller with free cooling",
+  "vendor": "Vertiv Liebert AFC class",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "vertiv-afc",
+      "url": "https://www.vertiv.com/49dc08/globalassets/products/thermal-management/free-cooling-chillers/liebert-afc-ds-en-emea-rev0---03.2020.pdf",
+      "title": "Vertiv Liebert AFC free-cooling chiller data sheet"
+    }
+  ],
+  "summary": "Screw compressors make cold water at any outdoor temperature, with a free-cooling coil that takes over when it is cold outside. Works for air-cooled halls at 18 to 20 °C supply, but compressor power climbs as the outdoor temperature rises.",
+  "category": "chiller",
+  "basis": "dryBulb",
+  "approachK": {
+    "value": 4,
+    "unit": "K",
+    "basis": "calculated",
+    "low": 3,
+    "high": 5,
+    "source": "https://www.vertiv.com/49dc08/globalassets/products/thermal-management/free-cooling-chillers/liebert-afc-ds-en-emea-rev0---03.2020.pdf",
+    "note": "Fitted to the vendor's free-cooling zero-energy temperature (ZET): 9.1 to 11.0 °C at 20/26 °C water. With the engine's rule (T_out + approach <= supply - loop ΔT, ΔT = 6 K) that is a 3 to 5 K approach."
+  },
+  "copRef": {
+    "value": 4.3,
+    "unit": "W/W",
+    "basis": "vendor",
+    "low": 4.2,
+    "high": 4.55,
+    "source": "https://www.vertiv.com/49dc08/globalassets/products/thermal-management/free-cooling-chillers/liebert-afc-ds-en-emea-rev0---03.2020.pdf",
+    "note": "Nominal EER 4.2 to 4.55 at 35 °C air, 20 °C supply / 26 °C return (R1234ze and R134a screw models, 0.7 to 1.5 MW)."
+  },
+  "copRefOutdoorC": {
+    "value": 35,
+    "unit": "°C",
+    "basis": "vendor",
+    "source": "https://www.vertiv.com/49dc08/globalassets/products/thermal-management/free-cooling-chillers/liebert-afc-ds-en-emea-rev0---03.2020.pdf",
+    "note": "Rating condition of the EER above."
+  },
+  "copSlopePerK": {
+    "value": 0.12,
+    "unit": "W/W/K",
+    "basis": "estimate",
+    "low": 0.08,
+    "high": 0.18,
+    "note": "COP falls ~2.5 to 3% per K of extra condenser lift (Carnot lift ratio around a 15 °C evaporator and a 47 °C condenser, discounted for fixed losses). Gives COP ~6 at 20 °C outdoor and ~3 at 45 °C, inside the 4 to 7 anchor band for normal hours."
+  },
+  "economizer": true,
+  "fanPowerFraction": {
+    "value": 0.025,
+    "unit": "fraction",
+    "basis": "estimate",
+    "low": 0.015,
+    "high": 0.035,
+    "note": "EC condenser fans in free-cooling mode; roughly a tenth of compressor-mode input power at nominal capacity (1/4.3 = 0.23 W/W)."
+  },
+  "waterLPerKwh": {
+    "value": 0,
+    "unit": "L/kWh",
+    "basis": "textbook",
+    "note": "Closed loop, air-cooled condenser: no evaporation."
+  },
+  "unitCapacityW": {
+    "value": 1300000,
+    "unit": "W",
+    "basis": "vendor",
+    "low": 650000,
+    "high": 1500000,
+    "source": "https://www.vertiv.com/49dc08/globalassets/products/thermal-management/free-cooling-chillers/liebert-afc-ds-en-emea-rev0---03.2020.pdf",
+    "note": "Range 650 to 1,500 kW; 1,296 kW (CIZ125) chosen as the reference unit."
+  },
+  "capexUsdPerKw": {
+    "value": 400,
+    "unit": "USD/kW",
+    "basis": "estimate",
+    "low": 250,
+    "high": 600,
+    "note": "Air-cooled free-cooling chiller equipment at roughly 900 to 1,400 USD per ton (250 to 400 USD/kW) plus pumps, piping and controls. Market guides quote 1,000 to 2,100 USD per ton equipment for smaller units; MW-scale units are cheaper per kW."
+  },
+  "leadTimeWeeks": {
+    "value": 40,
+    "unit": "week",
+    "basis": "estimate",
+    "low": 20,
+    "high": 85,
+    "note": "2025-26 supplier tables put large chillers at 20 to 85 weeks against ~40 weeks before 2020 (recruiter-compiled; not primary)."
+  },
+  "installWeeks": {
+    "value": 8,
+    "unit": "week",
+    "basis": "estimate",
+    "low": 6,
+    "high": 12,
+    "note": "Crane set, piping, electrical and commissioning per plant."
+  },
+  "footprintM2PerMw": {
+    "value": 40,
+    "unit": "m²/MW",
+    "basis": "estimate",
+    "low": 20,
+    "high": 50,
+    "note": "CIZ125 is 10.835 x 2.35 m for 1,296 kW = 19.7 m²/MW bare; airflow clearance and service access roughly double it."
+  }
+}

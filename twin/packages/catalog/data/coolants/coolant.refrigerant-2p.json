@@ -1,0 +1,38 @@
+{
+  "id": "coolant.refrigerant-2p",
+  "kind": "coolant",
+  "name": "Low-pressure refrigerant R1233zd(E)",
+  "vendor": "Honeywell Solstice zd (representative)",
+  "asOf": "2026-10-18",
+  "summary": "HFO refrigerant used in two-phase cold plates (Accelsius lists R1233zd(E) and R-515B). Boils near 18 °C at atmospheric pressure, so it absorbs heat as latent heat at nearly constant temperature. Low GWP, but under the EU PFAS definition debate.",
+  "cpJPerKgK": {
+    "value": 1250,
+    "unit": "J/(kg·K)",
+    "basis": "textbook",
+    "low": 1200,
+    "high": 1300,
+    "note": "Liquid cp 0.298 Btu/lb°F at 30 °C per Honeywell's Solstice zd data (page did not load during research; value from search excerpt). Sensible cp is secondary; two-phase heat transport uses latent heat (~190 kJ/kg)."
+  },
+  "densityKgM3": {
+    "value": 1279,
+    "unit": "kg/m³",
+    "basis": "textbook",
+    "low": 1240,
+    "high": 1280,
+    "note": "Liquid at the 18.3 °C normal boiling point (Honeywell data via search excerpt); ~1250 at 30 °C."
+  },
+  "viscosityPaS": {
+    "value": 0.00047,
+    "unit": "Pa·s",
+    "basis": "textbook",
+    "note": "Liquid viscosity 470.1 µPa·s at 25 °C (Honeywell data via search excerpt)."
+  },
+  "dielectric": true,
+  "glycolFraction": {
+    "value": 0,
+    "unit": "fraction",
+    "basis": "textbook",
+    "note": "No glycol."
+  },
+  "twoPhase": true
+}

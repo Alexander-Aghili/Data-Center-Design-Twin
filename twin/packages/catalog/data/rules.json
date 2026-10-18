@@ -1,0 +1,231 @@
+{
+  "airDensity": {
+    "value": 1.2,
+    "unit": "kg/m³",
+    "basis": "textbook",
+    "low": 1.13,
+    "high": 1.23,
+    "note": "Dry air at ~20 °C and sea level (1.204); 1.18 at Dallas elevation (~140 m), 1.13 at Phoenix in summer."
+  },
+  "airCp": {
+    "value": 1006,
+    "unit": "J/(kg·K)",
+    "basis": "textbook",
+    "note": "Dry air at 20 to 40 °C."
+  },
+  "airDeltaTK": {
+    "value": 11,
+    "unit": "K",
+    "basis": "textbook",
+    "low": 8,
+    "high": 14,
+    "note": "Uncontained rooms: about 20 °F (11 K) across CRAH coils; mixing and bypass air keep it low."
+  },
+  "airDeltaTKContained": {
+    "value": 15,
+    "unit": "K",
+    "basis": "textbook",
+    "low": 12,
+    "high": 20,
+    "note": "Containment stops bypass, so CRAH return air runs 25 to 35 °F (14 to 19 K) above supply."
+  },
+  "distributionEfficiency": {
+    "value": 0.98,
+    "unit": "fraction",
+    "basis": "textbook",
+    "low": 0.97,
+    "high": 0.99,
+    "note": "Busway, PDU and cabling I²R losses downstream of the UPS, typically 1 to 3%."
+  },
+  "upsEfficiency": {
+    "value": 0.96,
+    "unit": "fraction",
+    "basis": "textbook",
+    "low": 0.94,
+    "high": 0.99,
+    "note": "Double-conversion UPS at 40 to 80% load is 95 to 97%; eco mode reaches 99%."
+  },
+  "transformerEfficiency": {
+    "value": 0.99,
+    "unit": "fraction",
+    "basis": "textbook",
+    "low": 0.985,
+    "high": 0.995,
+    "note": "Medium-voltage dry-type transformers in the MVA class meet ~99% under DOE 2016 minimums at 50% load."
+  },
+  "miscFacilityFraction": {
+    "value": 0.02,
+    "unit": "fraction",
+    "basis": "estimate",
+    "low": 0.01,
+    "high": 0.03,
+    "note": "Lighting, office, security and BMS as a share of IT load in a large hall; small fixed loads spread over MW of IT."
+  },
+  "crahFanFractionFallback": {
+    "value": 0.04,
+    "unit": "fraction",
+    "basis": "estimate",
+    "low": 0.02,
+    "high": 0.06,
+    "note": "EC-fan CRAH units draw roughly 6 to 10 kW of fan power per 200 kW of sensible cooling at full speed (0.03 to 0.05)."
+  },
+  "facilityLoopDeltaTK": {
+    "value": 6,
+    "unit": "K",
+    "basis": "vendor",
+    "low": 5,
+    "high": 10,
+    "source": "https://www.vertiv.com/49dc08/globalassets/products/thermal-management/free-cooling-chillers/liebert-afc-ds-en-emea-rev0---03.2020.pdf",
+    "note": "Facility-water design rise of 6 K (26/20 °C) on the reference chiller; warm-water DLC loops often run 8 to 10 K."
+  },
+  "manifoldHeaderLossFraction": {
+    "value": 0.2,
+    "unit": "fraction",
+    "basis": "estimate",
+    "low": 0.1,
+    "high": 0.3,
+    "note": "Flow-share drop from the first to the last rack on a direct-return row header without balancing. Headers sized so header drop is 10 to 30% of the rack branch drop give this spread; 0.2 puts an unbalanced long row in the warning band (min share ~0.89)."
+  },
+  "balancingValvePumpPenalty": {
+    "value": 0.15,
+    "unit": "fraction",
+    "basis": "estimate",
+    "low": 0.1,
+    "high": 0.25,
+    "note": "Pressure-independent balancing valves need 15 to 30 kPa of extra head on a ~150 to 200 kPa loop, raising pump power by ~10 to 25%."
+  },
+  "bufferAllowedRiseK": {
+    "value": 5,
+    "unit": "K",
+    "basis": "estimate",
+    "low": 3,
+    "high": 8,
+    "note": "How far the loop may warm during a chiller restart before racks pass their coolant supply limit; 5 K keeps an 18 °C loop under typical 25 °C cold-plate limits with margin, and a 32 °C loop under 40 °C."
+  },
+  "chillerRestartS": {
+    "value": 180,
+    "unit": "s",
+    "basis": "press",
+    "low": 120,
+    "high": 780,
+    "source": "https://datacenterknowledge.com/business/speeding-up-those-chiller-restarts",
+    "note": "Quick-start chillers return to setpoint in under 3 minutes (York/RagingWire test); a standard restart took 13 minutes. Vendor claims range from 2 to 7 minutes to full capacity."
+  },
+  "towerBlowdownFactor": {
+    "value": 0.33,
+    "unit": "fraction",
+    "basis": "textbook",
+    "low": 0.17,
+    "high": 0.5,
+    "source": "https://deltacooling.com/resources/faqs/how-do-you-calculate-water-loss-in-a-cooling-tower",
+    "note": "Blowdown = evaporation / (cycles of concentration - 1); 4 cycles gives 0.33, 3 to 7 cycles gives 0.5 to 0.17."
+  },
+  "peakToAverageTraining": {
+    "value": 1.1,
+    "unit": "ratio",
+    "basis": "estimate",
+    "low": 1.05,
+    "high": 1.2,
+    "note": "Large synchronized training jobs hold GPUs near TDP; checkpoint and communication phases dip briefly, so average power sits ~85 to 95% of peak."
+  },
+  "peakToAverageInference": {
+    "value": 1.5,
+    "unit": "ratio",
+    "basis": "estimate",
+    "low": 1.3,
+    "high": 2.0,
+    "note": "Inference follows user demand with diurnal swings and rarely reaches TDP across a cluster (Microsoft's 2024 POLCA study found large power headroom in inference clusters); average ~50 to 75% of peak."
+  },
+  "peakToAverageMixed": {
+    "value": 1.3,
+    "unit": "ratio",
+    "basis": "estimate",
+    "low": 1.15,
+    "high": 1.5,
+    "note": "Between training and inference."
+  },
+  "dacReachM": {
+    "value": 2,
+    "unit": "m",
+    "basis": "estimate",
+    "low": 1,
+    "high": 3,
+    "note": "Passive 800G copper at 100G per lane reaches 2 to 3 m; reseller listings give 2 m maximum, and 200G-per-lane links shorten it further."
+  },
+  "aecReachM": {
+    "value": 7,
+    "unit": "m",
+    "basis": "estimate",
+    "low": 5,
+    "high": 7,
+    "note": "800G active electrical cables with retimers are listed up to 7 m across vendors."
+  },
+  "fiberNsPerM": {
+    "value": 4.9,
+    "unit": "ns/m",
+    "basis": "textbook",
+    "note": "Group index ~1.47 in silica fibre: 1.47 / 0.2998 m/ns."
+  },
+  "copperNsPerM": {
+    "value": 4.5,
+    "unit": "ns/m",
+    "basis": "textbook",
+    "low": 4.2,
+    "high": 4.8,
+    "note": "Twinax velocity factor ~0.7 to 0.8 of c."
+  },
+  "hopNs": {
+    "value": 600,
+    "unit": "ns",
+    "basis": "estimate",
+    "low": 150,
+    "high": 800,
+    "note": "Port-to-port latency of a 51.2T Ethernet AI switch is ~0.5 to 0.8 µs; InfiniBand switches are ~0.15 to 0.25 µs."
+  },
+  "pipingUsdPerMRaised": {
+    "value": 600,
+    "unit": "USD/m",
+    "basis": "estimate",
+    "low": 400,
+    "high": 1000,
+    "note": "Installed supply and return pair of DN80 to DN150 stainless or PP-R under a raised floor, including insulation and leak detection."
+  },
+  "pipingUsdPerMOverhead": {
+    "value": 800,
+    "unit": "USD/m",
+    "basis": "estimate",
+    "low": 550,
+    "high": 1300,
+    "note": "Same pipe overhead plus hangers, seismic bracing and drip trays; roughly a third more than under-floor."
+  },
+  "raisedFloorInstallWeeks": {
+    "value": 6,
+    "unit": "week",
+    "basis": "estimate",
+    "low": 4,
+    "high": 10,
+    "note": "Under-floor runs are easy to route but must be coordinated with pedestals and cable trays per hall."
+  },
+  "overheadInstallWeeks": {
+    "value": 8,
+    "unit": "week",
+    "basis": "estimate",
+    "low": 6,
+    "high": 12,
+    "note": "Overhead adds structural supports and drip trays before pipe can be hung."
+  },
+  "routingSlackM": {
+    "value": 3,
+    "unit": "m",
+    "basis": "estimate",
+    "low": 2,
+    "high": 5,
+    "note": "Per run: vertical drops, bends and service loops beyond the straight-line distance."
+  },
+  "warnThreshold": {
+    "value": 0.8,
+    "unit": "fraction",
+    "basis": "textbook",
+    "note": "Utilization above 80% of a capacity is flagged as a warning, a common engineering design margin."
+  }
+}
