@@ -1,4 +1,5 @@
 import { Html, Line } from '@react-three/drei'
+import { useThree } from '@react-three/fiber'
 import { loadBuiltins } from '@twin/catalog'
 import { makeCatalogIndex } from '@twin/engine'
 import { num, type CheckKind, type Evaluation, type Plan, type Status } from '@twin/schema'
@@ -11,7 +12,7 @@ import { PALETTE } from '../palette'
 type Vec3 = [number, number, number]
 type PositionKind = Plan['hall']['positions'][number]['kind']
 
-export interface SiteLabel {
+interface SiteLabel {
   id: 'grid' | 'water' | 'climate'
   title: string
   value: string
@@ -19,12 +20,17 @@ export interface SiteLabel {
   anchor: Vec3
   /** The check that compares the plan against this input, when there is an evaluation. */
   status?: { status: Status; text: string }
+  /** Context line for inputs without a check. */
+  note?: string
 }
 
 // Leader heights clear the hall roof and yard plant so labels float above the models they point at.
 const LEADER_M = 7
 const ROOF_LEADER_M = 4
 const ANCHOR_DOT_M = 0.25
+
+/** Callout marks never take clicks meant for the models underneath. */
+const noRaycast = () => undefined
 
 /** First equipment position of `kind` on the ground, else the middle of the hall's north wall. */
 function groundAnchor(plan: Plan, kind: PositionKind): Vec3 {
@@ -58,9 +64,11 @@ export function siteLabels(plan: Plan, evaluation: Evaluation | null): SiteLabel
   }
   const design: SiteLabel = {
     id: 'climate',
-    title: climate?.name ?? 'Climate',
-    value: `Design dry bulb ${fmtValue(climate ? num(climate.designDryBulbC) : null, '°C')}`,
-    anchor: [widthM / 2, ceilingM, depthM / 2],
+    title: 'Design dry bulb',
+    value: fmtValue(climate ? num(climate.designDryBulbC) : null, '°C'),
+    // On the roof's west half, clear of the plant yard and electrical room labels.
+    anchor: [widthM / 4, ceilingM, depthM / 2],
+    note: climate?.name ?? 'Climate not in the catalog',
   }
   return [grid, water, design]
 }
@@ -82,6 +90,12 @@ const css = `
   transform: translate(-1px, -100%);
   user-select: none;
 }
+.site-label[data-side='left'] {
+  border-left: var(--rule);
+  border-right: 2px solid var(--ink);
+  text-align: right;
+  transform: translate(calc(1px - 100%), -100%);
+}
 .site-label__title {
   color: var(--graphite);
   font-size: var(--text-xs);
@@ -92,25 +106,30 @@ const css = `
   font-weight: var(--weight-semibold);
   font-stretch: var(--stretch-label);
 }
-.site-label__check {
+.site-label__sub {
   margin-top: 3px;
   font-size: var(--text-xs);
 }
+.site-label__note {
+  color: var(--graphite);
+}
 `
 
-function SiteLabelCard({ label }: { label: SiteLabel }) {
+/** Callouts in the hall's west half open to the west, so neighbouring labels spread apart instead of stacking. */
+function SiteLabelCard({ label, side }: { label: SiteLabel; side: 'left' | 'right' }) {
   return (
-    <div className="site-label">
+    <div className="site-label" data-side={side}>
       <style href="twin-site-labels" precedence="twin">
         {css}
       </style>
       <span className="site-label__title">{label.title}</span>
       <span className="site-label__value">{label.value}</span>
       {label.status && (
-        <span className="site-label__check">
+        <span className="site-label__sub">
           <StatusMark status={label.status.status} label={label.status.text} />
         </span>
       )}
+      {label.note && <span className="site-label__sub site-label__note">{label.note}</span>}
     </div>
   )
 }
@@ -120,6 +139,9 @@ export function SiteLabels() {
   const plan = useTwinStore((s) => s.plan)
   const evaluation = useTwinStore((s) => s.evaluation)
   const labels = useMemo(() => (plan ? siteLabels(plan, evaluation) : []), [plan, evaluation])
+  // drei's Html remounts (and drops its content) when the canvas event target attaches; wait for it.
+  const eventsReady = Boolean(useThree((s) => s.events.connected))
+  const midX = (plan?.hall.widthM ?? 0) / 2
   return (
     <group name="site-labels">
       {labels.map((label) => {
@@ -127,14 +149,16 @@ export function SiteLabels() {
         const top: Vec3 = [x, y + (label.id === 'climate' ? ROOF_LEADER_M : LEADER_M), z]
         return (
           <group key={label.id}>
-            <mesh position={label.anchor} raycast={() => undefined}>
+            <mesh position={label.anchor} raycast={noRaycast}>
               <sphereGeometry args={[ANCHOR_DOT_M, 12, 8]} />
               <meshBasicMaterial color={PALETTE.ink} />
             </mesh>
             <Line points={[label.anchor, top]} color={PALETTE.ink} lineWidth={1} />
-            <Html position={top} zIndexRange={[9, 1]} pointerEvents="none">
-              <SiteLabelCard label={label} />
-            </Html>
+            {eventsReady && (
+              <Html position={top} zIndexRange={[9, 1]} pointerEvents="none">
+                <SiteLabelCard label={label} side={x < midX ? 'left' : 'right'} />
+              </Html>
+            )}
           </group>
         )
       })}

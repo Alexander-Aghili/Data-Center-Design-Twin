@@ -39,7 +39,7 @@ const OVERLAY_HINTS: Record<Overlay, string | null> = {
   none: null,
 }
 
-const SITE_HINT = 'Each site input at the place it enters the site'
+const SITE_HINT = 'Site inputs and how the plan uses them'
 
 /** The layer's overlays, plus the active one (and a way to turn it off) when the agent picked an overlay from another layer. */
 function overlayChoices(layer: LayerId, active: Overlay): readonly Overlay[] {
@@ -105,6 +105,8 @@ const css = `
 }
 `
 
+const ARROW_STEPS: Partial<Record<string, number>> = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }
+
 function OverlaySwitch({ choices, active }: { choices: readonly Overlay[]; active: Overlay }) {
   const dispatchView = useTwinStore((s) => s.dispatchView)
   const group = useRef<HTMLDivElement>(null)
@@ -112,17 +114,9 @@ function OverlaySwitch({ choices, active }: { choices: readonly Overlay[]; activ
 
   // Radio-group keys: arrows move the choice (wrapping), Home and End jump to the ends.
   const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>, index: number) => {
-    const last = choices.length - 1
-    const next =
-      e.key === 'ArrowRight' || e.key === 'ArrowDown'
-        ? index === last ? 0 : index + 1
-        : e.key === 'ArrowLeft' || e.key === 'ArrowUp'
-          ? index === 0 ? last : index - 1
-          : e.key === 'Home'
-            ? 0
-            : e.key === 'End'
-              ? last
-              : null
+    const n = choices.length
+    const step = ARROW_STEPS[e.key]
+    const next = e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : step === undefined ? null : (index + step + n) % n
     if (next === null) return
     e.preventDefault()
     choose(choices[next]!)

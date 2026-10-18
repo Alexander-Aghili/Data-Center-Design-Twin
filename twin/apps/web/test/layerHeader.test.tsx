@@ -131,8 +131,9 @@ describe('siteLabels', () => {
     expect(labels.map((l) => [l.id, l.title, l.value])).toEqual([
       ['grid', 'Grid connection', '10.0\u00A0MW'],
       ['water', 'Water allowance', '120\u00A0m³/day'],
-      ['climate', 'Dallas–Fort Worth, Texas', 'Design dry bulb 38.9\u00A0°C'],
+      ['climate', 'Design dry bulb', '38.9\u00A0°C'],
     ])
+    expect(labels[2]!.note).toBe('Dallas–Fort Worth, Texas')
     expect(labels.every((l) => l.status === undefined)).toBe(true)
   })
 
@@ -141,7 +142,7 @@ describe('siteLabels', () => {
     const at = (kind: string) => plan.hall.positions.find((p) => p.kind === kind)!
     expect(labels[0]!.anchor).toEqual([at('electrical').x, 0, at('electrical').z])
     expect(labels[1]!.anchor).toEqual([at('plant').x, 0, at('plant').z])
-    expect(labels[2]!.anchor).toEqual([plan.hall.widthM / 2, plan.hall.ceilingM, plan.hall.depthM / 2])
+    expect(labels[2]!.anchor).toEqual([plan.hall.widthM / 4, plan.hall.ceilingM, plan.hall.depthM / 2])
   })
 
   it('adds the worst-hour and peak-day checks with their status', () => {
@@ -167,6 +168,6 @@ describe('siteLabels', () => {
 
   it('shows a dash when the climate is not in the catalog', () => {
     const labels = siteLabels({ ...plan, site: { ...plan.site, climateId: 'climate.nowhere' }, catalog: {} }, null)
-    expect(labels[2]!).toMatchObject({ title: 'Climate', value: 'Design dry bulb —' })
+    expect(labels[2]!).toMatchObject({ value: '—', note: 'Climate not in the catalog' })
   })
 })

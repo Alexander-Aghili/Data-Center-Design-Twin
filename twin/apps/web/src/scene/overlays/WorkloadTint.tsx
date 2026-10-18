@@ -1,4 +1,5 @@
 import { Html } from '@react-three/drei'
+import { useThree } from '@react-three/fiber'
 import { loadBuiltins } from '@twin/catalog'
 import { makeCatalogIndex } from '@twin/engine'
 import type { Plan } from '@twin/schema'
@@ -35,7 +36,7 @@ const BAND_H_M = 0.01
 const BAND_OPACITY = 0.3
 const TAG_LIFT_M = 0.8
 
-export interface WorkloadGroup {
+interface WorkloadGroup {
   id: string
   name: string
   color: string
@@ -208,6 +209,8 @@ function Swatch({ color }: { color: string }) {
 export function WorkloadTint() {
   const plan = useTwinStore((s) => s.plan)
   const tints = useMemo(() => (plan ? rackTints(plan) : []), [plan])
+  // drei's Html remounts (and drops its content) when the canvas event target attaches; wait for it.
+  const eventsReady = Boolean(useThree((s) => s.events.connected))
   const tags = useMemo(() => {
     if (!plan) return []
     return workloadGroups(plan).flatMap((g) => {
@@ -224,7 +227,8 @@ export function WorkloadTint() {
     <group name="workload-tint">
       <TintInstances tints={tints} box={capBox} />
       <TintInstances tints={tints} box={bandBox} opacity={BAND_OPACITY} />
-      {tags.map((g) => (
+      {eventsReady &&
+        tags.map((g) => (
         <Html key={g.id} position={g.position} center zIndexRange={[9, 1]} pointerEvents="none">
           <WorkloadStyles />
           <span className="workload-tag">
