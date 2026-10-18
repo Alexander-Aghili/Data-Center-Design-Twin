@@ -102,11 +102,17 @@ describe('transitionPath', () => {
 
 describe('focus', () => {
   it('picks the selected rack, else the rack of the worst failing check, else the hall center', () => {
+    // Without a failing rack the close shots take the rack nearest the hall center, never empty floor.
+    const cx = plan.hall.widthM / 2
+    const cz = plan.hall.depthM / 2
+    const central = plan.placements
+      .map((p) => ({ id: p.id, d: Math.hypot(rackCenter(p.id).x - cx, rackCenter(p.id).z - cz) }))
+      .reduce((a, b) => (b.d < a.d ? b : a)).id
     expect(resolveFocus(ctx({ evaluation: failing, focusId: 'R3-07' }))).toBe('rack:R3-07')
     expect(resolveFocus(ctx({ evaluation: failing, focusId: 'rack:R3-07:tray:4:gpu:1' }))).toBe('rack:R3-07:tray:4:gpu:1')
     // Worst failing check with a rack subject is fail-big (fail-cdu has no rack); within it the hottest rack.
     expect(resolveFocus(ctx({ evaluation: failing }))).toBe('rack:R5-09')
-    expect(resolveFocus(ctx({ evaluation: { checks: [check('ok', 'pass', 0.2, ['rack:R1-00'])], racks: [] } }))).toBeNull()
+    expect(resolveFocus(ctx({ evaluation: { checks: [check('ok', 'pass', 0.2, ['rack:R1-00'])], racks: [] } }))).toBe(`rack:${central}`)
 
     const selected = shotFor('rack', ctx({ evaluation: failing, focusId: 'R3-07' }))
     expect(selected.target[0]).toBeCloseTo(rackCenter('R3-07').x)
@@ -116,7 +122,9 @@ describe('focus', () => {
     expect(worst.target[0]).toBeCloseTo(rackCenter('R5-09').x)
     expect(worst.target[2]).toBeCloseTo(rackCenter('R5-09').z)
 
-    const none = shotFor('rack', ctx())
+    const empty: Plan = { ...plan, placements: [] }
+    expect(resolveFocus(ctx({ plan: empty }))).toBeNull()
+    const none = shotFor('rack', ctx({ plan: empty }))
     expect(none.target[0]).toBeCloseTo(plan.hall.widthM / 2)
     expect(none.target[2]).toBeCloseTo(plan.hall.depthM / 2)
   })
@@ -130,7 +138,7 @@ describe('focus', () => {
 
   it('ignores selections that are not racks or rows of this plan', () => {
     expect(resolveFocus(ctx({ evaluation: failing, focusId: 'eq:cdu:R3:0' }))).toBe('rack:R5-09')
-    expect(resolveFocus(ctx({ focusId: 'R9-99' }))).toBeNull()
+    expect(resolveFocus(ctx({ evaluation: failing, focusId: 'R9-99' }))).toBe('rack:R5-09')
   })
 })
 
@@ -304,17 +312,64 @@ describe('Choreography', () => {
     const start: Waypoint = { shot: 'tray', focusId: 'rack:R3-07' }
     const driver = new FakeDriver(resolve(start))
     const choreo = new Choreography(driver, resolve, start)
-    choreo.refresh()
+    choreo.invalidate()
+    run(choreo, 1)
     const before = driver.moves.length
     boxes['rack:R3-07:tray:0'] = new Box3(new Vector3(9.9, 1.2, 7), new Vector3(10.5, 1.24, 9.2))
-    choreo.refresh()
+    run(choreo, 1)
+    expect(driver.moves).toHaveLength(before) // nothing re-resolves until the scene says it changed
+    choreo.invalidate()
+    run(choreo, 1)
     expect(driver.moves).toHaveLength(before + 1)
     expect(driver.moves.at(-1)!.pose.target[1]).toBeCloseTo(1.22)
 
     choreo.cancel()
     boxes['rack:R3-07:tray:0'] = new Box3(new Vector3(9.9, 0.4, 7), new Vector3(10.5, 0.44, 9.2))
-    choreo.refresh()
+    choreo.invalidate()
+    run(choreo, 1)
     expect(driver.moves).toHaveLength(before + 1)
+  })
+
+  it('resolves shots at leg starts, and at most 15 times a second while the scene changes', () => {
+    const calls: Waypoint[] = []
+    const base = resolveIn(ctx())
+    const resolve = (w: Waypoint) => {
+      calls.push(w)
+      return base(w)
+    }
+    const f = 'rack:R3-07'
+    const start: Waypoint = { shot: 'hall', focusId: f }
+    const driver = new FakeDriver(base(start))
+    const choreo = new Choreography(driver, resolve, start)
+    choreo.go({ shot: 'gpu', focusId: f }, false)
+    const planned = calls.length
+    run(choreo, 2)
+    expect(calls.length - planned).toBe(4) // row, rack, tray, gpu
+
+    calls.length = 0
+    choreo.go({ shot: 'hall', focusId: f }, false)
+    calls.length = 0
+    for (let t = 0; t < 0.6; t += 1 / 120) {
+      choreo.invalidate() // e.g. openness changing every frame
+      choreo.tick(1 / 120)
+    }
+    expect(calls.length).toBeLessThanOrEqual(Math.ceil(0.6 * 15) + 4)
+    expect(calls.length).toBeGreaterThan(4)
+  })
+
+  it('a user grab mid-leg finishes the rack opening instead of leaving it half open', () => {
+    const resolve = resolveIn(ctx())
+    const f = 'rack:R3-07'
+    const start: Waypoint = { shot: 'rack', focusId: f }
+    const driver = new FakeDriver(resolve(start))
+    const choreo = new Choreography(driver, resolve, start)
+    choreo.go({ shot: 'tray', focusId: f }, false)
+    run(choreo, 0.1)
+    const mid = driver.openness.at(-1)!.value
+    expect(mid).toBeGreaterThan(0)
+    expect(mid).toBeLessThan(1)
+    choreo.cancel()
+    expect(driver.openness.at(-1)).toEqual({ placementId: 'R3-07', value: 1 })
   })
 
   it('reduced motion uses cross-fade (duration 0.2 s, no path)', () => {
