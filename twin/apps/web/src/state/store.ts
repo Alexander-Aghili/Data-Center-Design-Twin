@@ -33,6 +33,8 @@ export interface TwinState {
   lastError: string | null
   /** Resolves when the command is applied; rejects with the reason (also stored in `lastError`). */
   send(cmd: Command): Promise<void>
+  /** All or nothing, as one undo step (catalog packs). Rejects with the reason, also stored in `lastError`. */
+  sendAll(commands: Command[]): Promise<void>
   undo(): void
   redo(): void
   chat(text: string): void
@@ -133,6 +135,16 @@ export function createTwinStore({ backend, fallback }: TwinStoreOptions): UseBou
             reject(new Error(message))
           }
         })
+      },
+      async sendAll(commands) {
+        try {
+          await active.sendAll(commands)
+          set({ lastError: null })
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          set({ lastError: message })
+          throw new Error(message)
+        }
       },
       undo: () => post({ t: 'undo' }),
       redo: () => post({ t: 'redo' }),

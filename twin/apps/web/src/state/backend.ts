@@ -1,4 +1,4 @@
-import { ServerMsgSchema, type ClientMsg, type ServerMsg } from '@twin/schema'
+import { ServerMsgSchema, type ClientMsg, type Command, type ServerMsg } from '@twin/schema'
 
 export type BackendStatus = 'connecting' | 'online' | 'local' | 'offline'
 
@@ -6,6 +6,8 @@ export type BackendStatus = 'connecting' | 'online' | 'local' | 'offline'
 export interface Backend {
   connect(onMsg: (m: ServerMsg) => void, onStatus?: (s: BackendStatus) => void): void
   send(m: ClientMsg): void
+  /** Applies every command or none, as one undo step; rejects with the reason. */
+  sendAll(commands: Command[]): Promise<void>
 }
 
 const RECONNECT_MIN_MS = 500
@@ -45,5 +47,16 @@ export class SocketBackend implements Backend {
   send(m: ClientMsg): void {
     if (this.socket?.readyState !== WebSocket.OPEN) throw new Error('Not connected to the server')
     this.socket.send(JSON.stringify(m))
+  }
+
+  /** Over HTTP (`POST /api/commands`); the new state still arrives on the socket. */
+  async sendAll(commands: Command[]): Promise<void> {
+    const res = await fetch('/api/commands', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ commands }),
+    })
+    const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string }
+    if (!res.ok || !body.ok) throw new Error(body.error ?? `The server answered ${res.status}`)
   }
 }

@@ -1,4 +1,4 @@
-import type { ClientMsg, Proposal, ServerMsg } from '@twin/schema'
+import type { ClientMsg, Command, Proposal, ServerMsg } from '@twin/schema'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import type { Backend, BackendStatus } from '../src/state/backend'
 import type { createTwinStore as CreateTwinStore } from '../src/state/store'
@@ -13,6 +13,11 @@ class FakeBackend implements Backend {
   }
   send(m: ClientMsg) {
     this.sent.push(m)
+  }
+  batches: Command[][] = []
+  sendAll(commands: Command[]) {
+    this.batches.push(commands)
+    return commands.some((c) => c.type === 'bad') ? Promise.reject(new Error('commands.1: rejected')) : Promise.resolve()
   }
 }
 
@@ -92,6 +97,16 @@ describe('twin store', () => {
     expect(store.getState()).toMatchObject({ previewProposalId: null, shot: 'hall' })
   })
 
+  it('sendAll hands the commands to the backend as one batch and keeps a rejection in lastError', async () => {
+    const backend = new FakeBackend()
+    const store = createTwinStore({ backend })
+    const rename = { type: 'renamePlan', payload: { name: 'B' } }
+    await store.getState().sendAll([rename, rename])
+    expect(backend.batches).toEqual([[rename, rename]])
+    await expect(store.getState().sendAll([rename, { type: 'bad', payload: {} }])).rejects.toThrow('commands.1: rejected')
+    expect(store.getState().lastError).toBe('commands.1: rejected')
+  })
+
   it('resetChat asks the server for a new conversation', () => {
     const backend = new FakeBackend()
     const store = createTwinStore({ backend })
@@ -121,5 +136,22 @@ describe('LocalBackend', () => {
     await vi.waitFor(() => expect(statuses.at(-1)).toBe('local'))
     expect(fetchSpy).not.toHaveBeenCalled()
     expect(msgs.find((m) => m.t === 'state')).toBeDefined()
+  })
+
+  it('applies a batch as one undo step, or nothing when a command fails', async () => {
+    const { LocalBackend } = await import('../src/state/localBackend')
+    const msgs: ServerMsg[] = []
+    const local = new LocalBackend()
+    const statuses: BackendStatus[] = []
+    local.connect((m) => msgs.push(m), (s) => statuses.push(s))
+    await vi.waitFor(() => expect(statuses.at(-1)).toBe('local'))
+    const rename = (name: string) => ({ type: 'renamePlan', payload: { name } })
+    await expect(local.sendAll([rename('B'), rename('')])).rejects.toThrow(/name/)
+    await local.sendAll([rename('B'), rename('C')])
+    const states = msgs.filter((m) => m.t === 'state')
+    expect(states).toHaveLength(2)
+    local.send({ t: 'undo' })
+    const last = msgs.at(-1)
+    expect(last?.t === 'state' && last.plan.name).toBe('Default hall')
   })
 })

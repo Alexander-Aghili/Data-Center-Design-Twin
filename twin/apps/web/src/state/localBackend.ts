@@ -1,7 +1,7 @@
 import { createDefaultPlan, loadBuiltins } from '@twin/catalog'
-import { applyCommand } from '@twin/commands'
+import { applyCommand, applyCommands } from '@twin/commands'
 import { evaluate, makeCatalogIndex } from '@twin/engine'
-import { CommandError, type AgentEvent, type Builtins, type ClientMsg, type Plan, type ServerMsg } from '@twin/schema'
+import { CommandError, type AgentEvent, type Builtins, type ClientMsg, type Command, type Plan, type ServerMsg } from '@twin/schema'
 import type { Backend, BackendStatus } from './backend'
 
 export const AGENT_NEEDS_SERVER = 'The design agent needs the server. Start it with npm run dev.'
@@ -66,20 +66,34 @@ export class LocalBackend implements Backend {
     }
   }
 
+  async sendAll(commands: Command[]): Promise<void> {
+    if (!this.builtins) throw new Error('The catalog is still loading')
+    const { plan, summaries } = applyCommands(this.present.plan, commands, this.catalog())
+    this.commit({ plan, summary: summaries.join('; ') })
+  }
+
+  private catalog() {
+    return makeCatalogIndex([...(this.builtins?.entries ?? []), ...Object.values(this.present.plan.catalog)])
+  }
+
+  private commit(next: Entry): void {
+    this.past.push(this.present)
+    this.present = next
+    this.future = []
+    this.pushState()
+  }
+
   private runCommand(id: string, command: { type: string; payload: unknown }): void {
     if (!this.builtins) return this.emit({ t: 'commandResult', id, ok: false, error: 'The catalog is still loading' })
-    const catalog = makeCatalogIndex([...this.builtins.entries, ...Object.values(this.present.plan.catalog)])
+    let result: { plan: Plan; summary: string }
     try {
-      const result = applyCommand(this.present.plan, command, catalog)
-      this.past.push(this.present)
-      this.present = { plan: result.plan, summary: result.summary }
-      this.future = []
-      this.emit({ t: 'commandResult', id, ok: true })
-      this.pushState()
+      result = applyCommand(this.present.plan, command, this.catalog())
     } catch (error) {
       if (!(error instanceof CommandError)) throw error
-      this.emit({ t: 'commandResult', id, ok: false, error: error.message })
+      return this.emit({ t: 'commandResult', id, ok: false, error: error.message })
     }
+    this.emit({ t: 'commandResult', id, ok: true })
+    this.commit(result)
   }
 
   private step(from: Entry[], to: Entry[]): void {

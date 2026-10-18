@@ -13,6 +13,7 @@ const BRIEF_FILE_NAME = /^[\w.-]+\.md$/
 const MARKDOWN = 'text/markdown; charset=utf-8'
 
 const CommandBody = z.object({ command: CommandSchema })
+const CommandsBody = z.object({ commands: z.array(CommandSchema).min(1) })
 const ImportBody = z.object({ plan: z.unknown() })
 const ChatBody = z.object({ text: z.string().min(1) })
 const ToolBody = z.object({ input: z.unknown().optional() }).optional()
@@ -45,6 +46,14 @@ export function registerRoutes(app: FastifyInstance, deps: { store: PlanStore; a
     const body = parse(CommandBody, request.body, reply, 'body')
     if (!body.ok) return reply
     const result = store.dispatch(body.data.command, 'user')
+    return reply.code(result.ok ? 200 : 400).send(result)
+  })
+
+  /** All or nothing, as one undo step (used for catalog pack imports). */
+  app.post('/api/commands', async (request, reply) => {
+    const body = parse(CommandsBody, request.body, reply, 'body')
+    if (!body.ok) return reply
+    const result = store.dispatchAll(body.data.commands, 'user')
     return reply.code(result.ok ? 200 : 400).send(result)
   })
 
