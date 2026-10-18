@@ -24,7 +24,8 @@ import rulesJson from '../../catalog/data/rules.json'
 import { makeCatalogIndex, type EvalContext } from '../src/context'
 import type { RejectionResult } from '../src/cooling/rejection'
 import type { NetworkSlice } from '../src/network'
-import { powerBudget } from '../src/power'
+import { demandChecks } from '../src/demand'
+import { placedCompute, powerBudget } from '../src/power'
 import { computeRacks } from '../src/racks'
 
 const rules = RulesSchema.parse(rulesJson)
@@ -184,12 +185,12 @@ describe('powerBudget', () => {
     expect(p.headline.usablePflops).toBe(0)
   })
 
-  it('busway check per row uses I = P / (√3 · V · pf) · peakToAverage(purpose) / oversubscription allowance', () => {
+  it('busway check per row uses I = P_peak / (√3 · V · pf) / oversubscription allowance', () => {
     const plan = basePlan()
     const allowance = 1.25
     const p = run({ ...plan, power: { ...plan.power, oversubscription: allowance } })
-    // Capacity checks use rack peak (155 kW), not nominal (132 kW).
-    const expected = ((10 * 155_000) / (Math.sqrt(3) * 415 * 0.95)) * R('peakToAverageMixed') / allowance
+    // Rack peak (155 kW, not nominal 132 kW) already is the peak, so no peak-to-average factor on top.
+    const expected = (10 * 155_000) / (Math.sqrt(3) * 415 * 0.95) / allowance
     const check = find(p.checks, 'power.busway:R3')
     expect(check.value).toBeCloseTo(expected, 6)
     expect(p.rows.find((r) => r.rowId === 'R3')!.buswayLoadA).toBeCloseTo(expected, 6)
@@ -197,18 +198,46 @@ describe('powerBudget', () => {
     // N+1 with two 2,500 A feeds: one carries the load.
     expect(check.limit).toBe(2500)
     expect(check.utilization).toBeCloseTo(expected / 2500, 9)
-    expect(check.status).toBe('warn')
+    // 1,816 A on 2,500 A is 73%, under the 80% warn threshold.
+    expect(check.status).toBe('pass')
     expect(check.subject).toEqual({ kind: 'row', id: 'R3', objectIds: ['eq:busway:R3:0'] })
     expect(check.explanation).toMatch(/row R3/i)
-    expect(check.explanation).toMatch(/1\.3/)
+    expect(check.explanation).toMatch(/1\.25/)
+    expect(check.explanation).not.toMatch(/peak-to-average/)
     expect(p.checks.some((c) => c.id === 'power.busway:R1')).toBe(false)
   })
 
-  it('training uses the training peak-to-average factor', () => {
+  it('busway design current does not depend on the workload purpose', () => {
     const plan = basePlan()
-    const p = run({ ...plan, workload: { ...plan.workload, purpose: 'training' } })
-    const expected = ((10 * 155_000) / (Math.sqrt(3) * 415 * 0.95)) * R('peakToAverageTraining')
-    expect(find(p.checks, 'power.busway:R3').value).toBeCloseTo(expected, 6)
+    const training = run({ ...plan, workload: { ...plan.workload, purpose: 'training' } })
+    const inference = run({ ...plan, workload: { ...plan.workload, purpose: 'inference' } })
+    const expected = (10 * 155_000) / (Math.sqrt(3) * 415 * 0.95)
+    expect(find(training.checks, 'power.busway:R3').value).toBeCloseTo(expected, 6)
+    expect(find(inference.checks, 'power.busway:R3').value).toBeCloseTo(expected, 6)
+  })
+
+  it('exposes each loaded row nominal power, amps per watt and serving busway capacity for the swing check', () => {
+    const p = run()
+    expect(p.busways).toEqual([
+      { rowId: 'R3', nominalW: 10 * 132_000, ampsPerW: expect.any(Number), capacityA: 2500, objectIds: ['eq:busway:R3:0'] },
+    ])
+    expect(p.busways[0]!.ampsPerW).toBeCloseTo(1 / (Math.sqrt(3) * 415 * 0.95), 12)
+  })
+
+  it('placed PFLOPS falls back to GPU FP8 × GPU count, and the target check agrees with the headline', () => {
+    const gpu: CatalogEntry = {
+      id: 'gpu.test', kind: 'gpu', name: 'Test GPU', asOf: '2026-10-18', summary: 'test gpu',
+      tdpW: est(1400, 'W'), fp8Pflops: est(5, 'PFLOPS'), fp4Pflops: est(10, 'PFLOPS'), hbmGb: est(288, 'GB'), cooling: 'liquid',
+    }
+    const noFp8: RackEntry = { ...gb300, id: 'rack.no-fp8', gpuId: 'gpu.test', fp8Pflops: { value: null, unit: 'PFLOPS', basis: 'estimate', note: 'unknown' } }
+    const plan = basePlan({ rackGroups: [{ id: 'g2', name: 'Training', rackTypeId: 'rack.no-fp8', coolingMethodId: RACK_COOLING.DLC_1P }] })
+    const ctx: EvalContext = { plan, catalog: makeCatalogIndex([...entries, gpu, noFp8]), rules, climate }
+    const racks = computeRacks(ctx)
+    const p = powerBudget(ctx, racks, defaultEquipment, rejection(), network)
+    expect(p.headline.placedPflops).toBe(10 * 72 * 5)
+    const target = demandChecks(ctx, racks, p).checks.find((c) => c.kind === 'workload.targetCompute')!
+    expect(target.value).toBe(p.headline.placedPflops)
+    expect(placedCompute(ctx, racks)).toEqual({ pflops: 3600, gpuCount: 720, unknownRacks: 0 })
   })
 
   it('busway check is unknown when no busway is sized for the row', () => {

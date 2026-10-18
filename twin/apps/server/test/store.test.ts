@@ -1,15 +1,16 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import type { StoreChange } from '../src/contracts'
 import { loadApiKey } from '../src/env'
-import { createPlanStore } from '../src/store'
+import { createPlanWriter } from '../src/persist'
+import { createPlanStore, type PlanStoreOptions } from '../src/store'
 import { rename, tempDataDir, testBuiltins, testRegistry } from './helpers/fixtures'
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-function makeStore(dataDir = tempDataDir()) {
-  return createPlanStore({ dataDir, builtins: testBuiltins(), registry: testRegistry() })
+function makeStore(dataDir = tempDataDir(), extra: Partial<PlanStoreOptions> = {}) {
+  return createPlanStore({ dataDir, builtins: testBuiltins(), registry: testRegistry(), onWarning: () => {}, ...extra })
 }
 
 describe('PlanStore', () => {
@@ -129,6 +130,50 @@ describe('PlanStore', () => {
     expect(makeStore(dataDir).state().plan.name).toBe('Default hall')
     writeFileSync(join(dataDir, 'plan.json'), '{ not json')
     expect(makeStore(dataDir).state().plan.name).toBe('Default hall')
+  })
+
+  it('a schema-valid plan.json with overlapping placements boots the default plan with a warning', () => {
+    const dataDir = tempDataDir()
+    const plan = { ...makeStore().state().plan, name: 'Overlapping' }
+    plan.placements = [...plan.placements, { ...plan.placements[0]! }]
+    writeFileSync(join(dataDir, 'plan.json'), JSON.stringify(plan))
+    const warnings: string[] = []
+    const store = makeStore(dataDir, { onWarning: (text) => warnings.push(text) })
+    expect(store.state().plan.name).toBe('Default hall')
+    expect(warnings).toHaveLength(1)
+    expect(warnings[0]).toMatch(/^plan\.json is not a valid plan/)
+    expect(warnings[0]).toMatch(new RegExp(`placements\\.${plan.placements.length - 1}: `))
+  })
+
+  it('a plan.json the engine cannot evaluate boots the default plan with a warning', () => {
+    const dataDir = tempDataDir()
+    writeFileSync(join(dataDir, 'plan.json'), JSON.stringify({ ...makeStore().state().plan, name: 'Breaks the engine' }))
+    const warnings: string[] = []
+    const fine = makeStore().state().evaluation
+    const store = makeStore(dataDir, {
+      onWarning: (text) => warnings.push(text),
+      evaluate: (plan) => {
+        if (plan.name === 'Breaks the engine') throw new Error('engine exploded')
+        return fine
+      },
+    })
+    expect(store.state().plan.name).toBe('Default hall')
+    expect(warnings).toEqual(['plan.json could not be evaluated (engine exploded), so the server starts from the default plan'])
+  })
+})
+
+describe('plan writer', () => {
+  it('keeps a plan queued when a write fails and writes it on the next flush', () => {
+    const dataDir = join(tempDataDir(), 'data')
+    writeFileSync(dataDir, 'a file where the directory should be')
+    const writer = createPlanWriter(dataDir, 300, () => {})
+    const plan = makeStore().state().plan
+    writer.schedule(plan)
+    expect(() => writer.flush()).toThrow()
+    rmSync(dataDir)
+    mkdirSync(dataDir)
+    writer.flush()
+    expect(JSON.parse(readFileSync(join(dataDir, 'plan.json'), 'utf8')).id).toBe(plan.id)
   })
 })
 

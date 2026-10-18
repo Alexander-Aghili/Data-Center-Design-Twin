@@ -47,15 +47,6 @@
   color: var(--graphite);
 }
 
-.ag-sr {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
 /* Messages */
 
 .ag-msg {
@@ -64,7 +55,7 @@
 
 .ag-msg--problem,
 .ag-msg--warning {
-  padding-left: 28px;
+  padding-left: 32px;
 }
 
 .ag-msg--problem {
@@ -80,7 +71,7 @@
   top: 1px;
   bottom: 2px;
   left: 0;
-  width: 20px;
+  width: 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -96,7 +87,7 @@
 
 .ag-msg__mark {
   font-weight: 700;
-  line-height: 18px;
+  line-height: 21px;
   color: var(--sev);
 }
 
@@ -116,6 +107,15 @@
 .ag-msg__body ul,
 .ag-msg__body ol {
   padding-left: 18px;
+}
+
+/* The global reset strips list markers; message lists keep theirs. */
+.ag-msg__body ul {
+  list-style: disc;
+}
+
+.ag-msg__body ol {
+  list-style: decimal;
 }
 
 .ag-msg__body li + li {
@@ -228,6 +228,12 @@
   color: var(--supply);
 }
 
+.ag-link--withheld {
+  margin: 0;
+  color: var(--graphite);
+  font-weight: 400;
+}
+
 /* Revision triangle */
 
 .ag-delta {
@@ -247,13 +253,13 @@
 .ag-delta path {
   fill: var(--canvas);
   stroke: var(--sev);
-  stroke-width: 1.6;
+  stroke-width: 1.5;
   stroke-linejoin: round;
 }
 
 .ag-delta text {
   font-family: var(--font);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   fill: var(--sev);
 }
@@ -335,24 +341,15 @@
   font-weight: 600;
 }
 
-.ag-card__check > span {
-  display: inline-block;
-  width: 14px;
-}
-
-.ag-card__check--warn {
+.ag-card__check [data-status='warn'] {
   color: var(--warning);
 }
 
-.ag-card__check--fail {
+.ag-card__check [data-status='fail'] {
   color: var(--heat);
 }
 
-.ag-card__check--unknown {
-  color: var(--ink);
-}
-
-.ag-card__check--pass {
+.ag-card__check [data-status='pass'] {
   color: var(--ok);
 }
 
@@ -376,55 +373,12 @@
   margin-top: 10px;
 }
 
-.ag-btn {
-  padding: 5px 12px;
-  border: var(--rule);
-  border-radius: var(--radius);
-  background: #fff;
-  color: var(--ink);
-  font: inherit;
-  font-weight: 500;
-  cursor: pointer;
-  transition: border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease);
-}
-
-.ag-btn:hover:not(:disabled) {
-  border-color: var(--graphite);
-}
-
-.ag-btn[aria-pressed='true'] {
+.ag-card .btn[aria-pressed='true'] {
   border-color: var(--ink);
-  background: var(--clay-mid);
+  background: var(--hover);
 }
 
-.ag-btn--primary {
-  border-color: var(--ink);
-  background: var(--ink);
-  color: #fff;
-}
-
-.ag-btn--primary:hover:not(:disabled) {
-  background: var(--graphite);
-  border-color: var(--graphite);
-}
-
-.ag-btn--quiet {
-  border-color: transparent;
-  background: transparent;
-  color: var(--graphite);
-}
-
-.ag-btn--quiet:hover:not(:disabled) {
-  border-color: transparent;
-  color: var(--ink);
-}
-
-.ag-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
-}
-
-/* Chat input */
+/* Chat input: the global .input and .btn, with a textarea that grows by rows. */
 
 .ag-input {
   display: grid;
@@ -435,40 +389,16 @@
   border-top: var(--rule);
 }
 
-.ag-input textarea {
+.ag-input .input {
   display: block;
   width: 100%;
-  padding: 7px 10px;
-  border: var(--rule);
-  border-radius: var(--radius);
-  background: #fff;
-  color: var(--ink);
-  font: inherit;
+  height: auto;
+  padding: 5px var(--space-2);
   line-height: 1.4;
   resize: none;
 }
 
-.ag-input textarea::placeholder {
-  color: var(--graphite);
-}
-
-.ag-input textarea:disabled {
+.ag-input .input:disabled {
   background: transparent;
   cursor: not-allowed;
-}
-
-.ag-input__send {
-  padding: 7px 4px;
-  border: 0;
-  background: none;
-  color: var(--ink);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.ag-input__send:disabled {
-  color: var(--graphite);
-  opacity: 0.5;
-  cursor: default;
 }

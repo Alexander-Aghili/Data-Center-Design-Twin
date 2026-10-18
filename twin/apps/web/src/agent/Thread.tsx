@@ -20,10 +20,11 @@ function buildItems(events: AgentEvent[]): ThreadItem[] {
   const messageFor = (id: string): AgentMessageModel => {
     let message = messages.get(id)
     if (!message) {
-      message = { id, severity: 'info', streaming: true, parts: [], sources: [] }
+      message = { id, version: 0, severity: 'info', streaming: true, parts: [], sources: [] }
       messages.set(id, message)
       items.push({ kind: 'agent', message })
     }
+    message.version += 1
     return message
   }
 
@@ -50,6 +51,7 @@ function buildItems(events: AgentEvent[]): ThreadItem[] {
         const call = calls.get(e.callId)
         if (!call) return
         call.part.result = { ok: e.ok, summary: e.summary }
+        call.message.version += 1
         call.message.sources.push({ name: call.part.name, numbers: e.numbers })
         return
       }

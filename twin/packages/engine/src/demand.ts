@@ -1,7 +1,7 @@
 import { num, type Check, type RackResult } from '@twin/schema'
 import { withUnit } from './causes'
 import type { EvalContext } from './context'
-import type { PowerResult } from './power'
+import { placedCompute, type PowerResult } from './power'
 
 export interface DemandResult {
   checks: Check[]
@@ -20,36 +20,42 @@ function rowObjectIds(racks: RackResult[], rowId: string): string[] {
 }
 
 /**
- * The power module's `buswayLoadA` is the design current: peak rack power × the purpose's peak-to-average
- * factor ÷ the oversubscription allowance. For training that already is load × `peakToAverageTraining`, so
- * it is compared to 90% of the busway capacity as is, without applying the factor a second time.
+ * Synchronized training steps swing a row around its average draw. The swing peak is the row's nominal
+ * (average) rack power × `peakToAverageTraining`, as line current, against 90% of the busway capacity the
+ * power module counts for the row (serving feeds × rating, the same limit as `power.busway`).
  */
 function trainingSwingChecks(ctx: EvalContext, racks: RackResult[], power: PowerResult): Check[] {
   if (ctx.plan.workload.purpose !== 'training') return []
   const peakToAverage = num(ctx.rules.peakToAverageTraining)
-  return power.rows
-    .filter((row) => row.buswayLoadA > 0)
+  return power.busways
+    .filter((row) => row.nominalW > 0)
     .map((row): Check => {
-      const busway = power.checks.find(
-        (c) => c.kind === 'power.busway' && (c.subject.id === row.rowId || c.id === `power.busway:${row.rowId}`),
-      )
-      const rating = busway?.limit ?? null
-      const value = row.buswayLoadA
-      const limit = rating === null ? null : rating * SWING_LIMIT_FRACTION
-      const utilization = limit !== null && limit > 0 ? value / limit : null
-      const status = utilization === null ? 'unknown' : utilization > 1 ? 'warn' : 'pass'
-      const factor = peakToAverage === null ? '' : ` (×${peakToAverage} peak-to-average)`
-      const explanation =
-        limit === null || rating === null
-          ? `Synchronized training steps put row ${row.rowId} at ${unit(value, 'A')}${factor}, but the busway capacity is unknown.`
-          : `Synchronized training steps put row ${row.rowId} at ${unit(value, 'A')} at peak${factor}. ` +
-            `That is ${Math.round((value / rating) * 100)}% of the ${unit(rating, 'A')} busway capacity; ` +
-            `above ${Math.round(SWING_LIMIT_FRACTION * 100)}% the breaker may trip on the swings.`
+      const value = peakToAverage === null || row.ampsPerW === null ? null : row.nominalW * peakToAverage * row.ampsPerW
+      const capacity = row.capacityA
+      const limit = capacity === null ? null : capacity * SWING_LIMIT_FRACTION
+      let utilization: number | null = null
+      let status: Check['status'] = 'unknown'
+      let explanation: string
+      if (value === null) {
+        explanation = `The busway model on row ${row.rowId} has no voltage or power factor, or the training peak factor is unknown, so the swing current cannot be calculated.`
+      } else if (capacity === null || limit === null) {
+        explanation = `Synchronized training steps take row ${row.rowId} to ${unit(value, 'A')} at peak, but no rated busway is sized for the row, so the swing cannot be checked.`
+      } else if (capacity <= 0) {
+        status = 'fail'
+        explanation = `Synchronized training steps take row ${row.rowId} to ${unit(value, 'A')} at peak, but no busway capacity is left once redundancy is set aside.`
+      } else {
+        utilization = value / limit
+        status = utilization > 1 ? 'warn' : 'pass'
+        explanation =
+          `Synchronized training steps take row ${row.rowId} from an average of ${unit(value / peakToAverage!, 'A')} to ${unit(value, 'A')} at peak ` +
+          `(×${peakToAverage}). That is ${Math.round((value / capacity) * 100)}% of the ${unit(capacity, 'A')} busway capacity; ` +
+          `above ${Math.round(SWING_LIMIT_FRACTION * 100)}% the breaker may trip on the swings.`
+      }
       return {
         id: `power.trainingSwing:${row.rowId}`,
         kind: 'power.trainingSwing',
         layer: 'power',
-        subject: { kind: 'row', id: row.rowId, objectIds: [...(busway?.subject.objectIds ?? []), ...rowObjectIds(racks, row.rowId)] },
+        subject: { kind: 'row', id: row.rowId, objectIds: [...new Set([...row.objectIds, ...rowObjectIds(racks, row.rowId)])] },
         title: `Training power swing on row ${row.rowId}`,
         value,
         limit,
@@ -58,27 +64,17 @@ function trainingSwingChecks(ctx: EvalContext, racks: RackResult[], power: Power
         status,
         explanation,
         causes: [],
-        ...(status === 'warn' ? { advice: `Spread the training racks over more rows, or fit a higher-rated busway on row ${row.rowId}.` } : {}),
+        ...(status === 'warn' || status === 'fail'
+          ? { advice: `Spread the training racks over more rows, or fit a higher-rated busway or another feed on row ${row.rowId}.` }
+          : {}),
       }
     })
 }
 
-/** Σ FP8 PFLOPS of placed racks; null when any placed rack's figure is unknown. */
-function placedPflops(ctx: EvalContext, racks: RackResult[]): number | null {
-  let total = 0
-  for (const rack of racks) {
-    const typeId = ctx.plan.rackGroups.find((g) => g.id === rack.groupId)?.rackTypeId
-    const entry = typeId ? ctx.catalog.get(typeId, 'rack') : undefined
-    const pflops = entry ? num(entry.fp8Pflops) : null
-    if (pflops === null) return null
-    total += pflops
-  }
-  return total
-}
-
 function targetComputeCheck(ctx: EvalContext, racks: RackResult[]): Check {
   const target = ctx.plan.workload.targetPflops
-  const placed = placedPflops(ctx, racks)
+  const compute = placedCompute(ctx, racks)
+  const placed = compute.unknownRacks > 0 ? null : compute.pflops
   const utilization = placed !== null && placed > 0 ? target / placed : null
   let status: Check['status']
   let explanation: string

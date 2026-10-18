@@ -1,6 +1,6 @@
 import { createDefaultPlan, loadBuiltins, snapshotCatalog } from '@twin/catalog'
-import { applyCommands, History, type Registry } from '@twin/commands'
-import { evaluate, makeCatalogIndex } from '@twin/engine'
+import { applyCommands, History, parsePlan, type Registry } from '@twin/commands'
+import { evaluate as evaluatePlan, makeCatalogIndex } from '@twin/engine'
 import type { Builtins, Command, Evaluation, Plan } from '@twin/schema'
 import type { DispatchAllResult, DispatchResult, PlanStore, StoreChange } from './contracts'
 import { createPlanWriter, loadPlan } from './persist'
@@ -16,8 +16,12 @@ export interface PlanStoreOptions {
   builtins?: Builtins
   /** Defaults to the built-in command registry. */
   registry?: CommandApplier
+  /** Defaults to the engine's `evaluate`. */
+  evaluate?: (plan: Plan, builtins: Builtins) => Evaluation
   /** Receives failures that must not crash the server: plan writes and change listeners. */
   onError?: (err: unknown, context: string) => void
+  /** Receives recoverable problems, such as an invalid `plan.json` replaced by the default plan. */
+  onWarning?: (message: string) => void
 }
 
 export interface ServerPlanStore extends PlanStore {
@@ -30,12 +34,31 @@ const message = (err: unknown) => (err instanceof Error ? err.message : String(e
 export function createPlanStore(opts: PlanStoreOptions): ServerPlanStore {
   const builtins = opts.builtins ?? loadBuiltins()
   const registry = opts.registry ?? { applyCommands }
+  const evaluate = opts.evaluate ?? evaluatePlan
   const onError = opts.onError ?? ((err, context) => console.error(context, err))
+  const onWarning = opts.onWarning ?? ((text) => console.warn(text))
   const writer = createPlanWriter(opts.dataDir, PERSIST_DELAY_MS, (err) => onError(err, 'Could not write plan.json'))
   const listeners = new Set<(change: StoreChange) => void>()
 
-  const history = new History(loadPlan(opts.dataDir) ?? snapshotCatalog(createDefaultPlan(), builtins.entries))
-  let evaluation = evaluate(history.current, builtins)
+  /** The persisted plan if it parses and evaluates; otherwise the default plan, with a warning. */
+  function startingPoint(): { plan: Plan; evaluation: Evaluation } {
+    const loaded = loadPlan(opts.dataDir, (value) => parsePlan(value, makeCatalogIndex(builtins.entries)))
+    if (loaded?.ok) {
+      try {
+        return { plan: loaded.plan, evaluation: evaluate(loaded.plan, builtins) }
+      } catch (err) {
+        onWarning(`plan.json could not be evaluated (${message(err)}), so the server starts from the default plan`)
+      }
+    } else if (loaded) {
+      onWarning(`plan.json is not a valid plan, so the server starts from the default plan.\n${loaded.problem}`)
+    }
+    const plan = snapshotCatalog(createDefaultPlan(), builtins.entries)
+    return { plan, evaluation: evaluate(plan, builtins) }
+  }
+
+  const start = startingPoint()
+  const history = new History(start.plan)
+  let evaluation = start.evaluation
 
   const catalogFor = (plan: Plan) => makeCatalogIndex([...builtins.entries, ...Object.values(plan.catalog)])
 

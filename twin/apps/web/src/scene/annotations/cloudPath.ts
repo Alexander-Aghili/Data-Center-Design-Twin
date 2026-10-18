@@ -28,11 +28,25 @@ const BUMP_RISE_PX = CLOUD_ARC_PX * (1 - Math.cos(BUMP_SWEEP_RAD / 2)) / Math.si
 /** Vertices of the polygon a hull is grown by (a 16-gon reads as round at a 10 px offset). */
 const OFFSET_SEGMENTS = 16
 
-// Tag geometry, matching the mockup: a 22 × 19 px triangle, label 17 px to its side.
-const TAG_HALF_W = 11
-const TAG_UP = 10
-const TAG_DOWN = 9
-const LABEL_GAP = 17
+// Tag geometry, matching the mockup: a 22 × 19 px triangle with its number, then the severity shape and the label.
+export const TAG_HALF_W = 11
+export const TAG_UP = 10
+export const TAG_DOWN = 9
+
+/**
+ * The revision triangle centered at (cx, cy): apex up, 22 × 19 px. Shared by the drawing's tags
+ * and any in-thread tag that must match them (the number's baseline sits at cy + 6).
+ */
+export function tagTrianglePath(cx: number, cy: number): string {
+  return `M${cx} ${cy - TAG_UP} L${cx + TAG_HALF_W} ${cy + TAG_DOWN} H${cx - TAG_HALF_W} Z`
+}
+
+/** From the tag's center to the near edge of the severity shape. */
+const SHAPE_GAP = TAG_HALF_W + 4
+/** The severity shape is drawn in a 12 px box, as StatusMark draws it. */
+export const SEVERITY_SHAPE_PX = 12
+/** From the severity shape's near edge to the label text. */
+const LABEL_GAP = SEVERITY_SHAPE_PX + 4
 const LABEL_LINE_PX = 14
 /** Average advance of the 12 px semi-bold label at the condensed label width (measured in Chromium: 4.4 px), with margin. */
 const LABEL_CHAR_PX = 5
@@ -192,7 +206,9 @@ export interface TagPlacement {
   /** Label side: `start` reads rightward from the tag, `end` sits to its left. */
   align: 'start' | 'end'
   lines: string[]
-  /** First baseline of the label. */
+  /** Center of the severity shape, between the triangle and the label. */
+  shapeAt: Pt
+  /** Text anchor point of the label's first baseline. */
   labelAt: Pt
   /** Triangle plus label, padded; used to keep tags apart. */
   bounds: Rect
@@ -224,13 +240,14 @@ export function placeTags(clouds: CloudShape[], view: Viewport, previous?: Reado
       cloud.hull.reduce((s, p) => s + p[0], 0) / cloud.hull.length,
       cloud.hull.reduce((s, p) => s + p[1], 0) / cloud.hull.length,
     ]
-    let best: { score: number; placement: TagPlacement } | null = null
-    for (const [choice, u] of DIRECTIONS.entries()) {
+    const candidates = DIRECTIONS.map((u, choice) => {
       const edge = exitPoint(cloud.hull, center, u)
       const at: Pt = [edge[0] + u[0] * LEADER_PX, edge[1] + u[1] * LEADER_PX]
-      const align = u[0] < -1e-6 ? 'end' : 'start'
+      const align: TagPlacement['align'] = u[0] < -1e-6 ? 'end' : 'start'
+      const side = align === 'start' ? 1 : -1
       const firstBaseline = at[1] + 4 - ((lines.length - 1) * LABEL_LINE_PX) / 2
-      const labelX = align === 'start' ? at[0] + LABEL_GAP : at[0] - LABEL_GAP
+      const shapeAt: Pt = [at[0] + side * (SHAPE_GAP + SEVERITY_SHAPE_PX / 2), firstBaseline - 4]
+      const labelX = at[0] + side * (SHAPE_GAP + LABEL_GAP)
       const triangle: Rect = { x: at[0] - TAG_HALF_W, y: at[1] - TAG_UP, w: 2 * TAG_HALF_W, h: TAG_UP + TAG_DOWN }
       const text: Rect = { x: align === 'start' ? labelX : labelX - labelW, y: firstBaseline - 11, w: labelW, h: labelH }
       const bounds = union(triangle, text, 4)
@@ -243,26 +260,24 @@ export function placeTags(clouds: CloudShape[], view: Viewport, previous?: Reado
       for (const other of placed) if (overlapArea(bounds, other.bounds) > 0) score += 1e5
       for (const box of cloudBoxes) score += overlapArea(bounds, box)
       if (previous?.get(cloud.tag) === choice) score -= 25
-      if (best && best.score <= score) continue
       const rise = BUMP_RISE_PX + 2
-      best = {
-        score,
-        placement: {
-          tag: cloud.tag,
-          at,
-          leader: [
-            [edge[0] + u[0] * rise, edge[1] + u[1] * rise],
-            [at[0] - u[0] * (TAG_HALF_W + 2), at[1] - u[1] * (TAG_HALF_W + 2)],
-          ],
-          align,
-          lines,
-          labelAt: [labelX, firstBaseline],
-          bounds,
-          choice,
-        },
+      const placement: TagPlacement = {
+        tag: cloud.tag,
+        at,
+        leader: [
+          [edge[0] + u[0] * rise, edge[1] + u[1] * rise],
+          [at[0] - u[0] * (TAG_HALF_W + 2), at[1] - u[1] * (TAG_HALF_W + 2)],
+        ],
+        align,
+        lines,
+        shapeAt,
+        labelAt: [labelX, firstBaseline],
+        bounds,
+        choice,
       }
-    }
-    if (best) placed.push(best.placement)
+      return { score, placement }
+    })
+    placed.push(candidates.reduce((a, b) => (b.score < a.score ? b : a)).placement)
   }
   return placed
 }
@@ -297,9 +312,7 @@ export function layoutClouds(
     const { tag, label, severity } = annotation
     shapes.push({ tag, label, severity, hull, ...cloudPath(hull, CLOUD_ARC_PX) })
   }
-  const markers = new Map(placeTags(shapes, view, previous).map((m) => [m.tag, m]))
-  return shapes.flatMap(({ tag, label, severity, d, arcs }) => {
-    const marker = markers.get(tag)
-    return marker ? [{ tag, label, severity, d, arcs, marker }] : []
-  })
+  // placeTags returns one marker per shape, in tag order, which is the order of `shapes`.
+  const markers = placeTags(shapes, view, previous)
+  return shapes.map(({ tag, label, severity, d, arcs }, i) => ({ tag, label, severity, d, arcs, marker: markers[i] }))
 }

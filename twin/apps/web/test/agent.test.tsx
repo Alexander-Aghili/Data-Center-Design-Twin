@@ -1,4 +1,5 @@
 import type { AgentEvent, Proposal } from '@twin/schema'
+import { fmtFlow, fmtMass, fmtMoney, fmtPct, fmtPower, fmtWeeks } from '../src/format'
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import type { Thread as ThreadComponent } from '../src/agent/Thread'
@@ -103,7 +104,7 @@ describe('agent thread', () => {
     setup(problemTurn)
     const lines = document.querySelectorAll<HTMLElement>('.ag-tool')
     expect(lines).toHaveLength(3)
-    expect(lines[0].textContent).toBe('✓Read the evaluation: 1 check fails')
+    expect(lines[0].textContent).toBe('✓Done: Read the evaluation: 1 check fails')
     expect(lines[0].title).toBe('get_evaluation')
   })
 
@@ -115,8 +116,9 @@ describe('agent thread', () => {
       { kind: 'toolResult', callId: 'b', ok: false, summary: 'No catalog entry "rack-x"', numbers: [] },
     ])
     const [pending, failed] = document.querySelectorAll<HTMLElement>('.ag-tool')
-    expect(pending.textContent).toBe('…Read the plan')
-    expect(failed.textContent).toBe('✕Looked up rack-x: No catalog entry "rack-x"')
+    expect(pending.textContent).toBe('…Running: Read the plan')
+    expect(failed.textContent).toBe('✕Failed: Looked up rack-x: No catalog entry "rack-x"')
+    expect(failed.querySelector('.visually-hidden')?.textContent).toBe('Failed: ')
   })
 
   it('ProposalCard shows + / = lines from commands summaries, diff (capex, build weeks, PUE, worst check), Preview/Apply/Dismiss', () => {
@@ -135,8 +137,8 @@ describe('agent thread', () => {
     expect(effect).toContain('Capex +$4.8M.')
     expect(effect).toContain('Build +9 weeks.')
     expect(effect).toContain('PUE 1.38 to 1.19.')
-    expect(effect).toContain('▲Floor bay B4-3 rises to 97%.')
-    expect(effect).toContain('✓Clears CRAH capacity.')
+    expect(effect).toContain('Warning: Floor bay B4-3 rises to 97%.')
+    expect(effect).toContain('Pass: Clears CRAH capacity.')
 
     fireEvent.click(within(card).getByRole('button', { name: 'Preview' }))
     expect(actions.dispatchView).toHaveBeenCalledWith({ type: 'previewProposal', proposalId: 'p1' })
@@ -160,6 +162,7 @@ describe('agent thread', () => {
     })
     expect(screen.getByText('Plan changed since this was proposed')).toBeTruthy()
     expect((screen.getByRole('button', { name: 'Apply' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: 'Preview' }) as HTMLButtonElement).disabled).toBe(true)
     expect((screen.getByRole('button', { name: 'Dismiss' }) as HTMLButtonElement).disabled).toBe(false)
   })
 
@@ -171,8 +174,11 @@ describe('agent thread', () => {
 
   it('error event renders plain message', () => {
     setup([rateLimitError])
-    const alert = screen.getByRole('alert')
-    expect(alert.textContent).toBe('✕The Claude API is rate limiting requests. Try again in a minute.')
+    const line = document.querySelector('.ag-error') as HTMLElement
+    expect(line.textContent).toBe('✕The Claude API is rate limiting requests. Try again in a minute.')
+    // The log is the live region; an alert inside it would announce the error twice.
+    expect(line.closest('[role="log"]')).not.toBeNull()
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 
   it('an error inside a message ends its streaming', () => {
@@ -181,7 +187,7 @@ describe('agent thread', () => {
       { kind: 'textDelta', messageId: 'm7', text: 'Checking' },
       { kind: 'error', messageId: 'm7', message: 'The connection to the Claude API dropped.' },
     ])
-    expect(screen.getByRole('alert').textContent).toContain('The connection to the Claude API dropped.')
+    expect(document.querySelector('.ag-error')?.textContent).toContain('The connection to the Claude API dropped.')
     expect(document.querySelector('.ag-caret')).toBeNull()
   })
 
@@ -236,6 +242,49 @@ describe('agent thread', () => {
     // Numbers from another message's tools are not used.
     const m2 = document.querySelector('[data-message-id="m2"]') as HTMLElement
     expect([...m2.querySelectorAll('.ag-grounded')].map((el) => el.textContent)).toEqual(['38 weeks', '30 weeks', '26 weeks'])
+  })
+
+  it('the proposal tag takes its severity from the checks the change hurts', () => {
+    const tagClass = () => document.querySelector('.ag-card .ag-delta')?.getAttribute('class')
+    setup(problemTurn)
+    expect(tagClass()).toContain('ag-delta--warning')
+    cleanup()
+    const fails = { ...liquidProposal.diff.worsened[0], status: 'fail' as const }
+    setup(problemTurn, { proposals: { p1: { ...liquidProposal, diff: { ...liquidProposal.diff, worsened: [fails] } } } })
+    expect(tagClass()).toContain('ag-delta--problem')
+    cleanup()
+    setup(problemTurn, { proposals: { p1: { ...liquidProposal, diff: { ...liquidProposal.diff, worsened: [] } } } })
+    expect(tagClass()).toContain('ag-delta--info')
+  })
+
+  it('a previewed proposal that stops being open ends the preview', () => {
+    const actions = setup(problemTurn, { previewProposalId: 'p1' })
+    expect(actions.dispatchView).not.toHaveBeenCalled()
+    act(() => useTwinStore.setState({ proposals: { p1: { ...liquidProposal, status: 'applied' } } }))
+    expect(actions.dispatchView).toHaveBeenCalledWith({ type: 'previewProposal', proposalId: null })
+  })
+
+  it('grounding understands every unit format.ts writes', () => {
+    const shown = [fmtPower(132_000), fmtPower(9_400_000), fmtMass(412_000), fmtFlow(2.5), fmtMoney(4_800_000), fmtWeeks(9), fmtPct(0.914)]
+    setup([
+      { kind: 'messageStart', messageId: 'm6', trigger: 'chat', severity: 'info' },
+      { kind: 'toolCall', messageId: 'm6', callId: 'f', name: 'get_evaluation', summary: 'Read the evaluation' },
+      { kind: 'toolResult', callId: 'f', ok: true, summary: 'ok', numbers: [132_000, 9_400_000, 412_000, 2.5, 4_800_000, 9, 0.914] },
+      { kind: 'textDelta', messageId: 'm6', text: shown.join(', ') },
+      { kind: 'messageEnd', messageId: 'm6' },
+    ])
+    const marks = [...document.querySelectorAll('[data-message-id="m6"] .ag-grounded')].map((el) => el.textContent)
+    expect(marks).toEqual(shown)
+  })
+
+  it('links that point outside the app are not offered', () => {
+    setup([
+      { kind: 'messageStart', messageId: 'm8', trigger: 'chat', severity: 'info' },
+      { kind: 'link', messageId: 'm8', label: 'Brief', href: 'https://example.com/api/brief/file/x.md' },
+      { kind: 'messageEnd', messageId: 'm8' },
+    ])
+    expect(screen.queryByRole('link')).toBeNull()
+    expect(screen.getByText(/Brief \(not offered/)).toBeTruthy()
   })
 
   it('link events render as a download link', () => {

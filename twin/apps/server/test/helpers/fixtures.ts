@@ -1,18 +1,20 @@
-import { mkdtempSync, readFileSync } from 'node:fs'
+import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { loadBuiltins } from '@twin/catalog'
 import { createRegistry, defineCommand } from '@twin/commands'
-import { RulesSchema, type Builtins } from '@twin/schema'
+import type { Builtins } from '@twin/schema'
 
 /** A temporary data directory per test. */
 export function tempDataDir(): string {
   return mkdtempSync(join(tmpdir(), 'twin-server-'))
 }
 
-/** Built-ins with the real rules and no entries: the engine evaluates to an empty result quickly. */
+const builtins = loadBuiltins()
+
+/** The real built-in catalog, loaded once: a persisted plan's references must resolve on reload. */
 export function testBuiltins(): Builtins {
-  const rulesPath = new URL('../../../../packages/catalog/data/rules.json', import.meta.url)
-  return { entries: [], rules: RulesSchema.parse(JSON.parse(readFileSync(rulesPath, 'utf8'))) }
+  return builtins
 }
 
 /** A registry with one real-shaped command, so server tests do not depend on the full command set. */

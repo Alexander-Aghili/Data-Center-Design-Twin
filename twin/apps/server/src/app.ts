@@ -60,6 +60,7 @@ export async function createApp(opts: AppOptions): Promise<FastifyInstance> {
     builtins: opts.builtins,
     registry: opts.registry,
     onError: (err, context) => app.log.error({ err }, context),
+    onWarning: (text) => app.log.warn(text),
   })
   const agent = opts.agentFactory?.(store) ?? createOfflineAgent()
   const stopFeedingAgent = store.onChange((change) => agent.handleChange(change))
@@ -79,6 +80,12 @@ export async function createApp(opts: AppOptions): Promise<FastifyInstance> {
     hub.close()
     stopFeedingAgent()
   })
-  app.addHook('onClose', async () => store.flush())
+  app.addHook('onClose', async () => {
+    try {
+      store.flush()
+    } catch (err) {
+      app.log.error({ err }, 'Could not write plan.json on shutdown')
+    }
+  })
   return app
 }
