@@ -22,11 +22,11 @@ export function NetworkDecisions({ plan }: { plan: Plan }) {
       <Field
         label="Oversubscription"
         target="decision:network.oversubscription"
-        hint="Downlink to uplink bandwidth at each leaf. 1 : 1 is non-blocking."
+        hint={'Downlink to uplink bandwidth at each leaf. 1\u00a0:\u00a01 is non-blocking.'}
       >
         <NumberInput
           value={plan.network.oversubscription}
-          unit=": 1"
+          unit={':\u00a01'}
           above={0}
           onCommit={(ratio) => send({ type: 'setNetworkOversubscription', payload: { ratio } })}
         />

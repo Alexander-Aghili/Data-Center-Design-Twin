@@ -191,7 +191,7 @@ export function CatalogPicker(props: PickerProps) {
       <div className={s.current}>
         <div className={s.currentText}>
           <span className={s.name}>{current?.name ?? `Unknown entry ${props.value}`}</span>
-          {current && <Facts id={`${id}-current`} facts={factsOf(current)} />}
+          {current && !open && <Facts id={`${id}-current`} facts={factsOf(current)} />}
           {current && <Verdict id={`${id}-current-verdict`} assessment={assess(current)} />}
         </div>
         <button

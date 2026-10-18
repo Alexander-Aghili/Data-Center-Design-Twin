@@ -85,6 +85,15 @@
   color: var(--graphite);
 }
 
+.inline :global(.input),
+.formGrid :global(.input),
+.zones :global(.input),
+.pair :global(.input),
+.row :global(.input) {
+  width: 100%;
+  min-width: 0;
+}
+
 .inline {
   display: grid;
   gap: 3px;
@@ -123,6 +132,11 @@
   min-width: 34px;
 }
 
+.row :global(.input) {
+  height: 24px;
+  font-size: var(--text-sm);
+}
+
 .row :global(.btn) {
   height: 22px;
   padding: 0 var(--space-2);
@@ -142,6 +156,7 @@
 }
 
 .slot[data-state='taken'] {
+  border-color: var(--graphite);
   background: var(--clay-dark);
 }
 

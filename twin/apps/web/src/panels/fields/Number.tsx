@@ -18,7 +18,6 @@ export function NumberInput(props: {
   min?: number
   /** Smallest value excluded, for quantities that must be positive. */
   above?: number
-  integer?: boolean
 }) {
   const { controlId, setError, run } = useField()
   const scale = props.scale ?? 1
@@ -27,7 +26,6 @@ export function NumberInput(props: {
   const problem = (text: string): string | null => {
     const n = Number(text.trim().replace(/,/g, ''))
     if (text.trim() === '' || !Number.isFinite(n)) return 'Enter a number'
-    if (props.integer && !Number.isInteger(n)) return 'Enter a whole number'
     if (props.min !== undefined && n < props.min) return `Enter ${props.min} or more`
     if (props.above !== undefined && n <= props.above) return `Enter a number above ${props.above}`
     return null

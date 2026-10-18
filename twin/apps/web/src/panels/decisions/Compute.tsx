@@ -27,13 +27,13 @@ function assessRack(rack: RackEntry, group: RackGroup, plan: Plan, catalog: Cata
   return {}
 }
 
-function GroupName({ group }: { group: RackGroup }) {
+function GroupName({ group, onResult }: { group: RackGroup; onResult(result: Promise<void>): void }) {
   const send = useTwinStore((st) => st.send)
   const [draft, setDraft] = useState<string | null>(null)
   const commit = () => {
     const name = draft?.trim()
     setDraft(null)
-    if (name && name !== group.name) void send({ type: 'renameRackGroup', payload: { groupId: group.id, name } }).catch(() => {})
+    if (name && name !== group.name) onResult(send({ type: 'renameRackGroup', payload: { groupId: group.id, name } }))
   }
   return (
     <input
@@ -54,8 +54,14 @@ function GroupCompute(props: { plan: Plan; group: RackGroup; catalog: CatalogInd
   const send = useTwinStore((st) => st.send)
   const { plan, group, catalog } = props
   const placed = plan.placements.some((p) => p.groupId === group.id)
+  const [error, setError] = useState<string | null>(null)
+  const track = (result: Promise<void>) =>
+    result.then(
+      () => setError(null),
+      (e: unknown) => setError(e instanceof Error ? e.message : String(e)),
+    )
   return (
-    <FieldGroup title={<GroupName group={group} />} subject={group.name} target={`group:${group.id}`} meta={placedSummary(plan, group.id)}>
+    <FieldGroup title={<GroupName group={group} onResult={track} />} subject={group.name} target={`group:${group.id}`} meta={placedSummary(plan, group.id)}>
       <Field label="Rack type" target={`decision:rackGroups.${group.id}.rackTypeId`}>
         <CatalogPicker
           kind="rack"
@@ -69,12 +75,17 @@ function GroupCompute(props: { plan: Plan; group: RackGroup; catalog: CatalogInd
           type="button"
           className="btn btn--quiet"
           disabled={placed}
-          onClick={() => void send({ type: 'deleteRackGroup', payload: { groupId: group.id } }).catch(() => {})}
+          onClick={() => track(send({ type: 'deleteRackGroup', payload: { groupId: group.id } }))}
         >
           Delete group
         </button>
         {placed && <span className={s.aside}>Remove its racks in Layout first.</span>}
       </div>
+      {error && (
+        <p role="alert" className={s.error}>
+          ✕ {error}
+        </p>
+      )}
     </FieldGroup>
   )
 }

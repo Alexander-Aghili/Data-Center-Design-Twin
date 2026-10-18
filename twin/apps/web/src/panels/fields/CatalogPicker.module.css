@@ -37,24 +37,18 @@
   color: var(--ink);
 }
 
-.change:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-/* Facts flow as a run of short statements; the basis trails each number in a lighter voice. */
+/* A short spec sheet: one deciding number per line, its basis set right in a lighter voice. */
 .facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1px var(--space-3);
+  display: grid;
   font-size: var(--text-sm);
   line-height: 1.45;
 }
 
 .fact {
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: baseline;
-  gap: 4px;
+  gap: var(--space-2);
 }
 
 .basis {

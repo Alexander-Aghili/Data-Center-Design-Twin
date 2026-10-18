@@ -2,7 +2,7 @@ import { useId } from 'react'
 import { useField } from './Field'
 import s from './Select.module.css'
 
-export interface Option<T extends string> {
+interface Option<T extends string> {
   value: T
   label: string
 }
