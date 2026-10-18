@@ -1,21 +1,15 @@
 import type { Check, Evaluation, Plan, Selection, SizedEquipment, Status } from '@twin/schema'
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from 'react'
-import { fmtNull, fmtPct, fmtPower, fmtValue } from '../format'
+import { fmtNull, fmtPower, fmtValue } from '../format'
+import './strips.css'
 
 /* The drawing kit shared by the layer strips, the inspector and the hourly chart. */
 
-const NBSP = '\u00a0'
-
-/** A value in a contract or catalog unit, null-safe: format.ts units plus "fraction" and "VA". */
+/** A value in a contract or catalog unit, null-safe: format.ts, with catalog "fraction" read as a ratio and VA like W. */
 export function fmtUnit(v: number | null, unit: string): string {
-  switch (unit) {
-    case 'fraction':
-      return fmtNull(v, fmtPct)
-    case 'VA':
-      return fmtNull(v, (n) => fmtPower(n).replace(/W$/, 'VA'))
-    default:
-      return fmtValue(v, unit)
-  }
+  if (unit === 'fraction') return fmtValue(v, 'ratio')
+  if (unit === 'VA') return fmtNull(v, (n) => fmtPower(n).replace(/W$/, 'VA'))
+  return fmtValue(v, unit)
 }
 
 /** "7.2 of 9.1 MW": a load against its capacity, the unit said once when both share it. */
@@ -23,7 +17,7 @@ function fmtLoadOf(loadW: number, capacityW: number | null): string {
   if (capacityW === null) return fmtPower(loadW)
   const load = fmtPower(loadW)
   const cap = fmtPower(capacityW)
-  const unit = cap.slice(cap.indexOf(NBSP))
+  const unit = cap.slice(cap.search(/\s/))
   return `${load.endsWith(unit) ? load.slice(0, -unit.length) : load} of ${cap}`
 }
 
@@ -179,7 +173,8 @@ export function Node({ x, y, label, value, detail, status, missing, symbol, text
           cx={x}
           cy={y}
           r={8}
-          stroke={missing ? 'var(--dt-missing)' : problem ? STATUS_COLOR[problem] : 'var(--ink)'}
+          stroke={missing ? 'var(--graphite)' : problem ? STATUS_COLOR[problem] : 'var(--ink)'}
+          strokeOpacity={missing ? 0.6 : undefined}
           strokeDasharray={missing ? '3 2' : undefined}
         />
       )}
@@ -205,43 +200,11 @@ export function Node({ x, y, label, value, detail, status, missing, symbol, text
   )
 }
 
-const STRIP_CSS = `
-.dt-strip{height:100%;display:flex;flex-direction:column;background:var(--canvas);
-  --dt-missing:#9aa6ac;font-variant-numeric:tabular-nums;min-width:0}
-.dt-strip header{display:flex;align-items:baseline;gap:var(--space-3);padding:var(--space-2) var(--space-4) 0}
-.dt-strip h3{margin:0;font-size:var(--text-sm);font-weight:600;font-stretch:var(--stretch-label);color:var(--graphite)}
-.dt-strip header p{margin:0 0 0 auto;font-size:var(--text-xs);font-stretch:var(--stretch-label);color:var(--graphite)}
-.dt-strip-body{flex:1;min-height:0}
-.dt-strip-body svg{display:block;overflow:visible}
-.dt-strip-empty{margin:auto;color:var(--graphite);font-size:var(--text-sm)}
-.dt-pipe-supply{stroke:var(--supply);stroke-dasharray:10 4;animation:dt-flow 1.1s linear infinite}
-.dt-pipe-air{stroke:var(--supply);stroke-dasharray:3 6;opacity:.8;animation:dt-flow 2.4s linear infinite}
-.dt-pipe-missing{stroke:var(--dt-missing);stroke-dasharray:4 4}
-.dt-pipe-power{stroke:var(--ink)}
-.dt-pipe-copper{stroke:var(--graphite)}
-.dt-pipe-fiber{stroke:var(--supply)}
-@keyframes dt-flow{to{stroke-dashoffset:-28}}
-@media (prefers-reduced-motion:reduce){.dt-pipe-supply,.dt-pipe-air{animation:none}}
-.dt-node{cursor:default;outline:none}
-.dt-node[role=button]{cursor:pointer}
-.dt-hit{fill:transparent}
-.dt-node[role=button]:hover .dt-hit{fill:var(--panel)}
-.dt-node:focus-visible .dt-hit{fill:var(--panel);stroke:var(--supply);stroke-width:2}
-.dt-bubble{fill:var(--panel);stroke-width:1.6}
-.dt-symbol{fill:var(--panel);stroke:var(--ink);stroke-width:1.6}
-.dt-label{font-size:11.5px;font-weight:600;font-stretch:var(--stretch-label)}
-.dt-value{font-size:10.5px;fill:var(--graphite)}
-.dt-tier{font-size:var(--text-xs);font-stretch:var(--stretch-label);fill:var(--graphite)}
-`
-
 /** Frame of a layer strip: a quiet title, a one-line summary, and the drawing at the measured width. */
 export function StripFrame(props: { title: string; summary?: string; empty?: string; children: (width: number) => ReactNode }) {
   const [ref, width] = useWidth<HTMLDivElement>(720)
   return (
     <section className="dt-strip" aria-label={props.title}>
-      <style href="twin-strip" precedence="default">
-        {STRIP_CSS}
-      </style>
       <header>
         <h3>{props.title}</h3>
         {props.summary ? <p>{props.summary}</p> : null}

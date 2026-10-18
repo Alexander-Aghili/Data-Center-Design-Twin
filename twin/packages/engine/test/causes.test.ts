@@ -119,7 +119,7 @@ describe('attachCauses', () => {
     expect(byPath(heat!, 'cooling.heatRejectionId')).toMatchObject({ value: 'Air-cooled chiller', label: 'Heat rejection: Air-cooled chiller' })
     expect(byPath(heat!, 'site.climateId')?.value).toBe('Dallas, Texas')
     expect(byPath(heat!, 'power.redundancy')?.value).toBe('N+1')
-    expect(byPath(grid!, 'site.gridCapacityW')?.value).toBe('10.4 MW')
+    expect(byPath(grid!, 'site.gridCapacityW')?.value).toBe('10.6 MW')
   })
 
   it('falls back to the catalog id when an entry is missing', () => {

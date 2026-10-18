@@ -66,6 +66,40 @@ describe('HourlyChart', () => {
     expect(within(table).getByText('Jul')).toBeTruthy()
   })
 
+  it('labels every row of the small multiples with its series', () => {
+    load()
+    const { container } = render(<HourlyChart series={['outdoorC', 'wetBulbC']} />)
+    const labels = [...container.querySelectorAll('[data-series-label]')].map((l) => l.textContent)
+    expect(labels).toEqual(['Outdoor dry-bulb', 'Outdoor wet-bulb'])
+  })
+
+  it('says "1 hour" for a single hour over the cap', () => {
+    const facilityW = evaluation.hourly.facilityW.map((w, h) =>
+      h === 5000 ? plan.site.gridCapacityW + 1 : Math.min(w, plan.site.gridCapacityW),
+    )
+    useTwinStore.setState({ plan, evaluation: { ...evaluation, hourly: { ...evaluation.hourly, facilityW } } })
+    render(<HourlyChart series={['facilityW']} />)
+    expect(screen.getByText('✕ 1 hour over the cap')).toBeTruthy()
+  })
+
+  it('hovering moves the crosshair without re-reading the 8,760-hour series', () => {
+    let reads = 0
+    const counted = new Proxy(evaluation.hourly.facilityW, {
+      get(target, key, receiver) {
+        if (typeof key === 'string' && /^\d+$/.test(key)) reads++
+        return Reflect.get(target, key, receiver)
+      },
+    })
+    useTwinStore.setState({ plan, evaluation: { ...evaluation, hourly: { ...evaluation.hourly, facilityW: counted } } })
+    const { container } = render(<HourlyChart series={['facilityW']} />)
+    const year = screen.getByRole('img', { name: /^Facility power over the year/ })
+    reads = 0
+    for (const x of [60, 120, 180, 240, 300]) fireEvent.pointerMove(year, { clientX: x })
+    expect(container.querySelector('[data-crosshair]')).not.toBeNull()
+    // Each move may read the hovered day (24 hours) for the tooltip, never the whole year.
+    expect(reads).toBeLessThanOrEqual(5 * 24)
+  })
+
   it('says so when there is no hourly data', () => {
     useTwinStore.setState({ plan, evaluation: { ...evaluation, hourly: { ...evaluation.hourly, facilityW: [] } } })
     render(<HourlyChart series={['facilityW']} />)

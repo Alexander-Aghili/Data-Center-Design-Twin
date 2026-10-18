@@ -1,6 +1,6 @@
 import { num, type Check, type Metric, type RackResult, type RowLoad } from '@twin/schema'
 import type { EvalContext } from '../context'
-import { airDeltaTK, airflowM3s, capacityStatus, crahFanW, groupEntries, kw, makeCheck, metric, planCrahs, ratio, rule, sumBy } from '../sizing'
+import { airDeltaTK, airflowM3s, capacityStatus, crahFanW, fmt, groupEntries, kw, makeCheck, metric, planCrahs, ratio, rule, sumBy } from '../sizing'
 
 export interface AirSideResult {
   rows: Pick<RowLoad, 'rowId' | 'airW'>[]
@@ -72,6 +72,55 @@ function rackHeatLimitChecks(ctx: EvalContext, racks: RackResult[]): Check[] {
   })
 }
 
+// ASHRAE TC9.9 Thermal Guidelines, class A1 air-cooled IT: recommended inlet 18 to 27 °C, allowable 15 to 32 °C.
+const A1_RECOMMENDED_MAX_C = 27
+const A1_ALLOWABLE_MAX_C = 32
+const ROOM_AIR_CATEGORIES = new Set(['air', 'rdhx'])
+
+/**
+ * Per air or rear-door group: the inlet air the CRAHs deliver against ASHRAE A1. The CRAHs share the facility
+ * loop, so warm water for liquid racks warms the room air too. Warn above 27 °C, fail above 32 °C.
+ */
+function airInletChecks(ctx: EvalContext, racks: RackResult[]): Check[] {
+  const approach = rule(ctx, 'crahCoilApproachK')
+  const supplyC = ctx.plan.cooling.facilitySupplyC
+  return ctx.plan.rackGroups.flatMap((group) => {
+    const { method } = groupEntries(ctx, group.id)
+    const members = racks.filter((r) => r.groupId === group.id)
+    const [first] = members
+    if (!first || !method || !ROOM_AIR_CATEGORIES.has(method.category)) return []
+    const inlet = first.airInletC
+    const status = inlet === null ? 'unknown' : inlet > A1_ALLOWABLE_MAX_C ? 'fail' : inlet > A1_RECOMMENDED_MAX_C ? 'warn' : 'pass'
+    const air = (c: number) => fmt(c, '°C')
+    const source = `${air(supplyC)} water plus the ${approach === null ? 'CRAH' : fmt(approach, 'K')} coil approach`
+    const explanation =
+      inlet === null
+        ? `The inlet air temperature for ${group.name} is unknown because the CRAH coil approach is unknown.`
+        : status === 'pass'
+          ? `${group.name} racks get ${air(inlet)} inlet air from the CRAHs (${source}), inside ASHRAE TC9.9's recommended ${air(18)} to ${air(A1_RECOMMENDED_MAX_C)} for air-cooled servers.`
+          : status === 'warn'
+            ? `${group.name} racks get ${air(inlet)} inlet air because the CRAHs share the facility loop (${source}). That is above ASHRAE TC9.9's recommended ${air(A1_RECOMMENDED_MAX_C)} for air-cooled servers, within the ${air(A1_ALLOWABLE_MAX_C)} allowable limit.`
+            : `${group.name} racks get ${air(inlet)} inlet air because the CRAHs share the facility loop, which supplies ${air(supplyC)} water. Air-cooled servers are rated to ${air(A1_ALLOWABLE_MAX_C)} (ASHRAE TC9.9 class A1 allowable).`
+    const maxSupply = approach === null ? null : A1_ALLOWABLE_MAX_C - approach
+    return [
+      makeCheck({
+        kind: 'cooling.airInletTemp',
+        subject: { kind: 'group', id: group.id, objectIds: members.map((r) => r.objectId) },
+        title: `Rack inlet air, ${group.name}`,
+        value: inlet,
+        limit: A1_ALLOWABLE_MAX_C,
+        unit: '°C',
+        utilization: ratio(inlet ?? 0, inlet === null ? null : A1_ALLOWABLE_MAX_C),
+        status,
+        explanation,
+        ...(status === 'fail' && maxSupply !== null
+          ? { advice: `Keep the facility supply at ${air(maxSupply)} or less, give the CRAHs their own colder chilled-water loop, or move ${group.name} to liquid cooling.` }
+          : {}),
+      }),
+    ]
+  })
+}
+
 /** Airflow, CRAH zone loads, rack air limits and rack air temperatures (Task 8). */
 export function airSide(ctx: EvalContext, racks: RackResult[]): AirSideResult {
   const { hall } = ctx.plan
@@ -96,11 +145,12 @@ export function airSide(ctx: EvalContext, racks: RackResult[]): AirSideResult {
   const fanW = fanParts.includes(null) ? null : sumBy(fanParts, (w) => w ?? 0) + unzonedFanW
 
   const inputs = ['rackGroups', 'placements', 'cooling.containment']
+  const withTemps = withAirTemperatures(ctx, racks)
   return {
     rows,
     crahLoads,
-    racks: withAirTemperatures(ctx, racks),
-    checks: rackHeatLimitChecks(ctx, racks),
+    racks: withTemps,
+    checks: [...rackHeatLimitChecks(ctx, racks), ...airInletChecks(ctx, withTemps)],
     metrics: [
       metric('cooling.airW', 'Heat to room air', airW, 'W', inputs, 'air'),
       metric('cooling.airDeltaTK', 'Room air ΔT', airDeltaTK(ctx), 'K', ['cooling.containment'], 'air'),

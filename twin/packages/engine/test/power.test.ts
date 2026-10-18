@@ -149,6 +149,14 @@ describe('powerBudget', () => {
     expect(p.headline.pueWorst).toBeCloseTo(facilityAt(IT_W, HOT_COOLING_W) / IT_W, 9)
   })
 
+  it('sized leaf switches count as IT load, at nominal and at peak', () => {
+    const leaves = { ...eq('leaf:leaf-1', 'leaf', EQUIPMENT.LEAF_64X800G, 10), loadW: 9_400 }
+    const p = run(basePlan(), [...defaultEquipment, leaves])
+    expect(p.hourly.itW[0]).toBe(IT_W + 9_400)
+    expect(p.hourly.facilityW[0]).toBeCloseTo(facilityAt(IT_W + 9_400, COOLING_W), 3)
+    expect(p.metrics.find((m) => m.id === 'power.itPeakW')!.value).toBeCloseTo(run().metrics.find((m) => m.id === 'power.itPeakW')!.value! + 9_400, 6)
+  })
+
   it('hoursOverCap counts hours where facilityW > gridCapacityW', () => {
     const cap = (facilityAt(IT_W, COOLING_W) + facilityAt(IT_W, HOT_COOLING_W)) / 2
     const plan = basePlan()
