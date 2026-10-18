@@ -15,6 +15,7 @@ import { useTwinStore } from '../../state/store'
 import { objectIdForPlacement, rackSize, slotWorld } from '../geometry'
 import { FINISH, PERF_TILE_M } from '../Lighting'
 import { useRegistered } from '../hooks'
+import { prefersReducedMotion } from '../overlays/LiquidFlow'
 import { exhaustColor } from '../overlays/Temperature'
 import { Shelf, Tray, type TrayCooling } from './Tray'
 
@@ -311,11 +312,13 @@ function RackBody({ plan, placement, openness, tray, interior, heat }: RackBodyP
     })
   }
 
+  const reduced = useMemo(prefersReducedMotion, [])
   useLayoutEffect(() => apply(current.current))
   useFrame((_, dt) => {
     const gap = openness - current.current
     if (Math.abs(gap) < 1e-4) return
-    current.current = Math.abs(gap) < 2e-3 ? openness : current.current + gap * (1 - Math.exp(-dt / EASE_S))
+    // With reduced motion the doors and trays jump with the camera's cut instead of swinging.
+    current.current = reduced || Math.abs(gap) < 2e-3 ? openness : current.current + gap * (1 - Math.exp(-dt / EASE_S))
     apply(current.current)
   })
 

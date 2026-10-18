@@ -130,6 +130,8 @@ export class Choreography {
   private openTo = 0
   private commanded: Shot | null = null
   private released = false
+  /** The last move asked for reduced motion: re-frames cut instead of gliding. */
+  private reducedMotion = false
   private staleForS = 0
   private sinceResolveS = 0
   private readonly driver: CameraDriver
@@ -153,6 +155,7 @@ export class Choreography {
     const { from, waypoints } = this.plan(target)
     this.target = target
     this.released = false
+    this.reducedMotion = reducedMotion
     this.legs = []
     this.legIndex = -1
     this.elapsedS = 0
@@ -176,7 +179,13 @@ export class Choreography {
    * rack finishes opening or closing as the interrupted leg intended.
    */
   cancel(): void {
-    if (this.legIndex >= 0) this.setOpen(this.open.placementId, this.openTo)
+    const leg = this.legs[this.legIndex]
+    if (leg) {
+      this.setOpen(this.open.placementId, this.openTo)
+      // The controls carry on to the leg's pose under the user's hand, so the next move starts from there, not from
+      // the abandoned target (which would first fly back in, opening the rack, on the way out).
+      this.target = leg.to
+    }
     this.legs = []
     this.legIndex = -1
     this.released = true
@@ -195,9 +204,9 @@ export class Choreography {
     const due = this.staleForS > 0 && this.sinceResolveS >= RESOLVE_INTERVAL_S
     this.staleForS = Math.max(0, this.staleForS - dt)
     this.sinceResolveS += dt
-    if (this.fadeS !== null) return this.tickFade(dt)
+    if (this.fadeS !== null) return this.tickFade(dt, due)
     if (this.legs.length === 0) {
-      if (due && !this.released) this.command(this.target, REFRAME_S)
+      if (due && !this.released) this.command(this.target, this.reducedMotion ? 0 : REFRAME_S)
       return
     }
     this.elapsedS += dt
@@ -256,10 +265,12 @@ export class Choreography {
   }
 
   /** Reduced motion: dip to the canvas over 0.2 s and cut to the target at the midpoint. */
-  private tickFade(dt: number): void {
+  private tickFade(dt: number, due: boolean): void {
     const half = CROSS_FADE_S / 2
     const before = this.fadeS!
     const now = before + dt
+    // Models settling after the cut (the rack opening at once) re-frame while the scene is still faded.
+    if (before >= half && due) this.command(this.target, 0)
     if (before < half && now >= half) {
       this.commanded = this.resolve(this.target)
       this.driver.moveTo(this.commanded, 0)

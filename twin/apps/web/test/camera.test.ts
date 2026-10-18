@@ -391,6 +391,44 @@ describe('Choreography', () => {
     expect(driver.openness.at(-1)).toEqual({ placementId: 'R3-07', value: 1 })
   })
 
+  it('after a user grab the next move starts where the camera settled, so leaving never opens the rack', () => {
+    const resolve = resolveIn(ctx())
+    const f = 'rack:R3-07'
+    const start: Waypoint = { shot: 'hall', focusId: f }
+    const driver = new FakeDriver(resolve(start))
+    const choreo = new Choreography(driver, resolve, start)
+    choreo.go({ shot: 'gpu', focusId: f }, false)
+    // Grab on the row to rack leg: the camera keeps heading for the rack shot after the grab.
+    const rackShot = JSON.stringify(resolve({ shot: 'rack', focusId: f }))
+    for (let i = 0; i < 600 && JSON.stringify(driver.moves.at(-1)?.pose) !== rackShot; i++) choreo.tick(1 / 60)
+    choreo.cancel()
+    const openAtGrab = driver.openness.at(-1)?.value ?? 0
+    driver.moves = []
+    driver.openness = []
+    choreo.go({ shot: 'site', focusId: f }, false)
+    run(choreo, 2)
+    const targets = [...new Set(driver.moves.map((m) => JSON.stringify(m.pose)))]
+    expect(targets).toEqual((['row', 'hall', 'site'] as const).map((shot) => JSON.stringify(resolve({ shot, focusId: f }))))
+    for (const o of driver.openness) expect(o.value).toBeLessThanOrEqual(openAtGrab)
+  })
+
+  it('reduced motion re-frames by cutting, not gliding, while the scene settles after the cut', () => {
+    const boxes: Record<string, Box3> = {}
+    const resolve = resolveIn(ctx({ worldBox: (id) => boxes[id] ?? null }))
+    const f = 'rack:R3-07:tray:0'
+    const start: Waypoint = { shot: 'hall', focusId: f }
+    const driver = new FakeDriver(resolve(start))
+    const choreo = new Choreography(driver, resolve, start)
+    choreo.go({ shot: 'gpu', focusId: f }, true)
+    run(choreo, 0.3)
+    // The open rack's tray registers and slides out after the cut.
+    boxes['rack:R3-07:tray:0'] = new Box3(new Vector3(9.9, 1.2, 7), new Vector3(10.5, 1.24, 9.2))
+    choreo.invalidate()
+    run(choreo, 0.5)
+    expect(driver.moves.length).toBeGreaterThan(1)
+    for (const m of driver.moves) expect(m.smoothTimeS).toBe(0)
+  })
+
   it('reduced motion uses cross-fade (duration 0.2 s, no path)', () => {
     const resolve = resolveIn(ctx())
     const start: Waypoint = { shot: 'gpu', focusId: 'rack:R3-07' }
