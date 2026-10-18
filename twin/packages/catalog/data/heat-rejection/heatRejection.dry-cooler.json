@@ -1,0 +1,98 @@
+{
+  "id": "heatRejection.dry-cooler",
+  "kind": "heatRejection",
+  "name": "Dry cooler",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "schneider-45c",
+      "url": "https://www.techtarget.com/it-infrastructure/news/366651212/AI-data-centers-can-run-hot-to-stay-cool-report",
+      "title": "TechTarget on Schneider Electric 32 C vs 45 C TCS modeling in Dallas and Paris"
+    }
+  ],
+  "summary": "Fans blow outdoor air over a finned coil; the water can only get to a few kelvin above the outdoor dry-bulb temperature. Uses no water and little power, so it pairs with warm-water liquid cooling. On hot hours it needs a trim chiller.",
+  "category": "dryCooler",
+  "basis": "dryBulb",
+  "approachK": {
+    "value": 7,
+    "unit": "K",
+    "basis": "press",
+    "low": 5,
+    "high": 10,
+    "source": "https://www.techtarget.com/it-infrastructure/news/366651212/AI-data-centers-can-run-hot-to-stay-cool-report",
+    "note": "Schneider's 100 MW model (Dallas, Paris) starts chiller assist at ~25 °C outdoor for a 32 °C supply and ~35 °C for 45 °C supply: approach of 7 to 10 K. Larger coils reach 5 K at higher capex."
+  },
+  "copRef": {
+    "value": null,
+    "unit": "W/W",
+    "basis": "textbook",
+    "note": "No compressor; trim cooling uses the chiller entry's curve."
+  },
+  "copRefOutdoorC": {
+    "value": null,
+    "unit": "°C",
+    "basis": "textbook",
+    "note": "Not applicable without a compressor."
+  },
+  "copSlopePerK": {
+    "value": null,
+    "unit": "W/W/K",
+    "basis": "textbook",
+    "note": "Not applicable without a compressor."
+  },
+  "economizer": false,
+  "fanPowerFraction": {
+    "value": 0.02,
+    "unit": "fraction",
+    "basis": "estimate",
+    "low": 0.01,
+    "high": 0.03,
+    "note": "EC-fan V-coil dry coolers at design duty draw roughly 15 to 30 kW of fan power per MW rejected; less at part load."
+  },
+  "waterLPerKwh": {
+    "value": 0,
+    "unit": "L/kWh",
+    "basis": "textbook",
+    "note": "Sealed closed loop, sensible heat only."
+  },
+  "unitCapacityW": {
+    "value": 1000000,
+    "unit": "W",
+    "basis": "estimate",
+    "low": 150000,
+    "high": 2500000,
+    "note": "Data-center V-coil dry coolers are sold from 150 kW to 1.8 MW (LU-VE) and up to 2.5 MW (ENEX); 1 MW is a typical unit at warm-water conditions."
+  },
+  "capexUsdPerKw": {
+    "value": 150,
+    "unit": "USD/kW",
+    "basis": "estimate",
+    "low": 100,
+    "high": 250,
+    "note": "Coil-and-fan equipment without compressors; cheaper per unit than a chiller but large coil area for small approach. No primary cost source found."
+  },
+  "leadTimeWeeks": {
+    "value": 26,
+    "unit": "week",
+    "basis": "estimate",
+    "low": 16,
+    "high": 40,
+    "note": "Shorter than chillers (no compressors) but caught in the same 2025-26 cooling backlog that Linesight flagged."
+  },
+  "installWeeks": {
+    "value": 6,
+    "unit": "week",
+    "basis": "estimate",
+    "low": 4,
+    "high": 10,
+    "note": "Roof or yard set, piping and controls."
+  },
+  "footprintM2PerMw": {
+    "value": 60,
+    "unit": "m²/MW",
+    "basis": "estimate",
+    "low": 40,
+    "high": 100,
+    "note": "A 1 MW V-coil unit is roughly 12 x 2.3 m; 7 K approach needs more coil per MW than a chiller condenser, plus spacing to avoid hot-air recirculation."
+  }
+}

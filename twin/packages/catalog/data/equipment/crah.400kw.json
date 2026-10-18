@@ -1,0 +1,53 @@
+{
+  "id": "crah.400kw",
+  "kind": "equipment",
+  "name": "400 kW fan-wall air handler",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "vertiv-liebert-pcw",
+      "url": "https://www.vertiv.com/495655/globalassets/products/thermal-management/room-cooling/vertiv-liebert-pcw/vertiv-liebert-pcw_brochure.pdf",
+      "title": "Vertiv Liebert PCW brochure"
+    }
+  ],
+  "summary": "Large chilled-water fan-wall air handler of about 400 kW for air-cooled or hybrid halls.",
+  "category": "crah",
+  "params": {
+    "capacityW": {
+      "value": 400000,
+      "unit": "W",
+      "basis": "estimate",
+      "note": "Class rating for fan-wall units, about twice the largest perimeter CRAH (Vertiv Liebert PCW tops out near 210 kW)."
+    },
+    "airflowM3s": {
+      "value": 27.6,
+      "unit": "m³/s",
+      "basis": "calculated",
+      "note": "Q / (ρ·cp·ΔT) = 400 kW / (1.2 kg/m³ × 1005 J/(kg·K) × 12 K) = 27.6 m³/s."
+    },
+    "fanPowerW": {
+      "value": 22000,
+      "low": 14000,
+      "high": 32000,
+      "unit": "W",
+      "basis": "estimate",
+      "note": "Specific fan power of 0.8 kW per m³/s × 27.6 m³/s = 22 kW, about 5.5 % of capacity."
+    },
+    "capexUsd": {
+      "value": 140000,
+      "low": 100000,
+      "high": 200000,
+      "unit": "USD",
+      "basis": "estimate",
+      "note": "About 350 USD per kW (judgment, economy of scale against the 200 kW unit), equipment only."
+    },
+    "leadTimeWeeks": {
+      "value": 20,
+      "low": 12,
+      "high": 30,
+      "unit": "week",
+      "basis": "estimate",
+      "note": "Judgment: fan walls are often built to order, so they queue longer than perimeter CRAHs."
+    }
+  }
+}

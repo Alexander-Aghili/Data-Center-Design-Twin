@@ -1,0 +1,75 @@
+{
+  "id": "cdu.2000kw",
+  "kind": "equipment",
+  "name": "2 MW row CDU",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "coolit-chx2000",
+      "url": "https://www.storagereview.com/news/coolit-unveils-chx2000-cdu-with-2mw-liquid-cooling-capacity-in-standard-rack-footprint",
+      "title": "StorageReview: CoolIT unveils CHx2000 CDU with 2 MW capacity"
+    },
+    {
+      "id": "vertiv-coolchip-cdu",
+      "url": "https://www.vertiv.com/en-us/products-catalog/thermal-management/high-density-solutions/vertiv-coolchip-cdu/",
+      "title": "Vertiv CoolChip CDU family specifications"
+    }
+  ],
+  "summary": "Row-scale liquid-to-liquid coolant distribution unit of about 2 MW, enough for up to twelve 120 kW NVL72 racks.",
+  "category": "cdu",
+  "params": {
+    "capacityW": {
+      "value": 2000000,
+      "unit": "W",
+      "basis": "press",
+      "source": "https://www.storagereview.com/news/coolit-unveils-chx2000-cdu-with-2mw-liquid-cooling-capacity-in-standard-rack-footprint",
+      "note": "CoolIT CHx2000 is marketed at 2 MW in a 750 × 1200 mm footprint."
+    },
+    "maxFlowLps": {
+      "value": 40,
+      "unit": "L/s",
+      "basis": "press",
+      "source": "https://www.storagereview.com/news/coolit-unveils-chx2000-cdu-with-2mw-liquid-cooling-capacity-in-standard-rack-footprint",
+      "note": "1.2 L/min per kW of capacity (CoolIT CHx2000 rating) × 2000 kW = 2400 L/min = 40 L/s."
+    },
+    "approachK": {
+      "value": 4,
+      "unit": "K",
+      "basis": "vendor",
+      "source": "https://www.vertiv.com/en-us/products-catalog/thermal-management/high-density-solutions/vertiv-coolchip-cdu/",
+      "note": "Vertiv rates its CoolChip CDU 2300 at 2300 kW with a 4 °C approach temperature difference; CoolIT does not publish one for CHx2000."
+    },
+    "pumpPowerW": {
+      "value": 24000,
+      "low": 12000,
+      "high": 30000,
+      "unit": "W",
+      "basis": "estimate",
+      "note": "Hydraulic power 40 L/s × 365 kPa (53 psi CHx2000 secondary head) = 14.6 kW, divided by a 0.6 wire-to-water efficiency = 24 kW at full flow and full head."
+    },
+    "weightKg": {
+      "value": 2000,
+      "low": 1500,
+      "high": 3000,
+      "unit": "kg",
+      "basis": "estimate",
+      "note": "Scaled from the 1.2 MW unit: larger heat exchanger and pumps, plus about 300 L of coolant."
+    },
+    "capexUsd": {
+      "value": 340000,
+      "low": 250000,
+      "high": 450000,
+      "unit": "USD",
+      "basis": "estimate",
+      "note": "About 170 USD per kW of capacity (judgment, slight economy of scale against the 1.2 MW class), equipment only."
+    },
+    "leadTimeWeeks": {
+      "value": 24,
+      "low": 14,
+      "high": 36,
+      "unit": "week",
+      "basis": "estimate",
+      "note": "Judgment: newest high-capacity CDUs ship in smaller volumes than 1 MW-class units, so lead times run longer."
+    }
+  }
+}

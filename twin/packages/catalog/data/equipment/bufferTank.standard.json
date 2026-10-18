@@ -1,0 +1,26 @@
+{
+  "id": "bufferTank.standard",
+  "kind": "equipment",
+  "name": "Chilled-water buffer tank",
+  "asOf": "2026-10-18",
+  "summary": "Insulated steel buffer tank on the facility loop that rides through a chiller restart.",
+  "category": "bufferTank",
+  "params": {
+    "capexUsdPerM3": {
+      "value": 1500,
+      "low": 800,
+      "high": 3000,
+      "unit": "USD/m³",
+      "basis": "estimate",
+      "note": "Judgment for insulated carbon-steel pressure tanks of 10–50 m³, installed; small tanks cost more per m³."
+    },
+    "leadTimeWeeks": {
+      "value": 12,
+      "low": 8,
+      "high": 20,
+      "unit": "week",
+      "basis": "estimate",
+      "note": "Judgment: fabricated locally to order, no constrained components."
+    }
+  }
+}

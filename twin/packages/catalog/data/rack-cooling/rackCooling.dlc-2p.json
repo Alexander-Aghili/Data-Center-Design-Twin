@@ -1,0 +1,112 @@
+{
+  "id": "rackCooling.dlc-2p",
+  "kind": "rackCooling",
+  "name": "Direct-to-chip, two-phase",
+  "vendor": "Accelsius / ZutaCore class",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "accelsius",
+      "url": "https://convergedigest.com/accelsius-advances-its-two-phase-direct-to-chip-cooling/",
+      "title": "Converge Digest: Accelsius MR250 two-phase CDU (250 kW per rack, 45 C facility water)"
+    }
+  ],
+  "summary": "A low-pressure refrigerant boils inside the cold plates, taking heat at nearly constant temperature. Handles higher heat flux per chip than water cold plates. Shipping as row CDUs of about 250 kW per rack, but the installed base is small.",
+  "category": "dlc-2p",
+  "maxRackW": {
+    "value": 250000,
+    "unit": "W",
+    "basis": "press",
+    "source": "https://convergedigest.com/accelsius-advances-its-two-phase-direct-to-chip-cooling/",
+    "note": "Accelsius MR250: 250 kW per rack, or two 125 kW racks."
+  },
+  "toTechnicalLoop": {
+    "value": 0.85,
+    "unit": "fraction",
+    "basis": "estimate",
+    "low": 0.8,
+    "high": 0.9,
+    "note": "Same cold-plate coverage as single-phase DLC; the rack still sheds drives, optics and PSU heat to air."
+  },
+  "coolantId": "coolant.refrigerant-2p",
+  "supplyRangeC": {
+    "min": {
+      "value": 20,
+      "unit": "°C",
+      "basis": "press",
+      "source": "https://convergedigest.com/accelsius-advances-its-two-phase-direct-to-chip-cooling/",
+      "note": "Accelsius 2025 full-rack test ran PG25 facility water at 20, 30 and 40 °C."
+    },
+    "max": {
+      "value": 45,
+      "unit": "°C",
+      "basis": "press",
+      "source": "https://convergedigest.com/accelsius-advances-its-two-phase-direct-to-chip-cooling/",
+      "note": "MR250 supports facility water up to 45 °C."
+    }
+  },
+  "deltaTK": {
+    "value": 10,
+    "unit": "K",
+    "basis": "estimate",
+    "low": 8,
+    "high": 12,
+    "note": "Facility-side water rise across the two-phase CDU. Accelsius' test fed 375 L/min PG25 for 250 kW: 250 kW / (6.25 L/s x 1.02 kg/L x 3.95 kJ/kgK) = 9.9 K. The refrigerant side boils near-isothermally, so sensible flow sizing does not apply to it."
+  },
+  "pressureDropKpa": {
+    "value": 50,
+    "unit": "kPa",
+    "basis": "estimate",
+    "low": 30,
+    "high": 100,
+    "note": "Refrigerant loops run at low mass flow (latent heat ~190 kJ/kg vs ~40 kJ/kg sensible for 10 K of water), so drops are lower than single-phase loops."
+  },
+  "addedWeightKgPerRack": {
+    "value": 40,
+    "unit": "kg",
+    "basis": "estimate",
+    "low": 25,
+    "high": 60,
+    "note": "Manifolds and refrigerant charge; refrigerant inventory is smaller than a water loop for the same heat."
+  },
+  "formFactor": "rack",
+  "requiresCdu": true,
+  "pumpPowerFraction": {
+    "value": 0.005,
+    "unit": "fraction",
+    "basis": "estimate",
+    "low": 0.003,
+    "high": 0.01,
+    "note": "Mass flow is Q / h_fg = 250 kW / 190 kJ/kg = 1.3 kg/s; at ~100 kPa head this is well under 1 kW. Doubled for controls and margin."
+  },
+  "capexUsdPerKw": {
+    "value": 150,
+    "unit": "USD/kW",
+    "basis": "estimate",
+    "low": 80,
+    "high": 300,
+    "note": "Rack-level manifolds, cold plates and refrigerant charge priced at about 1.5x single-phase hardware because of low volume and pressure-rated parts."
+  },
+  "installWeeks": {
+    "value": 10,
+    "unit": "week",
+    "basis": "estimate",
+    "low": 8,
+    "high": 16,
+    "note": "Refrigerant handling, leak testing and charge add work beyond a water loop."
+  },
+  "leadTimeWeeks": {
+    "value": 26,
+    "unit": "week",
+    "basis": "estimate",
+    "low": 16,
+    "high": 40,
+    "note": "Few suppliers; Accelsius cites a 500% manufacturing expansion, which suggests constrained supply."
+  },
+  "risks": [
+    "direct-to-chip-two-phase",
+    "coolants",
+    "liquid-cooling-operations"
+  ],
+  "status": "emerging"
+}

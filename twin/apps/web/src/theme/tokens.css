@@ -1,0 +1,90 @@
+/* Visual direction (approved): engineering-drawing paper, white clay models, color only where physics happens. */
+:root {
+  /* surfaces */
+  --paper: #e6ebec;
+  --panel: #f3f5f5;
+  --canvas: #eef2f2;
+  --floor: #d9e0e2;
+
+  /* ink */
+  --ink: #172026;
+  --graphite: #59656c;
+  --hairline: #c6cfd3;
+
+  /* physics */
+  --supply: #2d6cdf;
+  --return: #e0922a;
+  --heat: #d23b2a;
+  --ok: #2f8f5b;
+  --warning: #b7791f;
+
+  /* rack clay */
+  --clay-light: #fbfcfc;
+  --clay-mid: #e3e8ea;
+  --clay-dark: #cdd5d8;
+
+  /* type: Archivo variable; width axis condensed for labels, normal for text; tabular figures */
+  --font: 'Archivo Variable', system-ui, sans-serif;
+  --stretch-label: 78%;
+  --stretch-text: 100%;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 13px;
+  --text-lg: 16px;
+  --text-xl: 22px;
+  --text-hero: 34px;
+
+  /* space and lines */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --rule: 1px solid var(--hairline);
+  --radius: 2px;
+
+  /* layout */
+  --col-left: 300px;
+  --col-right: 360px;
+  --strip-h: 168px;
+
+  /* motion */
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --dur-fast: 120ms;
+  --dur: 240ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur: 0ms;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: var(--text-md);
+  font-stretch: var(--stretch-text);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--supply);
+  outline-offset: 2px;
+}

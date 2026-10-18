@@ -1,0 +1,48 @@
+{
+  "id": "coolant.pg25",
+  "kind": "coolant",
+  "name": "Propylene glycol 25%",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "etb-pg",
+      "url": "https://engineeringtoolbox.com/propylene-glycol-d_363.html",
+      "title": "Engineering ToolBox: propylene glycol based heat-transfer fluids"
+    }
+  ],
+  "summary": "Water with 25% propylene glycol and inhibitors, the usual technical-loop fluid for cold-plate racks (NVIDIA and OCP specify PG25). It resists biological growth and freezing to about -10 °C at a 5% loss of heat capacity.",
+  "cpJPerKgK": {
+    "value": 3950,
+    "unit": "J/(kg·K)",
+    "basis": "textbook",
+    "low": 3900,
+    "high": 3970,
+    "source": "https://engineeringtoolbox.com/propylene-glycol-d_363.html",
+    "note": "Interpolated between 20% (0.960 Btu/lb°F = 4019) and 30% by mass (0.935 = 3915): 3967 at 25% by mass; PG25 by volume is ~26% by mass and cp falls slightly at lower temperatures."
+  },
+  "densityKgM3": {
+    "value": 1018,
+    "unit": "kg/m³",
+    "basis": "textbook",
+    "low": 1010,
+    "high": 1022,
+    "source": "https://engineeringtoolbox.com/propylene-glycol-d_363.html",
+    "note": "Interpolated from 1014 (20%) and 1022 (30%) kg/m³ at 20 °C; ~1007 at 40 °C."
+  },
+  "viscosityPaS": {
+    "value": 0.0024,
+    "unit": "Pa·s",
+    "basis": "textbook",
+    "low": 0.0016,
+    "high": 0.0029,
+    "note": "About 2.4 mPa·s at 20 °C and 1.6 mPa·s at 35 °C for 25% PG (ASHRAE Fundamentals glycol tables); not on the ToolBox page."
+  },
+  "dielectric": false,
+  "glycolFraction": {
+    "value": 0.25,
+    "unit": "fraction",
+    "basis": "textbook",
+    "note": "25% propylene glycol."
+  },
+  "twoPhase": false
+}

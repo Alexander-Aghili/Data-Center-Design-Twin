@@ -1,0 +1,54 @@
+{
+  "id": "ups.500kw",
+  "kind": "equipment",
+  "name": "500 kW modular UPS",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "schneider-galaxy-vx",
+      "url": "https://www.se.com/ca/en/product-range/63732",
+      "title": "Schneider Electric Galaxy VX 500–1500 kW UPS"
+    },
+    {
+      "id": "uk-etl-gvx500",
+      "url": "https://etl.energysecurity.gov.uk/product-search/product/82822",
+      "title": "UK Energy Technology List: Galaxy VX 500 kVA (GVX500K1000NHS)"
+    }
+  ],
+  "summary": "Three-phase double-conversion UPS block of 500 kW with lithium-ion batteries, scalable in parallel.",
+  "category": "ups",
+  "params": {
+    "moduleW": {
+      "value": 500000,
+      "unit": "W",
+      "basis": "vendor",
+      "source": "https://www.se.com/ca/en/product-range/63732",
+      "note": "Schneider Galaxy VX scales from 500 kW to 1500 kW."
+    },
+    "efficiency": {
+      "value": 0.967,
+      "low": 0.961,
+      "high": 0.975,
+      "unit": "1",
+      "basis": "vendor",
+      "source": "https://etl.energysecurity.gov.uk/product-search/product/82822",
+      "note": "Galaxy VX 500 kVA double conversion: 96.7 % at 75 % load and 96.1 % at full load (UK ETL listing); newer Galaxy VXL claims up to 97.5 %."
+    },
+    "capexUsdPerKw": {
+      "value": 250,
+      "low": 150,
+      "high": 400,
+      "unit": "USD/kW",
+      "basis": "estimate",
+      "note": "Judgment for a modular UPS with about 5 minutes of lithium-ion autonomy, equipment only."
+    },
+    "leadTimeWeeks": {
+      "value": 26,
+      "low": 16,
+      "high": 40,
+      "unit": "week",
+      "basis": "estimate",
+      "note": "Judgment: large three-phase UPS orders were quoted at roughly 4–9 months in 2024–2025."
+    }
+  }
+}

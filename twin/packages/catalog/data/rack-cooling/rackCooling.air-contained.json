@@ -1,0 +1,103 @@
+{
+  "id": "rackCooling.air-contained",
+  "kind": "rackCooling",
+  "name": "Air with hot- or cold-aisle containment",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "uptime-2024",
+      "url": "https://datacenter.uptimeinstitute.com/rs/711-RIA-145/images/2024.Cooling.Survey.Report.pdf",
+      "title": "Uptime Institute Cooling Systems Survey 2024"
+    }
+  ],
+  "summary": "Server fans push room air through the rack; CRAH coils on the facility loop take the heat. Containment keeps hot and cold air apart, which raises the usable air temperature rise and the practical rack limit to roughly 30 to 40 kW.",
+  "category": "air",
+  "maxRackW": {
+    "value": 40000,
+    "unit": "W",
+    "basis": "press",
+    "low": 30000,
+    "high": 50000,
+    "source": "https://datacenter.uptimeinstitute.com/rs/711-RIA-145/images/2024.Cooling.Survey.Report.pdf",
+    "note": "Uptime 2024 survey (n=820): most operators put the point where air becomes too costly between 20 and 39 kW per rack (29% at 20-29 kW, 19% at 30-39 kW). 40 kW is the upper end with good containment; secondary press cites ~50 kW as the absolute ceiling."
+  },
+  "toTechnicalLoop": {
+    "value": 0,
+    "unit": "fraction",
+    "basis": "textbook",
+    "note": "No liquid at the rack; all heat leaves as air to CRAH units."
+  },
+  "coolantId": "coolant.water",
+  "supplyRangeC": {
+    "min": {
+      "value": 7,
+      "unit": "°C",
+      "basis": "textbook",
+      "note": "Classic chilled-water supply to CRAH coils."
+    },
+    "max": {
+      "value": 24,
+      "unit": "°C",
+      "basis": "estimate",
+      "note": "ASHRAE recommended server inlet air tops out at 27 °C; a CRAH coil needs about 3 K approach, so chilled water above ~24 °C cannot hold the cold aisle in range."
+    }
+  },
+  "deltaTK": {
+    "value": 15,
+    "unit": "K",
+    "basis": "textbook",
+    "low": 12,
+    "high": 20,
+    "note": "Air temperature rise across the rack with containment; matches the rules value airDeltaTKContained."
+  },
+  "pressureDropKpa": {
+    "value": 0,
+    "unit": "kPa",
+    "basis": "textbook",
+    "note": "No liquid circuit at the rack; the coil pressure drop belongs to the CRAH."
+  },
+  "addedWeightKgPerRack": {
+    "value": 15,
+    "unit": "kg",
+    "basis": "estimate",
+    "low": 10,
+    "high": 30,
+    "note": "Containment panels, blanking and doors spread per rack (aluminium/polycarbonate panels are a few kg per 600 mm bay)."
+  },
+  "formFactor": "rack",
+  "requiresCdu": false,
+  "pumpPowerFraction": {
+    "value": 0,
+    "unit": "fraction",
+    "basis": "textbook",
+    "note": "No pump at the rack; CRAH fan power is counted on the CRAH equipment (or crahFanFractionFallback)."
+  },
+  "capexUsdPerKw": {
+    "value": 75,
+    "unit": "USD/kW",
+    "basis": "estimate",
+    "low": 40,
+    "high": 150,
+    "note": "Containment hardware only (aisle doors, roof panels, blanking), about 1,500 to 3,000 USD per rack bay spread over 20 to 40 kW. CRAH units and the chiller plant are costed separately."
+  },
+  "installWeeks": {
+    "value": 2,
+    "unit": "week",
+    "basis": "estimate",
+    "low": 1,
+    "high": 4,
+    "note": "Containment kits are bolted onto existing rows; a hall is typically done in days to a few weeks."
+  },
+  "leadTimeWeeks": {
+    "value": 6,
+    "unit": "week",
+    "basis": "estimate",
+    "low": 4,
+    "high": 10,
+    "note": "Containment is a commodity sheet-metal product with short manufacturing lead times."
+  },
+  "risks": [
+    "air-containment"
+  ],
+  "status": "mainstream"
+}

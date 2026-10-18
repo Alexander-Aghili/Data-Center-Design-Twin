@@ -1,0 +1,119 @@
+{
+  "id": "rackCooling.immersion-2p",
+  "kind": "rackCooling",
+  "name": "Two-phase immersion tank",
+  "vendor": "LiquidStack DataTank class",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "novec649",
+      "url": "https://multimedia.3m.com/mws/media/569865O/3m-novec-engineered-fluid-649.pdf",
+      "title": "3M Novec 649 Engineered Fluid technical data"
+    }
+  ],
+  "summary": "Servers sit in a fluorocarbon bath that boils on the chips and condenses on a water coil in the lid. Very high density, but the fluids are PFAS and 3M stopped making Novec and Fluorinert at the end of 2025, so new projects have stalled.",
+  "category": "immersion-2p",
+  "maxRackW": {
+    "value": 250000,
+    "unit": "W",
+    "basis": "estimate",
+    "low": 100000,
+    "high": 252000,
+    "note": "LiquidStack markets its 48U DataTank at up to 252 kW (vendor listing seen in search, not opened)."
+  },
+  "toTechnicalLoop": {
+    "value": 0.99,
+    "unit": "fraction",
+    "basis": "estimate",
+    "low": 0.97,
+    "high": 1.0,
+    "note": "Vapor condenses on the in-tank coil; small losses through the lid and when the tank is opened."
+  },
+  "coolantId": "coolant.fluorocarbon-2p",
+  "supplyRangeC": {
+    "min": {
+      "value": 18,
+      "unit": "°C",
+      "basis": "estimate",
+      "note": "Condenser water must stay well below the fluid's boiling point (49 °C for Novec 649)."
+    },
+    "max": {
+      "value": 40,
+      "unit": "°C",
+      "basis": "estimate",
+      "note": "Above ~40 °C the condenser cannot hold vapor pressure with a 49 to 61 °C boiling fluid."
+    }
+  },
+  "deltaTK": {
+    "value": 6,
+    "unit": "K",
+    "basis": "estimate",
+    "low": 5,
+    "high": 10,
+    "note": "Condenser water rise; the bath itself is isothermal at the boiling point."
+  },
+  "pressureDropKpa": {
+    "value": 80,
+    "unit": "kPa",
+    "basis": "estimate",
+    "low": 40,
+    "high": 120,
+    "note": "Condenser coil water-side drop, similar to single-phase tank CDUs."
+  },
+  "addedWeightKgPerRack": {
+    "value": 2000,
+    "unit": "kg",
+    "basis": "estimate",
+    "low": 1500,
+    "high": 2500,
+    "note": "Fluorocarbons are ~1.6 kg/L (Novec 649), about double a hydrocarbon oil, so a filled tank outweighs a single-phase tank."
+  },
+  "formFactor": "tank",
+  "tankFootprintM2PerRack": {
+    "value": 2.5,
+    "unit": "m²",
+    "basis": "estimate",
+    "low": 2.0,
+    "high": 3.0,
+    "note": "48U tank; no published footprint found. Assumed slightly larger than a 39 OU single-phase tank (2.22 m²)."
+  },
+  "requiresCdu": false,
+  "pumpPowerFraction": {
+    "value": 0.01,
+    "unit": "fraction",
+    "basis": "estimate",
+    "low": 0.005,
+    "high": 0.02,
+    "note": "No fluid pump in the bath (passive boiling); condenser water pump only."
+  },
+  "capexUsdPerKw": {
+    "value": 2000,
+    "unit": "USD/kW",
+    "basis": "estimate",
+    "low": 1200,
+    "high": 3500,
+    "note": "Sealed tank plus fluorocarbon fill at several times hydrocarbon-oil prices per litre, and fluid now scarce."
+  },
+  "installWeeks": {
+    "value": 12,
+    "unit": "week",
+    "basis": "estimate",
+    "low": 8,
+    "high": 16,
+    "note": "Sealed tanks, vapor management and fluid handling."
+  },
+  "leadTimeWeeks": {
+    "value": 52,
+    "unit": "week",
+    "basis": "estimate",
+    "low": 26,
+    "high": 104,
+    "note": "Fluid supply is the constraint after 3M's PFAS exit; replacements (e.g. Chemours Opteon 2P50) are not yet at scale."
+  },
+  "risks": [
+    "immersion-two-phase",
+    "coolants",
+    "liquid-cooling-operations"
+  ],
+  "status": "stalled"
+}

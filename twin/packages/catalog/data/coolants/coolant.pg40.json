@@ -1,0 +1,46 @@
+{
+  "id": "coolant.pg40",
+  "kind": "coolant",
+  "name": "Propylene glycol 40%",
+  "asOf": "2026-10-18",
+  "sources": [
+    {
+      "id": "etb-pg",
+      "url": "https://engineeringtoolbox.com/propylene-glycol-d_363.html",
+      "title": "Engineering ToolBox: propylene glycol based heat-transfer fluids"
+    }
+  ],
+  "summary": "Water with 40% propylene glycol for outdoor loops in cold climates (freeze point about -22 °C). Carries about 10% less heat per kilogram than PG25 and is twice as viscous, so it needs more pump power.",
+  "cpJPerKgK": {
+    "value": 3747,
+    "unit": "J/(kg·K)",
+    "basis": "textbook",
+    "source": "https://engineeringtoolbox.com/propylene-glycol-d_363.html",
+    "note": "0.895 Btu/lb°F at 40% by mass x 4186.8."
+  },
+  "densityKgM3": {
+    "value": 1030,
+    "unit": "kg/m³",
+    "basis": "textbook",
+    "low": 1016,
+    "high": 1034,
+    "source": "https://engineeringtoolbox.com/propylene-glycol-d_363.html",
+    "note": "1030 kg/m³ at 20 °C, 1016 at 40 °C; specific gravity 1.034 at 60 °F."
+  },
+  "viscosityPaS": {
+    "value": 0.0045,
+    "unit": "Pa·s",
+    "basis": "textbook",
+    "low": 0.003,
+    "high": 0.006,
+    "note": "About 4.5 mPa·s at 20 °C for 40% PG (ASHRAE Fundamentals glycol tables); roughly 3 mPa·s at 35 °C."
+  },
+  "dielectric": false,
+  "glycolFraction": {
+    "value": 0.4,
+    "unit": "fraction",
+    "basis": "textbook",
+    "note": "40% propylene glycol."
+  },
+  "twoPhase": false
+}
