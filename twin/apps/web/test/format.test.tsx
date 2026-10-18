@@ -44,6 +44,7 @@ describe('format helpers', () => {
     expect(fmtValue(1_360, 'kg')).toBe(`1.4${nb}t`)
     expect(fmtValue(6_100_000, 'USD')).toBe('$6.1M')
     expect(fmtValue(0.91, 'ratio')).toBe('91%')
+    expect(fmtValue(71, '%')).toBe('71%')
     expect(fmtValue(18, '°C')).toBe(`18.0${nb}°C`)
     expect(fmtValue(7.2, 'kN/m²')).toBe(`7.2${nb}kN/m²`)
     expect(fmtValue(null, 'W')).toBe('—')

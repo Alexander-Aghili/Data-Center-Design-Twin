@@ -95,6 +95,8 @@ export function fmtValue(value: number | null | undefined, unit: string): string
         return fmtWeeks(n)
       case 'ratio':
         return fmtPct(n)
+      case '%':
+        return `${fmtNumber(n, 0)}%`
       case '°C':
       case 'K':
         return withUnit(grouped(n, 1, true), unit)
