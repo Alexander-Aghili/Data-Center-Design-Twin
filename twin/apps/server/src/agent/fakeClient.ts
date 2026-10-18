@@ -102,6 +102,7 @@ function briefReply(): Reply {
 function closingReply(store: PlanStore, tools: string[]): Reply {
   if (tools.includes('propose_change')) return { text: 'Preview it to see the CDUs and piping, then apply it if it fits.' }
   if (tools.includes('generate_simulation_brief')) return { text: 'The brief is ready to download.' }
+  if (tools.includes('cmd_setBayRating')) return { text: 'Every floor bay is back under the warning threshold.' }
   if (tools.includes('get_evaluation')) {
     const { pueWorst } = store.state().evaluation.headline
     return { text: pueWorst === null ? 'The plan has no PUE yet: nothing draws power.' : `PUE at the worst hour is ${pueWorst.toFixed(2)}.` }
