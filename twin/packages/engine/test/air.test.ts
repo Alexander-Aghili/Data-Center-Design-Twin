@@ -95,4 +95,38 @@ describe('air side', () => {
       expect(r.airOutletC).toBe(r.airInletC)
     })
   })
+
+  describe('cooling.airInletTemp against ASHRAE A1 (recommended 27 °C, allowable 32 °C)', () => {
+    const withSupply = (celsius: number, groups: Parameters<typeof makePlan>[0] = [airGroup]) => run(makePlan(groups, { cooling: { ...makePlan([]).cooling, facilitySupplyC: celsius } }))
+    const inletCheck = (r: ReturnType<typeof airSide>, groupId = 'g1') => r.checks.find((c) => c.id === `cooling.airInletTemp:${groupId}`)
+
+    it('passes at 18 °C facility water: 24 °C inlet air', () => {
+      const c = inletCheck(withSupply(18))!
+      expect(c).toMatchObject({ kind: 'cooling.airInletTemp', status: 'pass', value: 18 + rules.crahCoilApproachK.value!, limit: 32, unit: '°C' })
+      expect(c.subject.objectIds).toHaveLength(32)
+    })
+
+    it('warns above the 27 °C recommended limit', () => {
+      expect(inletCheck(withSupply(22))!.status).toBe('warn')
+    })
+
+    it('fails above the 32 °C allowable limit and names the shared loop, the limit and the source', () => {
+      const c = inletCheck(withSupply(32))!
+      expect(c.status).toBe('fail')
+      expect(c.value).toBe(32 + rules.crahCoilApproachK.value!)
+      expect(c.explanation).toContain('38\u00a0°C inlet air')
+      expect(c.explanation).toContain('32\u00a0°C water')
+      expect(c.explanation).toContain('ASHRAE TC9.9')
+      expect(c.advice).toMatch(/26\u00a0°C/)
+    })
+
+    it('covers air and rear-door racks, not liquid-cooled ones', () => {
+      const result = withSupply(32, [
+        { ...airGroup, id: 'g2', coolingMethodId: RACK_COOLING.RDHX_PASSIVE, rows: ['R3'] },
+        { ...airGroup, id: 'g3', rackTypeId: gb300.id, coolingMethodId: RACK_COOLING.DLC_1P, rows: ['R4'] },
+      ])
+      expect(inletCheck(result, 'g2')!.status).toBe('fail')
+      expect(inletCheck(result, 'g3')).toBeUndefined()
+    })
+  })
 })

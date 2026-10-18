@@ -129,7 +129,7 @@ describe('siteLabels', () => {
   it('reads grid, water and design temperature from the plan and its climate entry', () => {
     const labels = siteLabels(plan, null)
     expect(labels.map((l) => [l.id, l.title, l.value])).toEqual([
-      ['grid', 'Grid connection', '10.4\u00A0MW'],
+      ['grid', 'Grid connection', '10.6\u00A0MW'],
       ['water', 'Water allowance', '120\u00A0m³/day'],
       ['climate', 'Design dry bulb', '38.9\u00A0°C'],
     ])

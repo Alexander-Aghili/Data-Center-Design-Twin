@@ -146,9 +146,9 @@ export function createDefaultPlan(): Plan {
     },
     site: {
       climateId: CLIMATE.DALLAS,
-      // Sized for the demo: a GB300 hall on air peaks at 10.36 MW (fits), with dry coolers at 32 °C it peaks
-      // at 10.59 MW when trim chillers carry the whole load on the hottest hours (over the cap for 231 h).
-      gridCapacityW: 10_400_000,
+      // Sized for the demo: a GB300 hall on air peaks at 10.48 MW (fits), with dry coolers at 32 °C it peaks
+      // at 10.71 MW when trim chillers carry the whole load on the hottest hours (over the cap for 88 h).
+      gridCapacityW: 10_600_000,
       waterAllowanceM3PerDay: 120,
       valueOfComputeUsdPerGpuHour: 2.5,
     },

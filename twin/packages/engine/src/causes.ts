@@ -24,6 +24,7 @@ const CAUSE_TABLE: Record<CheckKind, Ref[]> = {
   'cooling.cduPositions': ['coolingMethod', 'power.redundancy', 'hall.positions'],
   'cooling.manifoldBalance': ['coolingMethod', 'cooling.flowBalancing'],
   'cooling.coolantTemp': ['rackType', 'coolingMethod', 'cooling.facilitySupplyC'],
+  'cooling.airInletTemp': ['cooling.facilitySupplyC', 'coolingMethod', 'cooling.heatRejectionId'],
   'cooling.heatRejection': ['cooling.heatRejectionId', 'site.climateId', 'cooling.facilitySupplyC', 'power.redundancy', 'rackType'],
   'cooling.rideThrough': ['cooling.bufferTankM3', 'coolingMethod', 'rackType'],
   'cooling.waterPeakDay': ['cooling.heatRejectionId', 'site.climateId', 'site.waterAllowanceM3PerDay'],
