@@ -116,6 +116,50 @@ describe('procedural models', () => {
     expect(Math.abs(cdu.z - position.z)).toBeLessThan(1e-9)
   })
 
+  it('stands UPS modules and transformers in short lineups and wraps a long plant yard into staggered rows', async () => {
+    const { evaluate } = await import('@twin/engine')
+    const { loadBuiltins } = await import('@twin/catalog')
+    const { equipmentUnits } = await import('../src/scene/models/Hall')
+    const plan = nvl72Plan()
+    const evaluation = evaluate(plan, loadBuiltins())
+    const sized = (key: string, count: number, positionIds: string[]) => ({
+      key,
+      category: key,
+      modelId: null,
+      count,
+      required: count,
+      positionIds,
+      autoSized: true,
+      loadW: 0,
+      capacityW: null,
+      objectIds: [],
+    })
+    const units = equipmentUnits(plan, {
+      ...evaluation,
+      equipment: [sized('ups', 24, ['elec-1']), sized('transformer', 6, ['elec-1']), sized('plant', 16, ['plant-1'])],
+    })
+    const lineups = (kind: string) => {
+      const byX = new Map<number, number>()
+      for (const u of units.filter((x) => x.kind === kind)) byX.set(u.x, (byX.get(u.x) ?? 0) + 1)
+      return [...byX.values()]
+    }
+    expect(lineups('ups')).toEqual([8, 8, 8])
+    expect(lineups('transformer')).toEqual([6])
+    for (const u of units.filter((x) => x.kind === 'ups' || x.kind === 'transformer')) {
+      expect(u.x).toBeGreaterThan(0)
+      expect(u.x).toBeLessThan(plan.hall.widthM)
+    }
+    // 16 chillers at a 3.4 m pitch would run 54 m, past the 40 m building: two rows, the far one offset half a
+    // pitch so its branch pipes run in the service gaps of the near row.
+    const plants = units.filter((u) => u.kind === 'plant')
+    const rowsZ = [...new Set(plants.map((u) => u.z))].sort((a, b) => b - a)
+    expect(rowsZ).toHaveLength(2)
+    const near = plants.filter((u) => u.z === rowsZ[0]).map((u) => u.x)
+    const far = plants.filter((u) => u.z === rowsZ[1]).map((u) => u.x)
+    expect(Math.max(...near) - Math.min(...near)).toBeLessThanOrEqual(plan.hall.widthM)
+    expect(Math.min(...far.map((x) => Math.min(...near.map((n) => Math.abs(n - x)))))).toBeCloseTo(3.4 / 2)
+  })
+
   it('the open rack stays drawn while it eases shut, then returns to the instanced hall', async () => {
     const plan = nvl72Plan()
     useTwinStore.setState({ plan, evaluation: null })
