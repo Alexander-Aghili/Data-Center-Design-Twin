@@ -2,7 +2,8 @@ import type { Plan } from '@twin/schema'
 import { useTwinStore } from '../../state/store'
 import { useCatalog } from '../fields/CatalogPicker'
 import { Field } from '../fields/Field'
-import { NumberInput, withUnit } from '../fields/Number'
+import { fmtValue } from '../../format'
+import { NumberInput } from '../fields/Number'
 import { Select } from '../fields/Select'
 
 export function WorkloadDecisions({ plan }: { plan: Plan }) {
@@ -33,7 +34,7 @@ export function WorkloadDecisions({ plan }: { plan: Plan }) {
       <Field
         label="Target compute"
         target="decision:workload.targetPflops"
-        hint={plan.placements.length > 0 ? `Racks placed now give ${withUnit(placed, 'PFLOPS', 0)} FP8.` : 'No racks placed yet.'}
+        hint={plan.placements.length > 0 ? `Racks placed now give ${fmtValue(placed, 'PFLOPS')} FP8.` : 'No racks placed yet.'}
       >
         <NumberInput
           value={plan.workload.targetPflops}

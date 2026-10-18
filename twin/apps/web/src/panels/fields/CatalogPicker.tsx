@@ -1,8 +1,8 @@
-import { useId, useMemo, useState, useSyncExternalStore } from 'react'
+import { useId, useMemo, useState } from 'react'
+import { loadBuiltins } from '@twin/catalog'
 import { makeCatalogIndex } from '@twin/engine'
 import type {
   Basis,
-  Builtins,
   CatalogEntryOfKind,
   CatalogIndex,
   ClimateEntry,
@@ -13,45 +13,13 @@ import type {
 } from '@twin/schema'
 import { useTwinStore } from '../../state/store'
 import { useField } from './Field'
-import { withUnit } from './Number'
+import { fmtMass, fmtMoney, fmtPct, fmtPower, fmtValue, fmtWeeks } from '../../format'
 import s from './CatalogPicker.module.css'
 
-// Built-in catalog, fetched once per page load and shared by every picker.
-let builtins: Builtins | null = null
-let loading: Promise<void> | null = null
-const listeners = new Set<() => void>()
-
-function loadBuiltins(): void {
-  loading ??= fetch('/api/catalog')
-    .then((res) => {
-      if (!res.ok) throw new Error(`GET /api/catalog failed with ${res.status}`)
-      return res.json() as Promise<Builtins>
-    })
-    .then(
-      (loaded) => {
-        builtins = loaded
-        for (const notify of listeners) notify()
-      },
-      () => {
-        loading = null
-      },
-    )
-}
-
-function subscribe(notify: () => void): () => void {
-  listeners.add(notify)
-  loadBuiltins()
-  return () => listeners.delete(notify)
-}
-
-/** Built-in entries merged with the plan's own catalog (plan entries win). Empty until the built-ins load. */
+/** Built-in entries merged with the plan's own catalog (plan entries, including custom ones, win). */
 export function useCatalog(): CatalogIndex {
-  const loaded = useSyncExternalStore(subscribe, () => builtins)
   const planCatalog = useTwinStore((st) => st.plan?.catalog)
-  return useMemo(
-    () => makeCatalogIndex([...(loaded?.entries ?? []), ...Object.values(planCatalog ?? {})]),
-    [loaded, planCatalog],
-  )
+  return useMemo(() => makeCatalogIndex([...loadBuiltins().entries, ...Object.values(planCatalog ?? {})]), [planCatalog])
 }
 
 type PickerKind = 'rack' | 'rackCooling' | 'heatRejection' | 'climate'
@@ -72,29 +40,20 @@ const BASIS_LABEL: Record<Basis, string> = {
   calculated: 'calculated',
 }
 
-const money = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  notation: 'compact',
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 2,
-})
-
 /** A fact from one quantity; null values are left out (the inspector shows the full entry). */
 function fact(q: Quantity | undefined, text: (v: number) => string): Fact[] {
   if (!q || q.value === null) return []
   return [{ text: text(q.value), basis: q.basis, title: q.note }]
 }
 
-const leadTime = (q: Quantity) => fact(q, (v) => `${withUnit(v, v === 1 ? 'week' : 'weeks', 0)} lead time`)
-const kw = (w: number) => (w >= 1e6 ? withUnit(w / 1e6, 'MW', 2) : withUnit(w / 1000, 'kW'))
+const leadTime = (q: Quantity) => fact(q, (v) => `${fmtWeeks(v)} lead time`)
 
 function rackCoolingFacts(e: RackCoolingEntry): Fact[] {
   return [
-    ...fact(e.maxRackW, (v) => `Max ${kw(v)} per rack`),
-    ...fact(e.toTechnicalLoop, (v) => (v === 0 ? 'All heat to air' : `${Math.round(v * 100)}% of heat to liquid`)),
-    ...fact(e.addedWeightKgPerRack, (v) => `Adds ${withUnit(v, 'kg', 0)} per rack`),
-    ...fact(e.capexUsdPerKw, (v) => `${money.format(v)} per kW`),
+    ...fact(e.maxRackW, (v) => `Max ${fmtPower(v)} per rack`),
+    ...fact(e.toTechnicalLoop, (v) => (v === 0 ? 'All heat to air' : `${fmtPct(v)} of heat to liquid`)),
+    ...fact(e.addedWeightKgPerRack, (v) => `Adds ${fmtMass(v)} per rack`),
+    ...fact(e.capexUsdPerKw, (v) => `${fmtMoney(v)} per kW`),
     ...leadTime(e.leadTimeWeeks),
     ...(e.requiresCdu ? [{ text: 'Needs CDUs' }] : []),
   ]
@@ -103,22 +62,22 @@ function rackCoolingFacts(e: RackCoolingEntry): Fact[] {
 function heatRejectionFacts(e: HeatRejectionEntry): Fact[] {
   const cop = e.copRef.value !== null && e.copRefOutdoorC.value !== null
   return [
-    ...(cop ? fact(e.copRef, (v) => `COP ${v} at ${withUnit(e.copRefOutdoorC.value, '°C')} outdoor`) : []),
-    ...fact(e.approachK, (v) => `Approach ${withUnit(v, 'K')} to ${e.basis === 'wetBulb' ? 'wet bulb' : 'dry bulb'}`),
-    ...fact(e.waterLPerKwh, (v) => (v === 0 ? 'No water' : `${withUnit(v, 'L')} of water per kWh of heat`)),
+    ...(cop ? fact(e.copRef, (v) => `COP ${v} at ${fmtValue(e.copRefOutdoorC.value, '°C')} outdoor`) : []),
+    ...fact(e.approachK, (v) => `Approach ${fmtValue(v, 'K')} to ${e.basis === 'wetBulb' ? 'wet bulb' : 'dry bulb'}`),
+    ...fact(e.waterLPerKwh, (v) => (v === 0 ? 'No water' : `${fmtValue(v, 'L')} of water per kWh of heat`)),
     ...(e.economizer ? [{ text: 'Free cooling in cold hours' }] : []),
-    ...fact(e.capexUsdPerKw, (v) => `${money.format(v)} per kW`),
+    ...fact(e.capexUsdPerKw, (v) => `${fmtMoney(v)} per kW`),
     ...leadTime(e.leadTimeWeeks),
   ]
 }
 
 function rackFacts(e: RackEntry): Fact[] {
   return [
-    ...fact(e.nominalPowerW, (v) => `${kw(v)} per rack`),
+    ...fact(e.nominalPowerW, (v) => `${fmtPower(v)} per rack`),
     ...(e.gpuCount > 0 ? [{ text: `${e.gpuCount} GPUs` }] : []),
-    ...fact(e.fp8Pflops, (v) => (v > 0 ? `${withUnit(v, 'PFLOPS')} FP8` : 'No GPU compute')),
-    ...fact(e.weightKg, (v) => withUnit(v, 'kg', 0)),
-    ...fact(e.capexUsd, (v) => money.format(v)),
+    ...fact(e.fp8Pflops, (v) => (v > 0 ? `${fmtValue(v, 'PFLOPS')} FP8` : 'No GPU compute')),
+    ...fact(e.weightKg, (v) => fmtMass(v)),
+    ...fact(e.capexUsd, (v) => fmtMoney(v)),
     ...leadTime(e.leadTimeWeeks),
     ...(e.slotsWide > 1 ? [{ text: `${e.slotsWide} slots wide` }] : []),
   ]
@@ -126,8 +85,8 @@ function rackFacts(e: RackEntry): Fact[] {
 
 function climateFacts(e: ClimateEntry): Fact[] {
   return [
-    ...fact(e.designDryBulbC, (v) => `Design dry bulb ${withUnit(v, '°C')}`),
-    { text: `Peak wet bulb ${withUnit(Math.max(...e.wetBulbC), '°C')}`, basis: 'calculated', title: 'Hottest hour of the typical year' },
+    ...fact(e.designDryBulbC, (v) => `Design dry bulb ${fmtValue(v, '°C')}`),
+    { text: `Peak wet bulb ${fmtValue(Math.max(...e.wetBulbC), '°C')}`, basis: 'calculated', title: 'Hottest hour of the typical year' },
   ]
 }
 
@@ -231,7 +190,7 @@ export function CatalogPicker(props: PickerProps) {
     <div className={s.picker}>
       <div className={s.current}>
         <div className={s.currentText}>
-          <span className={s.name}>{current?.name ?? (options.length ? `Unknown entry ${props.value}` : 'Loading the catalog')}</span>
+          <span className={s.name}>{current?.name ?? `Unknown entry ${props.value}`}</span>
           {current && <Facts id={`${id}-current`} facts={factsOf(current)} />}
           {current && <Verdict id={`${id}-current-verdict`} assessment={assess(current)} />}
         </div>
@@ -240,7 +199,6 @@ export function CatalogPicker(props: PickerProps) {
           className={s.change}
           aria-expanded={open}
           aria-controls={listId}
-          disabled={options.length === 0}
           onClick={() => setOpen((v) => !v)}
         >
           {open ? 'Close' : 'Change'}

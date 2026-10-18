@@ -68,7 +68,7 @@ function Rows({ plan, catalog }: { plan: Plan; catalog: CatalogIndex }) {
             </span>
             <button
               type="button"
-              className={s.quiet}
+              className="btn btn--quiet"
               disabled={ids.length === 0}
               aria-label={`Remove all racks in ${row.id}`}
               onClick={() => run(send({ type: 'removeRacks', payload: { placementIds: ids } }))}
@@ -112,7 +112,7 @@ function PlaceRacks({ plan, catalog }: { plan: Plan; catalog: CatalogIndex }) {
       <h3 className={s.formTitle}>Place racks</h3>
       <div className={s.formGrid}>
         <label htmlFor={`${id}-group`}>Group</label>
-        <select id={`${id}-group`} className={s.select} value={groupId} onChange={(e) => setGroupId(e.currentTarget.value)}>
+        <select id={`${id}-group`} className="input" value={groupId} onChange={(e) => setGroupId(e.currentTarget.value)}>
           {plan.rackGroups.map((g) => (
             <option key={g.id} value={g.id}>
               {g.name}
@@ -122,7 +122,7 @@ function PlaceRacks({ plan, catalog }: { plan: Plan; catalog: CatalogIndex }) {
         <label htmlFor={`${id}-row`}>Row</label>
         <select
           id={`${id}-row`}
-          className={s.select}
+          className="input"
           value={rowId}
           onChange={(e) => {
             setRowId(e.currentTarget.value)
@@ -136,9 +136,9 @@ function PlaceRacks({ plan, catalog }: { plan: Plan; catalog: CatalogIndex }) {
           ))}
         </select>
         <label htmlFor={`${id}-from`}>From slot</label>
-        <input id={`${id}-from`} className={s.text} inputMode="numeric" value={from} onChange={(e) => setFrom(e.currentTarget.value)} />
+        <input id={`${id}-from`} className="input" inputMode="numeric" value={from} onChange={(e) => setFrom(e.currentTarget.value)} />
         <label htmlFor={`${id}-count`}>Count</label>
-        <input id={`${id}-count`} className={s.text} inputMode="numeric" value={count} onChange={(e) => setCount(e.currentTarget.value)} />
+        <input id={`${id}-count`} className="input" inputMode="numeric" value={count} onChange={(e) => setCount(e.currentTarget.value)} />
       </div>
       {problem && (
         <p role="alert" className={s.error}>
@@ -146,7 +146,7 @@ function PlaceRacks({ plan, catalog }: { plan: Plan; catalog: CatalogIndex }) {
         </p>
       )}
       <div className={s.actions}>
-        <button type="submit" className={s.primary} disabled={problem !== null}>
+        <button type="submit" className="btn btn--primary" disabled={problem !== null}>
           Place racks
         </button>
       </div>
@@ -174,7 +174,7 @@ function MoveRack({ plan, placementId }: { plan: Plan; placementId: string }) {
       <h3 className={s.formTitle}>Rack {placement.id}</h3>
       <div className={s.formGrid}>
         <label htmlFor={`${id}-row`}>Row</label>
-        <select id={`${id}-row`} className={s.select} value={rowId} onChange={(e) => setRowId(e.currentTarget.value)}>
+        <select id={`${id}-row`} className="input" value={rowId} onChange={(e) => setRowId(e.currentTarget.value)}>
           {plan.hall.rows.map((r) => (
             <option key={r.id} value={r.id}>
               {r.id}
@@ -182,15 +182,15 @@ function MoveRack({ plan, placementId }: { plan: Plan; placementId: string }) {
           ))}
         </select>
         <label htmlFor={`${id}-slot`}>Slot</label>
-        <input id={`${id}-slot`} className={s.text} inputMode="numeric" value={slot} onChange={(e) => setSlot(e.currentTarget.value)} />
+        <input id={`${id}-slot`} className="input" inputMode="numeric" value={slot} onChange={(e) => setSlot(e.currentTarget.value)} />
       </div>
       <div className={s.actions}>
-        <button type="submit" className={s.primary}>
+        <button type="submit" className="btn btn--primary">
           Move
         </button>
         <button
           type="button"
-          className={s.quiet}
+          className="btn btn--quiet"
           onClick={() => run(send({ type: 'removeRacks', payload: { placementIds: [placement.id] } }))}
         >
           Remove rack
@@ -220,7 +220,7 @@ export function ZoneEditor({ plan, kinds }: { plan: Plan; kinds: readonly Equipm
   }
   return (
     <div className={s.zones}>
-      <select id={controlId} className={s.select} value={positionId} onChange={(e) => setPositionId(e.currentTarget.value)}>
+      <select id={controlId} className="input" value={positionId} onChange={(e) => setPositionId(e.currentTarget.value)}>
         {positions.map((p) => (
           <option key={p.id} value={p.id}>
             {positionName(p)}, serves {p.servesRows.length ? p.servesRows.join(', ') : 'no rows'}
@@ -229,7 +229,7 @@ export function ZoneEditor({ plan, kinds }: { plan: Plan; kinds: readonly Equipm
       </select>
       {position && (
         <fieldset className={s.chips}>
-          <legend className={s.visuallyHidden}>Rows {positionName(position)} serves</legend>
+          <legend className="visually-hidden">Rows {positionName(position)} serves</legend>
           {plan.hall.rows.map((r) => (
             <label key={r.id} className={s.chip}>
               <input type="checkbox" checked={position.servesRows.includes(r.id)} onChange={(e) => toggle(r.id, e.currentTarget.checked)} />

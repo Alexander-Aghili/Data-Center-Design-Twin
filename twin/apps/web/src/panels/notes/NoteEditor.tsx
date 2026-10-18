@@ -25,7 +25,7 @@ export function NoteList(props: { notes: Note[] }) {
               <span>from {owners?.[note.authorRole]?.initials ?? note.authorRole}</span>
               <button
                 type="button"
-                className={s.remove}
+                className={`btn btn--quiet ${s.remove}`}
                 aria-label={`Remove note: ${note.text}`}
                 onClick={() =>
                   send({ type: 'removeNote', payload: { id: note.id } }).then(
@@ -110,7 +110,7 @@ export function NoteEditor(props: { target: string; onAdded?: () => void }) {
         <span className={s.author}>
           As {owner?.initials ?? layer}, {owner?.name.toLowerCase() ?? layer}
         </span>
-        <button type="submit" className={s.add}>
+        <button type="submit" className="btn btn--primary">
           Add note
         </button>
       </div>

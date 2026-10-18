@@ -2,19 +2,6 @@ import { useState } from 'react'
 import { useField } from './Field'
 import s from './Number.module.css'
 
-const NBSP = ' '
-
-/** A number for display, with thousands separators; null shows as "—". */
-export function formatNumber(value: number | null, maxFractionDigits = 1): string {
-  if (value === null || !Number.isFinite(value)) return '—'
-  return value.toLocaleString('en-US', { maximumFractionDigits: maxFractionDigits })
-}
-
-/** Number and unit joined by a non-breaking space. */
-export function withUnit(value: number | null, unit: string, maxFractionDigits = 1): string {
-  return `${formatNumber(value, maxFractionDigits)}${NBSP}${unit}`
-}
-
 function shown(value: number, scale: number): string {
   return String(Number((value / scale).toPrecision(6)))
 }

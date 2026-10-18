@@ -67,7 +67,7 @@ function GroupCompute(props: { plan: Plan; group: RackGroup; catalog: CatalogInd
       <div className={s.actions}>
         <button
           type="button"
-          className={s.quiet}
+          className="btn btn--quiet"
           disabled={placed}
           onClick={() => void send({ type: 'deleteRackGroup', payload: { groupId: group.id } }).catch(() => {})}
         >
@@ -120,11 +120,11 @@ function NewGroup({ catalog }: { catalog: CatalogIndex }) {
       <h3 className={s.formTitle}>New rack group</h3>
       <label className={s.inline}>
         <span>Name</span>
-        <input className={s.text} value={name} onChange={(e) => setName(e.currentTarget.value)} />
+        <input className="input" value={name} onChange={(e) => setName(e.currentTarget.value)} />
       </label>
       <label className={s.inline} htmlFor={`${id}-rack`}>
         <span>Rack type</span>
-        <select id={`${id}-rack`} className={s.select} value={rack?.id ?? ''} onChange={(e) => setRackTypeId(e.currentTarget.value)}>
+        <select id={`${id}-rack`} className="input" value={rack?.id ?? ''} onChange={(e) => setRackTypeId(e.currentTarget.value)}>
           {racks.map((r) => (
             <option key={r.id} value={r.id}>
               {r.name}
@@ -139,7 +139,7 @@ function NewGroup({ catalog }: { catalog: CatalogIndex }) {
         </p>
       )}
       <div className={s.actions}>
-        <button type="submit" className={s.primary}>
+        <button type="submit" className="btn btn--primary">
           Add group
         </button>
       </div>

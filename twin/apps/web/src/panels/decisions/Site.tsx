@@ -3,7 +3,8 @@ import type { Plan } from '@twin/schema'
 import { useTwinStore } from '../../state/store'
 import { CatalogPicker } from '../fields/CatalogPicker'
 import { Field, ReadOnly } from '../fields/Field'
-import { NumberInput, withUnit } from '../fields/Number'
+import { fmtValue } from '../../format'
+import { NumberInput } from '../fields/Number'
 import { Select } from '../fields/Select'
 import s from './decisions.module.css'
 
@@ -15,7 +16,7 @@ function BayRating({ plan, bayId, onBay }: { plan: Plan; bayId: string; onBay(id
   const bay = plan.hall.bays.find((b) => b.id === bayId)
   return (
     <div className={s.pair}>
-      <select aria-label="Bay" className={s.select} value={bayId} onChange={(e) => onBay(e.currentTarget.value)}>
+      <select aria-label="Bay" className="input" value={bayId} onChange={(e) => onBay(e.currentTarget.value)}>
         {plan.hall.bays.map((b) => (
           <option key={b.id} value={b.id}>
             {b.id}
@@ -70,7 +71,7 @@ export function SiteDecisions({ plan }: { plan: Plan }) {
         />
       </Field>
       <ReadOnly label="Hall">
-        {withUnit(hall.widthM, 'm')} × {withUnit(hall.depthM, 'm')}, ceiling {withUnit(hall.ceilingM, 'm')}
+        {fmtValue(hall.widthM, 'm')} × {fmtValue(hall.depthM, 'm')}, ceiling {fmtValue(hall.ceilingM, 'm')}
       </ReadOnly>
       <Field label="Floor" target="decision:hall.floor.type">
         <Select
@@ -85,7 +86,7 @@ export function SiteDecisions({ plan }: { plan: Plan }) {
       <Field
         label="Floor rating, all bays"
         target="decision:hall.bays.ratingKnM2"
-        hint={low === high ? undefined : `Bays range from ${withUnit(low, 'kN/m²')} to ${withUnit(high, 'kN/m²')}. A new value sets every bay.`}
+        hint={low === high ? undefined : `Bays range from ${fmtValue(low, 'kN/m²')} to ${fmtValue(high, 'kN/m²')}. A new value sets every bay.`}
       >
         <NumberInput
           value={low}

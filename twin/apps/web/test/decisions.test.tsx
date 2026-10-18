@@ -1,5 +1,5 @@
 import { createDefaultPlan } from '@twin/catalog'
-import { LAYER_IDS, type Builtins, type CatalogEntry, type Command, type Plan, type Rules } from '@twin/schema'
+import { LAYER_IDS, type Command, type Plan } from '@twin/schema'
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -11,11 +11,6 @@ import { DecisionPanel } from '../src/panels/decisions'
 import { NoteEditor } from '../src/panels/notes/NoteEditor'
 import { useTwinStore } from '../src/state/store'
 
-const files = import.meta.glob<CatalogEntry | Rules>('../../../packages/catalog/data/**/*.json', { eager: true, import: 'default' })
-const entries = Object.values(files).filter((f): f is CatalogEntry => typeof f === 'object' && f !== null && 'kind' in f)
-const rules = Object.entries(files).find(([path]) => path.endsWith('/rules.json'))![1] as Rules
-const builtins: Builtins = { entries, rules }
-
 let send: ReturnType<typeof vi.fn<(cmd: Command) => Promise<void>>>
 
 function usePlan(plan: Plan) {
@@ -23,7 +18,6 @@ function usePlan(plan: Plan) {
 }
 
 beforeEach(() => {
-  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(builtins))))
   send = vi.fn(async () => undefined)
   useTwinStore.setState({ plan: createDefaultPlan(), send, activeLayer: 'cooling', selection: null })
 })

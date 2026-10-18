@@ -2,7 +2,8 @@ import type { CatalogIndex, Plan, RackCoolingCategory, RackCoolingEntry, RackEnt
 import { useTwinStore } from '../../state/store'
 import { CatalogPicker, useCatalog, type Assessment } from '../fields/CatalogPicker'
 import { Field, FieldGroup, ReadOnly } from '../fields/Field'
-import { NumberInput, withUnit } from '../fields/Number'
+import { fmtPower, fmtValue } from '../../format'
+import { NumberInput } from '../fields/Number'
 import { Select } from '../fields/Select'
 import { Toggle } from '../fields/Toggle'
 import { placedSummary } from './Compute'
@@ -29,7 +30,7 @@ function assessMethod(method: RackCoolingEntry, rack: RackEntry | undefined): As
   if (!rack.supportedCooling.includes(method.category)) return { blocked: `${rack.name} ${coolingAccepted(rack)}` }
   const limit = method.maxRackW.value
   const load = rack.nominalPowerW.value
-  if (limit !== null && load !== null && limit < load) return { caution: `Below this rack's ${withUnit(load / 1000, 'kW')}` }
+  if (limit !== null && load !== null && limit < load) return { caution: `Below this rack's ${fmtPower(load)}` }
   return {}
 }
 
@@ -99,7 +100,7 @@ export function CoolingDecisions({ plan }: { plan: Plan }) {
         <Field
           label="Facility supply temperature"
           target="decision:cooling.facilitySupplyC"
-          hint={limit ? `${limit.rack} accepts coolant up to ${withUnit(limit.celsius, '°C')}.` : undefined}
+          hint={limit ? `${limit.rack} accepts coolant up to ${fmtValue(limit.celsius, '°C')}.` : undefined}
         >
           <NumberInput
             value={c.facilitySupplyC}

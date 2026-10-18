@@ -26,7 +26,7 @@ function BuswayPerRow({ plan }: { plan: Plan }) {
             </label>
             <select
               id={`${id}-${row.id}`}
-              className={s.select}
+              className="input"
               value={current}
               onChange={(e) => {
                 const modelId = e.currentTarget.value
