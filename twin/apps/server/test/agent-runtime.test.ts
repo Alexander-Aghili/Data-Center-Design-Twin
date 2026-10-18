@@ -533,7 +533,7 @@ describe('agent runtime', () => {
     expect(second.requests[0]!.messages.map((m) => m.role)).toEqual(['user', 'assistant', 'user'])
   })
 
-  it('a proposal in a tool result emits a proposal event and applyProposal emits its status', async () => {
+  it('tool events become proposal and link events; applyProposal and dismissProposal emit statuses', async () => {
     const proposal: Proposal = {
       id: 'p1',
       title: 'Liquid-cool rows 3 to 5',
@@ -545,17 +545,41 @@ describe('agent runtime', () => {
       status: 'open',
       basePlanUpdatedAt: '2026-10-18T10:00:00.000Z',
     }
-    const propose = okTool('propose_change', JSON.stringify({ proposal }))
-    const { client } = fakeClient([{ content: [toolUse('t1', 'propose_change', {})], stop_reason: 'tool_use' }, reply('Proposed.')])
-    const proposals = { apply: vi.fn(() => ({ ...proposal, status: 'applied' as const })), dismiss: vi.fn(() => ({ ...proposal, status: 'dismissed' as const })) }
-    const rt = createAgentRuntime({ store: fakeStore(), tools: [propose], client, dataDir, proposals })
+    const propose = tool('propose_change', async () => ({
+      ok: true,
+      content: '{"proposalId":"p1"}',
+      summary: 'Proposed liquid cooling',
+      events: [{ kind: 'proposal', proposal }],
+    }))
+    const brief = tool('generate_simulation_brief', async () => ({
+      ok: true,
+      content: 'Brief written.',
+      summary: 'Wrote the OpenFOAM brief',
+      events: [{ kind: 'link', label: 'OpenFOAM brief', href: '/api/brief/file/x-openfoam.md' }],
+    }))
+    const { client } = fakeClient([
+      { content: [toolUse('t1', 'propose_change', {}), toolUse('t2', 'generate_simulation_brief', {})], stop_reason: 'tool_use' },
+      reply('Proposed.'),
+    ])
+    const proposals = {
+      apply: vi.fn((id: string) => ({ proposal: { ...proposal, id, status: 'stale' as const }, summary: 'Not applied: row R9 does not exist.' })),
+      dismiss: vi.fn((id: string) => ({ ...proposal, id, status: 'dismissed' as const })),
+    }
+    const rt = createAgentRuntime({ store: fakeStore(), tools: [propose, brief], client, dataDir, proposals })
     const rec = recorder(rt)
     rt.handleChat('fix it')
     await rec.turnsDone(1)
-    expect(rec.events).toContainEqual(expect.objectContaining({ kind: 'proposal', proposal }))
+    const messageId = rec.events.find((e) => e.kind === 'messageStart')?.messageId
+    expect(rec.events).toContainEqual({ kind: 'proposal', messageId, proposal })
+    expect(rec.events).toContainEqual({ kind: 'link', messageId, label: 'OpenFOAM brief', href: '/api/brief/file/x-openfoam.md' })
 
     rt.applyProposal('p1')
     expect(proposals.apply).toHaveBeenCalledWith('p1')
-    expect(rec.events.at(-1)).toEqual({ kind: 'proposalStatus', proposalId: 'p1', status: 'applied' })
+    expect(rec.events.slice(-2)).toEqual([
+      { kind: 'proposalStatus', proposalId: 'p1', status: 'stale' },
+      { kind: 'error', message: 'Not applied: row R9 does not exist.' },
+    ])
+    rt.dismissProposal('p2')
+    expect(rec.events.at(-1)).toEqual({ kind: 'proposalStatus', proposalId: 'p2', status: 'dismissed' })
   })
 })

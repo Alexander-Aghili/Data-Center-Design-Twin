@@ -6,14 +6,16 @@ import type {
   BetaToolResultBlockParam,
   BetaToolUseBlock,
 } from '@anthropic-ai/sdk/resources/beta/messages/messages'
-import { ProposalSchema, type AgentEvent, type Severity } from '@twin/schema'
-import { z } from 'zod'
+import type { AgentEvent, Proposal, Severity } from '@twin/schema'
 import { SYSTEM_PROMPT } from './prompt/system'
 import type { AnthropicLike, FinalMessage } from './client'
 import { BASE_EFFORT, type Conversation } from './conversation'
 
+/** Side events a tool asks the runtime to emit into the thread (Task 13's `ToolEvent`). */
+type ToolEvent = { kind: 'link'; label: string; href: string } | { kind: 'proposal'; proposal: Proposal }
+
 /** What a tool returns (Task 13's `ToolOutcome`). */
-export type ToolOutcome = { ok: true; content: string; summary: string } | { ok: false; error: string }
+export type ToolOutcome = { ok: true; content: string; summary: string; events?: ToolEvent[] } | { ok: false; error: string }
 
 /** The shape of Task 13's `AgentTool` that the loop consumes. */
 export interface RuntimeTool {
@@ -114,8 +116,6 @@ function parseJson(content: string): unknown {
     return undefined
   }
 }
-
-const LinkSchema = z.object({ label: z.string(), href: z.string() })
 
 /**
  * The content blocks to keep in history. After a mid-output server-side fallback, thinking and
@@ -230,19 +230,8 @@ async function runTool(ctx: TurnContext, out: TurnOutput, block: BetaToolUseBloc
     return { type: 'tool_result', tool_use_id: block.id, is_error: true, content: outcome.error }
   }
   ctx.emit({ kind: 'toolResult', callId: block.id, ok: true, summary: outcome.summary, numbers: numbersIn(outcome.content) })
-  emitAttachments(ctx, outcome.content)
+  for (const e of outcome.events ?? []) ctx.emit({ ...e, messageId: ctx.messageId })
   return { type: 'tool_result', tool_use_id: block.id, content: outcome.content }
-}
-
-/** A tool result carrying `proposal` (propose_change) or `link` (generated documents) becomes a thread event. */
-function emitAttachments(ctx: TurnContext, content: string): void {
-  const parsed = parseJson(content)
-  if (!parsed || typeof parsed !== 'object') return
-  const { proposal, link } = parsed as { proposal?: unknown; link?: unknown }
-  const p = ProposalSchema.safeParse(proposal)
-  if (p.success) ctx.emit({ kind: 'proposal', messageId: ctx.messageId, proposal: p.data })
-  const l = LinkSchema.safeParse(link)
-  if (l.success) ctx.emit({ kind: 'link', messageId: ctx.messageId, ...l.data })
 }
 
 /**

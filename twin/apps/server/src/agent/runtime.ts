@@ -10,7 +10,7 @@ import { ChangeCoalescer, formatAppEvent, isWorthObserving, severityOf, type Mer
 
 /** Task 13's `ProposalBook`, as far as applying and dismissing go. */
 export interface ProposalControl {
-  apply(id: string): Proposal
+  apply(id: string): { proposal: Proposal; summary: string }
   dismiss(id: string): Proposal
 }
 
@@ -97,10 +97,13 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
     emit({ kind: 'messageEnd', messageId })
   }
 
-  const settleProposal = (id: string, action: (p: ProposalControl) => Proposal) => {
+  const settleProposal = (id: string, action: (p: ProposalControl) => { proposal: Proposal; summary?: string }) => {
     if (!deps.proposals) return emit({ kind: 'error', message: 'Proposals are not available in this session.' })
     try {
-      emit({ kind: 'proposalStatus', proposalId: id, status: action(deps.proposals).status })
+      const { proposal, summary } = action(deps.proposals)
+      emit({ kind: 'proposalStatus', proposalId: proposal.id, status: proposal.status })
+      // A stale proposal was not applied; the summary says why.
+      if (proposal.status === 'stale' && summary) emit({ kind: 'error', message: summary })
     } catch (err) {
       emit({ kind: 'error', message: err instanceof Error ? err.message : String(err) })
     }
@@ -132,7 +135,7 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
     },
 
     applyProposal: (id) => settleProposal(id, (p) => p.apply(id)),
-    dismissProposal: (id) => settleProposal(id, (p) => p.dismiss(id)),
+    dismissProposal: (id) => settleProposal(id, (p) => ({ proposal: p.dismiss(id) })),
 
     onEvent(cb) {
       listeners.add(cb)
