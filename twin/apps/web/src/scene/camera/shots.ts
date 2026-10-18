@@ -2,7 +2,7 @@ import { RowSchema, type Check, type Evaluation, type Plan, type ShotId } from '
 import { Box3, MathUtils, Vector3 } from 'three'
 import { hallBounds, objectIdForPlacement } from '../geometry'
 
-export type Vec3 = [number, number, number]
+type Vec3 = [number, number, number]
 
 export interface Shot {
   position: Vec3
@@ -11,7 +11,7 @@ export interface Shot {
   fov: number
 }
 
-export type WorldBox = (id: string) => Box3 | null
+type WorldBox = (id: string) => Box3 | null
 
 export interface ShotContext {
   plan: Plan
@@ -46,8 +46,8 @@ const STYLE: Record<ShotId, { elevationDeg: number; offsetDeg: number; fov: numb
   row: { elevationDeg: 32, offsetDeg: 60, fov: 38, margin: 1.1 },
   rack: { elevationDeg: 26, offsetDeg: 22, fov: 34, margin: 1.25 },
   tray: { elevationDeg: 40, offsetDeg: 14, fov: 32, margin: 1.3 },
-  // Twice the GPU's own size keeps its cold plate hoses and quick disconnects in frame.
-  gpu: { elevationDeg: 62, offsetDeg: 8, fov: 30, margin: 2 },
+  // Three times the GPU's own size keeps its cold plate hoses, quick disconnects and neighbours in frame.
+  gpu: { elevationDeg: 62, offsetDeg: 8, fov: 30, margin: 3 },
 }
 
 interface Focus {
@@ -151,7 +151,7 @@ function rackFrame(ctx: ShotContext, focus: Focus | null): RackFrame {
 }
 
 /** The focused tray (else the middle one) as rendered, slid out with the rack's openness. */
-function focusedTray(ctx: ShotContext, focus: Focus | null): { index: number; box: Box3 } | null {
+function focusedTray(ctx: Pick<ShotContext, 'worldBox'>, focus: Focus | null): { index: number; box: Box3 } | null {
   if (!focus) return null
   const trays: Box3[] = []
   for (let i = 0; i < MAX_TRAYS; i++) {
@@ -168,6 +168,12 @@ function focusedTray(ctx: ShotContext, focus: Focus | null): { index: number; bo
 function slab(rack: Box3): Box3 {
   const midY = rack.max.y / 2
   return new Box3(new Vector3(rack.min.x, midY - RACK_UNIT_M / 2, rack.min.z), new Vector3(rack.max.x, midY + RACK_UNIT_M / 2, rack.max.z))
+}
+
+/** Index of the tray the tray and gpu shots of `focusId` look at, or null when its rack has no rendered trays. */
+export function focusTray(focusId: string, worldBox: WorldBox): number | null {
+  const focus = parseFocus(focusId)
+  return focusedTray({ worldBox }, focus)?.index ?? null
 }
 
 function trayBox(ctx: ShotContext, focus: Focus | null, rack: Box3): Box3 {

@@ -297,6 +297,26 @@ describe('Choreography', () => {
     expect(targets).toEqual((['row', 'hall', 'site'] as const).map((shot) => JSON.stringify(resolve({ shot, focusId: f }))))
   })
 
+  it('re-frames the resting shot when the scene changes, unless the user took the camera', () => {
+    const boxes: Record<string, Box3> = {}
+    const c = ctx({ worldBox: (id) => boxes[id] ?? null })
+    const resolve = resolveIn(c)
+    const start: Waypoint = { shot: 'tray', focusId: 'rack:R3-07' }
+    const driver = new FakeDriver(resolve(start))
+    const choreo = new Choreography(driver, resolve, start)
+    choreo.refresh()
+    const before = driver.moves.length
+    boxes['rack:R3-07:tray:0'] = new Box3(new Vector3(9.9, 1.2, 7), new Vector3(10.5, 1.24, 9.2))
+    choreo.refresh()
+    expect(driver.moves).toHaveLength(before + 1)
+    expect(driver.moves.at(-1)!.pose.target[1]).toBeCloseTo(1.22)
+
+    choreo.cancel()
+    boxes['rack:R3-07:tray:0'] = new Box3(new Vector3(9.9, 0.4, 7), new Vector3(10.5, 0.44, 9.2))
+    choreo.refresh()
+    expect(driver.moves).toHaveLength(before + 1)
+  })
+
   it('reduced motion uses cross-fade (duration 0.2 s, no path)', () => {
     const resolve = resolveIn(ctx())
     const start: Waypoint = { shot: 'gpu', focusId: 'rack:R3-07' }
@@ -316,7 +336,7 @@ describe('Choreography', () => {
 
 describe('rack openness slice', () => {
   it('reports the value only for the open rack', () => {
-    useRackOpenness.setState({ placementId: 'R3-07', value: 0.6 })
+    useRackOpenness.setState({ placementId: 'R3-07', tray: 9, value: 0.6 })
     expect(selectOpenness('R3-07')(useRackOpenness.getState())).toBe(0.6)
     expect(selectOpenness('R3-08')(useRackOpenness.getState())).toBe(0)
   })

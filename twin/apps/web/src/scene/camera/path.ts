@@ -25,6 +25,8 @@ const MAX_TOTAL_S = 1.6
 // ln 3 ≈ 1.1) with its turn lands near 1 s; gpu to site saturates at the 1.6 s cap.
 const SECONDS_PER_UNIT = 0.15
 const CROSS_FADE_S = 0.2
+// A resting shot that shifts because the scene changed eases over a short half second rather than jumping.
+const REFRAME_S = 0.4
 // The rack is shut down to the rack shot and fully open (doors swung, trays out) at tray and gpu.
 const OPENNESS: Record<ShotId, number> = { site: 0, hall: 0, row: 0, rack: 0, tray: 1, gpu: 1 }
 
@@ -96,7 +98,10 @@ interface Leg {
   durationS: number
 }
 
-const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2)
+// The rack opens early in its leg and closes late, so the tray is out before the camera (which damps behind the
+// schedule) arrives, and stays out until the camera has pulled back.
+const easeOut = (t: number) => 1 - (1 - t) ** 3
+const easeIn = (t: number) => t ** 3
 
 function samePose(a: Shot, b: Shot): boolean {
   const xs = [...a.position, ...a.target, a.fov]
@@ -119,6 +124,7 @@ export class Choreography {
   private openFrom = 0
   private openTo = 0
   private commanded: Shot | null = null
+  private released = false
   private readonly driver: CameraDriver
   private readonly resolve: (w: Waypoint) => Shot
 
@@ -139,6 +145,7 @@ export class Choreography {
     if (sameWaypoint(target, this.target)) return
     const { from, waypoints } = this.plan(target)
     this.target = target
+    this.released = false
     this.legs = []
     this.legIndex = -1
     this.elapsedS = 0
@@ -161,6 +168,19 @@ export class Choreography {
   cancel(): void {
     this.legs = []
     this.legIndex = -1
+    this.released = true
+  }
+
+  /**
+   * Re-frames the resting shot after the scene changed under it (models mounted, plan edited), unless a move is
+   * under way or the user has taken the camera since the last move.
+   */
+  refresh(): void {
+    if (this.busy || this.released) return
+    const pose = this.resolve(this.target)
+    if (this.commanded && samePose(pose, this.commanded)) return
+    this.driver.moveTo(pose, REFRAME_S)
+    this.commanded = pose
   }
 
   tick(dt: number): void {
@@ -180,8 +200,12 @@ export class Choreography {
       this.commanded = pose
     }
     const p = MathUtils.clamp((this.elapsedS - leg.startS) / leg.durationS, 0, 1)
-    this.setOpen(this.open.placementId, this.openFrom + (this.openTo - this.openFrom) * easeInOut(p))
-    if (last && p >= 1) this.cancel()
+    const eased = this.openTo > this.openFrom ? easeOut(p) : easeIn(p)
+    this.setOpen(this.open.placementId, this.openFrom + (this.openTo - this.openFrom) * eased)
+    if (last && p >= 1) {
+      this.legs = []
+      this.legIndex = -1
+    }
   }
 
   /**
@@ -218,8 +242,8 @@ export class Choreography {
     const before = this.fadeS!
     const now = before + dt
     if (before < half && now >= half) {
-      this.driver.moveTo(this.resolve(this.target), 0)
-      this.commanded = null
+      this.commanded = this.resolve(this.target)
+      this.driver.moveTo(this.commanded, 0)
       const value = OPENNESS[this.target.shot]
       this.setOpen(value > 0 ? focusRack(this.target.focusId) : this.open.placementId, value)
     }
