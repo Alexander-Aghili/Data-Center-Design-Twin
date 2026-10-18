@@ -37,11 +37,6 @@ function waypointOf(s: TwinState): Waypoint | null {
 }
 
 /**
- * Drives the camera from the store's shot and selection: every layer switch travels through each level in between
- * (gpu, tray, rack, row, hall, site), opens the focus rack on the way into it, and can be redirected mid-move.
- * The user can orbit and zoom at any time; grabbing the camera ends the current move. Render inside the Canvas.
- */
-/**
  * Shifts the projection center left by half of `inset` (a view offset into a wider virtual frame), so the shot's
  * subject sits in the middle of the part of the scene the inspector leaves visible.
  */
@@ -61,6 +56,11 @@ function applyInset(camera: PerspectiveCamera, width: number, height: number, in
   if (!current || Math.abs(camera.aspect - fullWidth / height) > 1e-6) camera.setViewOffset(fullWidth, height, inset, 0, width, height)
 }
 
+/**
+ * Drives the camera from the store's shot and selection: every layer switch travels through each level in between
+ * (gpu, tray, rack, row, hall, site), opens the focus rack on the way into it, and can be redirected mid-move.
+ * The user can orbit and zoom at any time; grabbing the camera ends the current move. Render inside the Canvas.
+ */
 export function CameraRig() {
   const controls = useRef<CameraControlsImpl>(null)
   const choreography = useRef<Choreography | null>(null)
