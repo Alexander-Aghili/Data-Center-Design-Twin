@@ -40,7 +40,7 @@ This is the cascade the build is tuned for. `packages/engine/test/demo.test.ts` 
    - On the hottest hours the dry coolers need trim cooling. The worst hour peaks at 10.71 MW, the plan runs 88 hours a year over the grid cap, and usable compute drops from 19,584 to 19,326 PFLOPS.
    - Ride-through fails because the plan has no buffer tank.
 6. In Cooling, raise the facility supply temperature to 32 °C (ASHRAE W32). Coolant then reaches the GB300 racks at 36 °C, within their 45 °C limit. The 88 hours over the cap stay, because the hottest hours run on trim at any setpoint. The Inference block is still air cooled and its CRAHs share the facility loop, so its racks now get 38 °C inlet air against the 32 °C ASHRAE A1 allowable limit. `packages/engine/test/demo.test.ts` evaluates steps 4 and 6 together.
-7. Ask the agent in chat to fix the floor. It moves racks through its tools, the camera follows, and the floor bays pass again. The grid, ride-through and air-inlet problems are left for the next decisions.
+7. Ask the agent in chat to fix the floor. It spreads the racks or raises the floor rating through its tools, the camera follows, and the floor bays pass again. The engine test moves two racks per GB300 row to the end of the row; the scripted agent in the browser test raises the rating. The grid, ride-through and air-inlet problems are left for the next decisions.
 8. Ask for a simulation brief. The agent writes the OpenFOAM (`buoyantSimpleFoam`) brief and links it for download.
 9. Export the plan as JSON, re-import it, and the evaluation comes back identical.
 
